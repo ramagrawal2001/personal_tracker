@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/database/finance_repository.dart';
 import '../../auth/presentation/auth_repository.dart';
+
 
 
 class SettingsScreen extends StatefulWidget {
@@ -98,8 +100,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 24),
 
+            const Text('Financial Engine Preferences', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const SizedBox(height: 12),
+
+            Consumer(
+              builder: (context, ref, _) {
+                final financeState = ref.watch(financeNotifierProvider);
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Minimum Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      const Text('Reserved in Safe-to-Spend formula before spending recommendation', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [10000.0, 20000.0, 50000.0].map((amount) {
+                          final isSelected = financeState.emergencyBuffer == amount;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ChoiceChip(
+                              label: Text('₹${amount.toInt()}'),
+                              selected: isSelected,
+                              selectedColor: AppColors.income.withValues(alpha: 0.2),
+                              onSelected: (val) {
+                                if (val) {
+                                  ref.read(financeNotifierProvider.notifier).setEmergencyBuffer(amount);
+                                }
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+
             const Text('Security & Privacy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             const SizedBox(height: 12),
+
 
 
             Container(

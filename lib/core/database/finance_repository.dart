@@ -14,6 +14,8 @@ class FinanceState {
   final List<BudgetModel> budgets;
   final List<RecurringPaymentModel> recurringPayments;
   final List<InvestmentModel> investments;
+  final double emergencyBuffer;
+  final String currencySymbol;
 
   FinanceState({
     required this.accounts,
@@ -24,7 +26,10 @@ class FinanceState {
     required this.budgets,
     required this.recurringPayments,
     required this.investments,
+    this.emergencyBuffer = 20000.0,
+    this.currencySymbol = '₹',
   });
+
 
   double get totalInvestedAmount {
     return investments.fold(0.0, (sum, i) => sum + i.investedAmount);
@@ -122,12 +127,12 @@ class FinanceState {
     return recurringPayments.fold(0.0, (sum, p) => sum + p.amount);
   }
 
-  /// Safe To Spend = Liquid Balance - Upcoming Obligations - Minimum Buffer (₹20,000)
+  /// Safe To Spend = Liquid Balance - Upcoming Obligations - Dynamic Emergency Buffer
   double get safeToSpend {
-    const double emergencyBuffer = 20000.0;
     final safe = totalLiquidBalance - upcomingPaymentsTotal - emergencyBuffer;
     return safe > 0 ? safe : 0.0;
   }
+
 
   FinanceState copyWith({
     List<AccountModel>? accounts,
@@ -138,6 +143,8 @@ class FinanceState {
     List<BudgetModel>? budgets,
     List<RecurringPaymentModel>? recurringPayments,
     List<InvestmentModel>? investments,
+    double? emergencyBuffer,
+    String? currencySymbol,
   }) {
     return FinanceState(
       accounts: accounts ?? this.accounts,
@@ -148,8 +155,11 @@ class FinanceState {
       budgets: budgets ?? this.budgets,
       recurringPayments: recurringPayments ?? this.recurringPayments,
       investments: investments ?? this.investments,
+      emergencyBuffer: emergencyBuffer ?? this.emergencyBuffer,
+      currencySymbol: currencySymbol ?? this.currencySymbol,
     );
   }
+
 
 }
 
@@ -535,7 +545,43 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     );
   }
 
+  void addCategory({
+    required String name,
+    required String type,
+    required String icon,
+    String colorHex = '0xFF6366F1',
+    String? parentId,
+  }) {
+    final newCat = CategoryModel(
+      id: _uuid.v4(),
+      name: name,
+      type: type,
+      icon: icon,
+      colorHex: colorHex,
+      parentId: parentId,
+    );
+
+    state = state.copyWith(
+      categories: [...state.categories, newCat],
+    );
+  }
+
+  void deleteCategory(String id) {
+    state = state.copyWith(
+      categories: state.categories.where((c) => c.id != id).toList(),
+    );
+  }
+
+  void setEmergencyBuffer(double amount) {
+    state = state.copyWith(emergencyBuffer: amount);
+  }
+
+  void setCurrencySymbol(String symbol) {
+    state = state.copyWith(currencySymbol: symbol);
+  }
+
   void deleteTransaction(String id) {
+
 
     state = state.copyWith(
       transactions: state.transactions.where((t) => t.id != id).toList(),
