@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/theme/app_colors.dart';
 import '../transactions/presentation/quick_add_modal.dart';
+import '../import_export/presentation/csv_import_modal.dart';
+
 
 class MainShell extends StatelessWidget {
   final Widget child;
@@ -111,10 +113,15 @@ class MainShell extends StatelessWidget {
                     Navigator.pop(ctx);
                     context.go('/ai-assistant');
                   }),
+                  _buildMenuItem(ctx, 'CSV Import', LucideIcons.fileSpreadsheet, AppColors.income, () {
+                    Navigator.pop(ctx);
+                    CsvImportModal.show(ctx);
+                  }),
                   _buildMenuItem(ctx, 'Settings', LucideIcons.settings, AppColors.textSecondary, () {
                     Navigator.pop(ctx);
                     context.go('/settings');
                   }),
+
 
                 ],
               ),
