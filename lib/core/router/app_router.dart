@@ -26,6 +26,10 @@ import '../../features/auth/presentation/profile_screen.dart';
 
 
 import '../../features/splash/presentation/splash_screen.dart';
+import '../../features/notes/presentation/notes_screen.dart';
+import '../../features/notes/presentation/note_editor_screen.dart';
+import '../../features/legal/privacy_policy_screen.dart';
+import '../../features/legal/terms_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
@@ -118,6 +122,25 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/ai-assistant',
           builder: (context, state) => const AiAssistantScreen(),
+        ),
+        GoRoute(
+          path: '/notes',
+          builder: (context, state) => const NotesScreen(),
+        ),
+        GoRoute(
+          path: '/notes/editor',
+          builder: (context, state) {
+            final note = state.extra as dynamic;
+            return NoteEditorScreen(note: note);
+          },
+        ),
+        GoRoute(
+          path: '/privacy-policy',
+          builder: (context, state) => const PrivacyPolicyScreen(),
+        ),
+        GoRoute(
+          path: '/terms',
+          builder: (context, state) => const TermsScreen(),
         ),
 
       ],

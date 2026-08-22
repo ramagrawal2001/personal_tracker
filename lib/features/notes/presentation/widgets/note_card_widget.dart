@@ -1,0 +1,127 @@
+import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import '../../../../domain/models/note_model.dart';
+import '../../../../core/theme/app_colors.dart';
+
+class NoteCard extends StatelessWidget {
+  final NoteModel note;
+  final VoidCallback onTap;
+  final VoidCallback onPin;
+  final VoidCallback onArchive;
+  final VoidCallback onDelete;
+
+  const NoteCard({
+    super.key,
+    required this.note,
+    required this.onTap,
+    required this.onPin,
+    required this.onArchive,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: note.color.color,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: note.color.borderColor, width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title
+            if (note.title.isNotEmpty) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      note.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (note.isPinned)
+                    const Icon(LucideIcons.pin, size: 14, color: AppColors.primary),
+                ],
+              ),
+              const SizedBox(height: 6),
+            ],
+            // Body or Checklist preview
+            if (note.isChecklist && note.checklistItems.isNotEmpty)
+              ...note.checklistItems.take(4).map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      item.isChecked ? LucideIcons.checkSquare : LucideIcons.square,
+                      size: 14,
+                      color: item.isChecked ? AppColors.income : AppColors.textMuted,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        item.text,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: item.isChecked ? AppColors.textMuted : AppColors.textPrimary,
+                          decoration: item.isChecked ? TextDecoration.lineThrough : null,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ))
+            else if (note.body.isNotEmpty)
+              Text(
+                note.body,
+                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                maxLines: 8,
+                overflow: TextOverflow.ellipsis,
+              ),
+            const SizedBox(height: 10),
+            // Actions row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _ActionBtn(icon: note.isPinned ? LucideIcons.pinOff : LucideIcons.pin, onTap: onPin),
+                _ActionBtn(icon: LucideIcons.archive, onTap: onArchive),
+                _ActionBtn(icon: LucideIcons.trash2, onTap: onDelete, color: AppColors.expense),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color color;
+
+  const _ActionBtn({required this.icon, required this.onTap, this.color = AppColors.textMuted});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Icon(icon, size: 16, color: color),
+      ),
+    );
+  }
+}

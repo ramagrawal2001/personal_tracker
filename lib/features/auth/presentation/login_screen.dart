@@ -213,7 +213,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     width: 20,
                                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                   )
-                                : Text(_isSignUp ? 'Create Account & Open Dashboard' : 'Sign In & Open Dashboard'),
+                                : Text(_isSignUp ? 'Create Account' : 'Sign In'),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -231,6 +231,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 _isSignUp ? 'Sign In' : 'Register',
                                 style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
                               ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            TextButton(
+                              onPressed: () => context.push('/privacy-policy'),
+                              style: TextButton.styleFrom(minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+                              child: const Text('Privacy Policy', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                            ),
+                            const Text('·', style: TextStyle(color: AppColors.textMuted)),
+                            TextButton(
+                              onPressed: () => context.push('/terms'),
+                              style: TextButton.styleFrom(minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+                              child: const Text('Terms & Conditions', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                             ),
                           ],
                         ),
