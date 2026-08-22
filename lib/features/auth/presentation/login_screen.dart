@@ -43,12 +43,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     if (success && mounted) {
       context.go('/');
-    } else if (mounted) {
-      // In case offline, enter local session cleanly
-      authNotifier.continueAsGuest();
-      context.go('/');
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -203,20 +200,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-
-                  // Direct Demo Access
-                  TextButton.icon(
-                    icon: const Icon(LucideIcons.arrowRight, color: AppColors.income, size: 18),
-                    label: const Text(
-                      'Enter Dashboard as Guest Session',
-                      style: TextStyle(color: AppColors.income, fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    onPressed: () {
-                      ref.read(authNotifierProvider.notifier).continueAsGuest();
-                      context.go('/');
-                    },
-                  ),
                 ],
               ),
             ),
@@ -226,3 +209,4 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 }
+

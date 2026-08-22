@@ -26,7 +26,6 @@ class ProfileModal extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
-    final isGuest = authState.isGuestMode;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -73,20 +72,20 @@ class ProfileModal extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        user != null ? user.email ?? 'Logged In User' : (isGuest ? 'Local Guest Mode' : 'Not Signed In'),
+                        user != null ? user.email ?? 'Authenticated Account' : 'Finance OS Account',
                         style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16),
                       ),
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: (user != null ? AppColors.income : AppColors.warning).withValues(alpha: 0.2),
+                          color: AppColors.income.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          user != null ? 'Cloud Storage Sync Active' : 'Offline Encrypted Storage',
+                        child: const Text(
+                          'Encrypted Sync Active',
                           style: TextStyle(
-                            color: user != null ? AppColors.income : AppColors.warning,
+                            color: AppColors.income,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -99,6 +98,7 @@ class ProfileModal extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
+
 
           // Feature Toggles & Preferences Section
           const Text('Security & Vault Preferences', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
@@ -182,7 +182,7 @@ class ProfileModal extends ConsumerWidget {
 
           // Action Buttons
 
-          if (user != null || isGuest)
+          if (user != null || authState.isAuthenticated)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(

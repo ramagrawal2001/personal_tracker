@@ -4,14 +4,12 @@ import '../../../core/services/supabase_service.dart';
 
 class AuthState {
   final bool isAuthenticated;
-  final bool isGuestMode;
   final User? user;
   final bool isLoading;
   final String? errorMessage;
 
   AuthState({
     required this.isAuthenticated,
-    this.isGuestMode = false,
     this.user,
     this.isLoading = false,
     this.errorMessage,
@@ -19,14 +17,12 @@ class AuthState {
 
   AuthState copyWith({
     bool? isAuthenticated,
-    bool? isGuestMode,
     User? user,
     bool? isLoading,
     String? errorMessage,
   }) {
     return AuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
-      isGuestMode: isGuestMode ?? this.isGuestMode,
       user: user ?? this.user,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
@@ -43,9 +39,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
           ),
         );
 
-  void continueAsGuest() {
-    state = AuthState(isAuthenticated: true, isGuestMode: true);
-  }
 
 
   Future<bool> signIn(String email, String password) async {
