@@ -179,8 +179,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   'Continue in Local Mode (Offline)',
                   style: TextStyle(color: AppColors.income, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
-                onPressed: () => context.go('/'),
+                onPressed: () {
+                  ref.read(authNotifierProvider.notifier).continueAsGuest();
+                  context.go('/');
+                },
               ),
+
             ],
           ),
         ),
