@@ -32,6 +32,7 @@ import '../../features/legal/privacy_policy_screen.dart';
 import '../../features/legal/terms_screen.dart';
 import '../../features/reports/presentation/analytics_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
@@ -151,6 +152,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/admin',
           builder: (context, state) => const AdminScreen(),
+        ),
+        GoRoute(
+          path: '/forgot-password',
+          builder: (context, state) => const ForgotPasswordScreen(),
         ),
 
       ],
