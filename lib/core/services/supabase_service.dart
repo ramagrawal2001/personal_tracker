@@ -20,6 +20,8 @@ class SupabaseService {
   }
 
   static SupabaseClient get client => Supabase.instance.client;
+  static User? get currentUser => _isInitialized ? client.auth.currentUser : null;
+
 
   /// Sync local SQLite Finance state to Supabase PostgreSQL database
   static Future<bool> syncLocalDataToCloud(FinanceState state) async {

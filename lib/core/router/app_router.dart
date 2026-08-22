@@ -12,6 +12,8 @@ import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/net_worth/presentation/net_worth_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/ai_assistant/presentation/ai_assistant_screen.dart';
+import '../../features/auth/presentation/login_screen.dart';
+
 
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -21,7 +23,12 @@ final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
   routes: [
+    GoRoute(
+      path: '/login',
+      builder: (context, state) => const LoginScreen(),
+    ),
     ShellRoute(
+
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) {
         return MainShell(child: child);
