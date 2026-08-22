@@ -14,8 +14,12 @@ class FinanceState {
   final List<BudgetModel> budgets;
   final List<RecurringPaymentModel> recurringPayments;
   final List<InvestmentModel> investments;
+  final List<GoalModel> goals;
   final double emergencyBuffer;
   final String currencySymbol;
+  final bool isBiometricEnabled;
+  final bool isRoundUpEnabled;
+  final bool isAutoBackupEnabled;
 
   FinanceState({
     required this.accounts,
@@ -26,9 +30,14 @@ class FinanceState {
     required this.budgets,
     required this.recurringPayments,
     required this.investments,
+    required this.goals,
     this.emergencyBuffer = 20000.0,
     this.currencySymbol = '₹',
+    this.isBiometricEnabled = true,
+    this.isRoundUpEnabled = true,
+    this.isAutoBackupEnabled = true,
   });
+
 
 
   double get totalInvestedAmount {
@@ -143,8 +152,12 @@ class FinanceState {
     List<BudgetModel>? budgets,
     List<RecurringPaymentModel>? recurringPayments,
     List<InvestmentModel>? investments,
+    List<GoalModel>? goals,
     double? emergencyBuffer,
     String? currencySymbol,
+    bool? isBiometricEnabled,
+    bool? isRoundUpEnabled,
+    bool? isAutoBackupEnabled,
   }) {
     return FinanceState(
       accounts: accounts ?? this.accounts,
@@ -155,10 +168,15 @@ class FinanceState {
       budgets: budgets ?? this.budgets,
       recurringPayments: recurringPayments ?? this.recurringPayments,
       investments: investments ?? this.investments,
+      goals: goals ?? this.goals,
       emergencyBuffer: emergencyBuffer ?? this.emergencyBuffer,
       currencySymbol: currencySymbol ?? this.currencySymbol,
+      isBiometricEnabled: isBiometricEnabled ?? this.isBiometricEnabled,
+      isRoundUpEnabled: isRoundUpEnabled ?? this.isRoundUpEnabled,
+      isAutoBackupEnabled: isAutoBackupEnabled ?? this.isAutoBackupEnabled,
     );
   }
+
 
 
 }
@@ -352,6 +370,25 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       ),
     ];
 
+    final goals = [
+      GoalModel(
+        id: 'goal_1',
+        name: 'Emergency Vault Buffer',
+        targetAmount: 200000.0,
+        currentSavedAmount: 150000.0,
+        targetDate: DateTime(now.year, now.month + 6, 1),
+        icon: 'shield',
+      ),
+      GoalModel(
+        id: 'goal_2',
+        name: 'MacBook Pro M4 Workstation',
+        targetAmount: 250000.0,
+        currentSavedAmount: 85000.0,
+        targetDate: DateTime(now.year, now.month + 4, 15),
+        icon: 'laptop',
+      ),
+    ];
+
     return FinanceState(
       accounts: accounts,
       categories: categories,
@@ -361,8 +398,10 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       budgets: budgets,
       recurringPayments: recurringPayments,
       investments: investments,
+      goals: goals,
     );
   }
+
 
 
   // --- Actions & State Modifiers ---
@@ -558,7 +597,58 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     );
   }
 
+  void addGoal({
+    required String name,
+    required double targetAmount,
+    required double currentSavedAmount,
+    DateTime? targetDate,
+    String icon = 'target',
+  }) {
+    final newGoal = GoalModel(
+      id: _uuid.v4(),
+      name: name,
+      targetAmount: targetAmount,
+      currentSavedAmount: currentSavedAmount,
+      targetDate: targetDate,
+      icon: icon,
+    );
+
+    state = state.copyWith(
+      goals: [...state.goals, newGoal],
+    );
+  }
+
+  void addFundsToGoal(String goalId, double amount) {
+    state = state.copyWith(
+      goals: state.goals.map((g) {
+        if (g.id == goalId) {
+          return g.copyWith(currentSavedAmount: g.currentSavedAmount + amount);
+        }
+        return g;
+      }).toList(),
+    );
+  }
+
+  void deleteGoal(String id) {
+    state = state.copyWith(
+      goals: state.goals.where((g) => g.id != id).toList(),
+    );
+  }
+
+  void toggleBiometric(bool value) {
+    state = state.copyWith(isBiometricEnabled: value);
+  }
+
+  void toggleRoundUp(bool value) {
+    state = state.copyWith(isRoundUpEnabled: value);
+  }
+
+  void toggleAutoBackup(bool value) {
+    state = state.copyWith(isAutoBackupEnabled: value);
+  }
+
   void addCategory({
+
     required String name,
     required String type,
     required String icon,

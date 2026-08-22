@@ -296,4 +296,48 @@ class InvestmentModel {
   });
 }
 
+class GoalModel {
+  final String id;
+  final String name;
+  final double targetAmount;
+  final double currentSavedAmount;
+  final DateTime? targetDate;
+  final String icon;
+  final String colorHex;
+
+  double get progressPercentage => targetAmount > 0 ? (currentSavedAmount / targetAmount).clamp(0.0, 1.0) : 0.0;
+  double get remainingAmount => (targetAmount - currentSavedAmount) > 0 ? (targetAmount - currentSavedAmount) : 0.0;
+
+  GoalModel({
+    required this.id,
+    required this.name,
+    required this.targetAmount,
+    required this.currentSavedAmount,
+    this.targetDate,
+    this.icon = 'target',
+    this.colorHex = '0xFF6366F1',
+  });
+
+  GoalModel copyWith({
+    String? id,
+    String? name,
+    double? targetAmount,
+    double? currentSavedAmount,
+    DateTime? targetDate,
+    String? icon,
+    String? colorHex,
+  }) {
+    return GoalModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      targetAmount: targetAmount ?? this.targetAmount,
+      currentSavedAmount: currentSavedAmount ?? this.currentSavedAmount,
+      targetDate: targetDate ?? this.targetDate,
+      icon: icon ?? this.icon,
+      colorHex: colorHex ?? this.colorHex,
+    );
+  }
+}
+
+
 

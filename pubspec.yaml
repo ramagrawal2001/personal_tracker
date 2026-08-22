@@ -45,6 +45,8 @@ dependencies:
   google_fonts: ^6.2.1
   lucide_icons: ^0.257.0
   supabase_flutter: ^2.5.0
+  crypto: ^3.0.3
+
 
 
 dev_dependencies:

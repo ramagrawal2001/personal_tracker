@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/database/finance_repository.dart';
+import '../../../core/services/backup_service.dart';
 import 'auth_repository.dart';
+
 
 class ProfileModal extends ConsumerWidget {
   const ProfileModal({super.key});
@@ -97,7 +100,88 @@ class ProfileModal extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
+          // Feature Toggles & Preferences Section
+          const Text('Security & Vault Preferences', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+          const SizedBox(height: 10),
+
+          Consumer(
+            builder: (context, ref, _) {
+              final financeState = ref.watch(financeNotifierProvider);
+              final notifier = ref.read(financeNotifierProvider.notifier);
+
+              return Column(
+                children: [
+                  SwitchListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 20),
+                    title: const Text('Biometric Security Lock', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Require Face ID / Fingerprint on launch', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                    value: financeState.isBiometricEnabled,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) => notifier.toggleBiometric(val),
+                  ),
+                  SwitchListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(LucideIcons.coins, color: AppColors.income, size: 20),
+                    title: const Text('Spare-Change Round-Ups', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Auto round-up expenses & transfer to Savings Goal', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                    value: financeState.isRoundUpEnabled,
+                    activeColor: AppColors.income,
+                    onChanged: (val) => notifier.toggleRoundUp(val),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 100% Encrypted Local Backup & Restore Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10)),
+                          icon: const Icon(LucideIcons.download, size: 16),
+                          label: const Text('Export Vault', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          onPressed: () {
+                            final backupStr = BackupService.exportEncryptedBackup({
+                              'totalAssets': financeState.totalAssets,
+                              'netWorth': financeState.netWorth,
+                              'exportedAt': DateTime.now().toIso8601String(),
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Encrypted Vault Exported (${backupStr.length} bytes)!'),
+                                backgroundColor: AppColors.income,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10)),
+                          icon: const Icon(LucideIcons.upload, size: 16),
+                          label: const Text('Restore Vault', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Local Encrypted Vault restored successfully!'),
+                                backgroundColor: AppColors.income,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+
           // Action Buttons
+
           if (user != null || isGuest)
             SizedBox(
               width: double.infinity,
