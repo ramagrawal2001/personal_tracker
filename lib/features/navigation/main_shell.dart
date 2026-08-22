@@ -101,6 +101,7 @@ class _MainShellState extends State<MainShell> {
                       _buildMenuItem(ctx, 'Calendar', LucideIcons.calendar, AppColors.accent, () { Navigator.pop(ctx); context.go('/recurring'); }),
                       _buildMenuItem(ctx, 'Reports', LucideIcons.barChart3, AppColors.income, () { Navigator.pop(ctx); context.go('/reports'); }),
                       _buildMenuItem(ctx, 'Net Worth', LucideIcons.trendingUp, AppColors.transfer, () { Navigator.pop(ctx); context.go('/net-worth'); }),
+                      _buildMenuItem(ctx, 'Analytics', LucideIcons.pieChart, AppColors.accent, () { Navigator.pop(ctx); context.go('/analytics'); }),
                       _buildMenuItem(ctx, 'AI Assistant', LucideIcons.bot, AppColors.primary, () { Navigator.pop(ctx); context.go('/ai-assistant'); }),
                       _buildMenuItem(ctx, 'CSV Import', LucideIcons.fileSpreadsheet, AppColors.income, () { Navigator.pop(ctx); CsvImportModal.show(ctx); }),
                       _buildMenuItem(ctx, 'Settings', LucideIcons.settings, AppColors.textSecondary, () { Navigator.pop(ctx); context.go('/settings'); }),

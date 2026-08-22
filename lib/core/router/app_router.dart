@@ -30,6 +30,8 @@ import '../../features/notes/presentation/notes_screen.dart';
 import '../../features/notes/presentation/note_editor_screen.dart';
 import '../../features/legal/privacy_policy_screen.dart';
 import '../../features/legal/terms_screen.dart';
+import '../../features/reports/presentation/analytics_screen.dart';
+import '../../features/admin/presentation/admin_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
@@ -141,6 +143,14 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/terms',
           builder: (context, state) => const TermsScreen(),
+        ),
+        GoRoute(
+          path: '/analytics',
+          builder: (context, state) => const AnalyticsScreen(),
+        ),
+        GoRoute(
+          path: '/admin',
+          builder: (context, state) => const AdminScreen(),
         ),
 
       ],

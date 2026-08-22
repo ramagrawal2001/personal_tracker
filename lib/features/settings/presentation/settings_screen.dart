@@ -202,6 +202,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _legalTile('Terms & Conditions', LucideIcons.fileText, () => context.go('/terms')),
             ]),
 
+            // ── Analytics Shortcut ────────────────────────────────────────
+            const SizedBox(height: 12),
+            _card(children: [
+              _legalTile('Finance Analytics', LucideIcons.pieChart, () => context.go('/analytics')),
+            ]),
+
+            // ── Admin Panel (role-gated) ──────────────────────────────────
+            Consumer(builder: (context, ref, _) {
+              final authState = ref.watch(authNotifierProvider);
+              final userMeta = authState.user?.userMetadata;
+              final isAdmin = userMeta?['app_role'] == 'admin';
+              if (!isAdmin) return const SizedBox.shrink();
+              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const SizedBox(height: 12),
+                _sectionLabel('Administration'),
+                _card(children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(LucideIcons.shieldAlert, color: AppColors.expense, size: 20),
+                    title: const Text('Super Admin Panel', style: TextStyle(color: AppColors.expense, fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: const Text('Platform analytics & user overview', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    trailing: const Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                    onTap: () => context.go('/admin'),
+                  ),
+                ]),
+              ]);
+            }),
+
             // ── Sign Out ─────────────────────────────────────────────────
             const SizedBox(height: 12),
             SizedBox(
