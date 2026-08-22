@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../auth/presentation/profile_modal.dart';
 import 'widgets/net_worth_card.dart';
+
 import 'widgets/safe_to_spend_card.dart';
 import 'widgets/money_summary_card.dart';
 import 'widgets/upcoming_payments_widget.dart';
@@ -50,15 +52,20 @@ class DashboardScreen extends ConsumerWidget {
             onPressed: () => context.go('/ai-assistant'),
           ),
           IconButton(
-            icon: const Icon(LucideIcons.bell, color: AppColors.textPrimary),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('No new alerts. Your finances are healthy!')),
-              );
-            },
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+              ),
+              child: const Icon(LucideIcons.user, color: AppColors.textPrimary, size: 18),
+            ),
+            onPressed: () => ProfileModal.show(context),
           ),
           const SizedBox(width: 8),
         ],
+
 
       ),
       body: RefreshIndicator(
