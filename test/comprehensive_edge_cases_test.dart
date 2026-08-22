@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personal_tracker/core/constants/app_constants.dart';
-import 'package:personal_tracker/core/database/finance_repository.dart';
-import 'package:personal_tracker/core/services/merchant_categorizer.dart';
-import 'package:personal_tracker/domain/models/models.dart';
+import 'package:aspyric/core/constants/app_constants.dart';
+import 'package:aspyric/core/database/finance_repository.dart';
+import 'package:aspyric/core/services/merchant_categorizer.dart';
+import 'package:aspyric/domain/models/models.dart';
 
 void main() {
   group('Comprehensive Financial Engine Edge Cases Matrix', () {

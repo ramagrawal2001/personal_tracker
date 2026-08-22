@@ -123,7 +123,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                         const SizedBox(height: 28),
 
                         const Text(
-                          'Personal Finance OS',
+                          'Aspyric',
                           style: TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.bold,

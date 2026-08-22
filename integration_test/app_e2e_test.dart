@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:personal_tracker/main.dart';
+import 'package:aspyric/main.dart';
 
 
 void main() {
@@ -12,7 +12,7 @@ void main() {
       // 1. Launch Main Application
       await tester.pumpWidget(
         const ProviderScope(
-          child: PersonalTrackerApp(),
+          child: AspyricApp(),
         ),
       );
       await tester.pumpAndSettle();

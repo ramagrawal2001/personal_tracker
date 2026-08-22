@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personal_tracker/core/constants/app_constants.dart';
-import 'package:personal_tracker/core/database/finance_repository.dart';
+import 'package:aspyric/core/constants/app_constants.dart';
+import 'package:aspyric/core/database/finance_repository.dart';
 
 void main() {
   group('FinanceEngine Tests', () {

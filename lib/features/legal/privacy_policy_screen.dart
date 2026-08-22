@@ -22,7 +22,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _header('Personal Finance OS — Privacy Policy'),
+            _header('Aspyric — Privacy Policy'),
             _para('Last updated: August 2026'),
             const SizedBox(height: 16),
             _section('1. Data We Collect'),
@@ -40,7 +40,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             _section('7. Children'),
             _para('This application is not intended for children under the age of 13. We do not knowingly collect personal information from children.'),
             _section('8. Contact'),
-            _para('For privacy-related queries, contact us at: privacy@personalfinanceos.app'),
+            _para('For privacy-related queries, contact us at: privacy@aspyric.app'),
             const SizedBox(height: 40),
           ],
         ),

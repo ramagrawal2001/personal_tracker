@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personal_tracker/features/auth/presentation/auth_repository.dart';
+import 'package:aspyric/features/auth/presentation/auth_repository.dart';
 
 void main() {
   group('Authentication Flow Tests', () {

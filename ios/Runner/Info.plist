@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Personal Tracker</string>
+	<string>Aspyric</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>personal_tracker</string>
+	<string>Aspyric</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -24,6 +24,35 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+
+	<!-- Biometric / Face ID -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Aspyric uses Face ID to securely lock your financial data.</string>
+
+	<!-- Camera for profile photo -->
+	<key>NSCameraUsageDescription</key>
+	<string>Aspyric needs camera access to set your profile photo.</string>
+
+	<!-- Photo Library for profile photo -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aspyric needs photo library access to set your profile photo.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Aspyric needs permission to save photos to your library.</string>
+
+	<!-- Local Notifications -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+
+	<!-- Network -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
+
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

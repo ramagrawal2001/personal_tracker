@@ -63,7 +63,7 @@ class NotificationService {
 
     await _plugin.zonedSchedule(
       0,
-      '💰 Finance Update',
+      '💰 Aspyric — Daily Update',
       'Don\'t forget to log today\'s transactions!',
       scheduled,
       details,

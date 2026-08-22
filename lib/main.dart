@@ -15,13 +15,13 @@ void main() async {
 
   runApp(
     const ProviderScope(
-      child: PersonalTrackerApp(),
+      child: AspyricApp(),
     ),
   );
 }
 
-class PersonalTrackerApp extends ConsumerWidget {
-  const PersonalTrackerApp({super.key});
+class AspyricApp extends ConsumerWidget {
+  const AspyricApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +29,7 @@ class PersonalTrackerApp extends ConsumerWidget {
     final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
-      title: 'Personal Finance OS',
+      title: 'Aspyric',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

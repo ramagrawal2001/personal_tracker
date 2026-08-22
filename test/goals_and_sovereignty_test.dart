@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:personal_tracker/core/database/finance_repository.dart';
-import 'package:personal_tracker/core/services/backup_service.dart';
-import 'package:personal_tracker/domain/models/models.dart';
+import 'package:aspyric/core/database/finance_repository.dart';
+import 'package:aspyric/core/services/backup_service.dart';
+import 'package:aspyric/domain/models/models.dart';
 
 void main() {
   group('Custom Savings Goals & Data Sovereignty Tests', () {
