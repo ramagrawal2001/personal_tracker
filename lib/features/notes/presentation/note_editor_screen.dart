@@ -76,14 +76,14 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   void _toggleChecklist() {
     setState(() {
       _note = _note.copyWith(isChecklist: !_note.isChecklist);
-      _changed = true;
+      
     });
   }
 
   void _setColor(NoteColor color) {
     setState(() {
       _note = _note.copyWith(color: color);
-      _changed = true;
+      
     });
   }
 
@@ -107,7 +107,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             onPressed: () {
               setState(() {
                 _note = _note.copyWith(isPinned: !_note.isPinned);
-                _changed = true;
+                
               });
             },
           ),
@@ -129,7 +129,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           children: [
             TextField(
               controller: _titleCtrl,
-              onChanged: (_) => _changed = true,
+              onChanged: (_) {},
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               decoration: const InputDecoration(
                 hintText: 'Title',
@@ -162,7 +162,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                     Expanded(
                       child: TextField(
                         controller: _checkCtrl[i],
-                        onChanged: (_) => _changed = true,
+                        onChanged: (_) {},
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           decoration: isChecked ? TextDecoration.lineThrough : null,
@@ -198,7 +198,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             ] else
               TextField(
                 controller: _bodyCtrl,
-                onChanged: (_) => _changed = true,
+                onChanged: (_) {},
                 maxLines: null,
                 style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, height: 1.6),
                 decoration: const InputDecoration(
