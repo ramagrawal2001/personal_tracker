@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../auth/presentation/profile_modal.dart';
@@ -27,7 +29,12 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.asset('assets/images/app_logo.jpg', width: 28, height: 28),
+              child: Image.asset(
+                'assets/images/app_logo.jpg',
+                width: 28,
+                height: 28,
+                fit: BoxFit.cover,
+              ),
             ),
             const SizedBox(width: 10),
             Column(
@@ -35,17 +42,25 @@ class DashboardScreen extends ConsumerWidget {
               children: [
                 const Text(
                   'FINANCIAL DASHBOARD',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: AppColors.textMuted),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 Text(
-                  'August 2026',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  DateFormat('MMMM yyyy').format(DateTime.now()),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                  ),
                 ),
+
               ],
             ),
           ],
         ),
-
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.bot, color: AppColors.primary),
