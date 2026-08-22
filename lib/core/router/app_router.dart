@@ -41,123 +41,44 @@ final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/splash',
   routes: [
+    // ── Public / full-page routes (no shell) ─────────────────────────────
+    GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
+    GoRoute(path: '/login',  builder: (_, __) => const LoginScreen()),
+    GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
+    GoRoute(path: '/privacy-policy',  builder: (_, __) => const PrivacyPolicyScreen()),
+    GoRoute(path: '/terms',           builder: (_, __) => const TermsScreen()),
+    GoRoute(path: '/analytics',       builder: (_, __) => const AnalyticsScreen()),
+    GoRoute(path: '/admin',           builder: (_, __) => const AdminScreen()),
+    GoRoute(path: '/profile',         builder: (_, __) => const ProfileScreen()),
+    GoRoute(path: '/notes',           builder: (_, __) => const NotesScreen()),
     GoRoute(
-      path: '/splash',
-      builder: (context, state) => const SplashScreen(),
-    ),
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
-
-    ShellRoute(
-
-      navigatorKey: _shellNavigatorKey,
-      builder: (context, state, child) {
-        return MainShell(child: child);
+      path: '/notes/editor',
+      builder: (_, state) {
+        final note = state.extra as dynamic;
+        return NoteEditorScreen(note: note);
       },
+    ),
+    GoRoute(path: '/ai-assistant',    builder: (_, __) => const AiAssistantScreen()),
+    GoRoute(path: '/settings',        builder: (_, __) => const SettingsScreen()),
+    GoRoute(path: '/net-worth',       builder: (_, __) => const NetWorthScreen()),
+    GoRoute(path: '/reports',         builder: (_, __) => const ReportsScreen()),
+
+    // ── Shell routes (main nav with Finance/Notes switcher) ───────────────
+    ShellRoute(
+      navigatorKey: _shellNavigatorKey,
+      builder: (context, state, child) => MainShell(child: child),
       routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const DashboardScreen(),
-        ),
-        GoRoute(
-          path: '/transactions',
-          builder: (context, state) => const TransactionsScreen(),
-        ),
-        GoRoute(
-          path: '/accounts',
-          builder: (context, state) => const AccountsScreen(),
-        ),
-        GoRoute(
-          path: '/credit-cards',
-          builder: (context, state) => const CreditCardsScreen(),
-        ),
-        GoRoute(
-          path: '/loans',
-          builder: (context, state) => const LoansScreen(),
-        ),
-        GoRoute(
-          path: '/budgets',
-          builder: (context, state) => const BudgetsScreen(),
-        ),
-        GoRoute(
-          path: '/goals',
-          builder: (context, state) => const GoalsScreen(),
-        ),
-        GoRoute(
-          path: '/goals/add',
-          builder: (context, state) => const AddGoalScreen(),
-        ),
-
-
-        GoRoute(
-          path: '/categories',
-          builder: (context, state) => const CategoriesScreen(),
-        ),
-
-        GoRoute(
-          path: '/investments',
-          builder: (context, state) => const InvestmentsScreen(),
-        ),
-
-        GoRoute(
-          path: '/recurring',
-          builder: (context, state) => const CalendarScreen(),
-        ),
-        GoRoute(
-          path: '/reports',
-          builder: (context, state) => const ReportsScreen(),
-        ),
-        GoRoute(
-          path: '/net-worth',
-          builder: (context, state) => const NetWorthScreen(),
-        ),
-        GoRoute(
-          path: '/settings',
-          builder: (context, state) => const SettingsScreen(),
-        ),
-        GoRoute(
-          path: '/profile',
-          builder: (context, state) => const ProfileScreen(),
-        ),
-
-        GoRoute(
-          path: '/ai-assistant',
-          builder: (context, state) => const AiAssistantScreen(),
-        ),
-        GoRoute(
-          path: '/notes',
-          builder: (context, state) => const NotesScreen(),
-        ),
-        GoRoute(
-          path: '/notes/editor',
-          builder: (context, state) {
-            final note = state.extra as dynamic;
-            return NoteEditorScreen(note: note);
-          },
-        ),
-        GoRoute(
-          path: '/privacy-policy',
-          builder: (context, state) => const PrivacyPolicyScreen(),
-        ),
-        GoRoute(
-          path: '/terms',
-          builder: (context, state) => const TermsScreen(),
-        ),
-        GoRoute(
-          path: '/analytics',
-          builder: (context, state) => const AnalyticsScreen(),
-        ),
-        GoRoute(
-          path: '/admin',
-          builder: (context, state) => const AdminScreen(),
-        ),
-        GoRoute(
-          path: '/forgot-password',
-          builder: (context, state) => const ForgotPasswordScreen(),
-        ),
-
+        GoRoute(path: '/',             builder: (_, __) => const DashboardScreen()),
+        GoRoute(path: '/transactions', builder: (_, __) => const TransactionsScreen()),
+        GoRoute(path: '/accounts',     builder: (_, __) => const AccountsScreen()),
+        GoRoute(path: '/credit-cards', builder: (_, __) => const CreditCardsScreen()),
+        GoRoute(path: '/loans',        builder: (_, __) => const LoansScreen()),
+        GoRoute(path: '/budgets',      builder: (_, __) => const BudgetsScreen()),
+        GoRoute(path: '/goals',        builder: (_, __) => const GoalsScreen()),
+        GoRoute(path: '/goals/add',    builder: (_, __) => const AddGoalScreen()),
+        GoRoute(path: '/categories',   builder: (_, __) => const CategoriesScreen()),
+        GoRoute(path: '/investments',  builder: (_, __) => const InvestmentsScreen()),
+        GoRoute(path: '/recurring',    builder: (_, __) => const CalendarScreen()),
       ],
     ),
   ],
