@@ -13,6 +13,7 @@ class FinanceState {
   final List<LoanModel> loans;
   final List<BudgetModel> budgets;
   final List<RecurringPaymentModel> recurringPayments;
+  final List<InvestmentModel> investments;
 
   FinanceState({
     required this.accounts,
@@ -22,7 +23,28 @@ class FinanceState {
     required this.loans,
     required this.budgets,
     required this.recurringPayments,
+    required this.investments,
   });
+
+  double get totalInvestedAmount {
+    return investments.fold(0.0, (sum, i) => sum + i.investedAmount);
+  }
+
+  double get totalInvestmentCurrentValue {
+    return investments.fold(0.0, (sum, i) => sum + i.currentValue);
+  }
+
+  double get totalMonthlySipAmount {
+    return investments.fold(0.0, (sum, i) => sum + i.monthlySipAmount);
+  }
+
+  /// Total Assets = Liquid Money + Investment Portfolio Value
+  double get totalAssets {
+    double liquid = totalLiquidBalance;
+    double portfolio = totalInvestmentCurrentValue;
+    return liquid + portfolio;
+  }
+
 
   // --- Dynamic Financial Calculations ---
 
@@ -75,17 +97,9 @@ class FinanceState {
   /// Total Liabilities = Credit Cards + Loans
   double get totalLiabilities => totalCreditCardDebt + totalLoanDebt;
 
-  /// Total Assets = Liquid Money + Investments / FDs
-  double get totalAssets {
-    double liquid = totalLiquidBalance;
-    double investments = accountsWithCalculatedBalances
-        .where((a) => a.type == AccountType.fd || a.type == AccountType.rd || a.type == AccountType.investmentAccount || a.type == AccountType.otherAsset)
-        .fold(0.0, (sum, a) => sum + a.calculatedBalance);
-    return liquid + investments + 750000.0; // Mock SIP/Stocks portfolio value
-  }
-
   /// Net Worth = Total Assets - Total Liabilities
   double get netWorth => totalAssets - totalLiabilities;
+
 
   /// Monthly Income (Current Month)
   double get monthlyIncome {
@@ -123,6 +137,7 @@ class FinanceState {
     List<LoanModel>? loans,
     List<BudgetModel>? budgets,
     List<RecurringPaymentModel>? recurringPayments,
+    List<InvestmentModel>? investments,
   }) {
     return FinanceState(
       accounts: accounts ?? this.accounts,
@@ -132,8 +147,10 @@ class FinanceState {
       loans: loans ?? this.loans,
       budgets: budgets ?? this.budgets,
       recurringPayments: recurringPayments ?? this.recurringPayments,
+      investments: investments ?? this.investments,
     );
   }
+
 }
 
 class FinanceNotifier extends StateNotifier<FinanceState> {
@@ -297,6 +314,34 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       RecurringPaymentModel(id: 'rec_3', title: 'Mutual Fund SIP', amount: 8000.0, frequency: PaymentFrequency.monthly, nextDueDate: DateTime(now.year, now.month + 1, 1), categoryId: 'cat_investment', accountId: 'acc_hdfc'),
     ];
 
+    final investments = [
+      InvestmentModel(
+        id: 'inv_1',
+        name: 'Nifty 50 Index Fund SIP',
+        type: InvestmentType.mutualFundSip,
+        investedAmount: 150000.0,
+        currentValue: 182500.0,
+        monthlySipAmount: 5000.0,
+        sipDay: 1,
+      ),
+      InvestmentModel(
+        id: 'inv_2',
+        name: 'Parag Parikh Flexi Cap SIP',
+        type: InvestmentType.mutualFundSip,
+        investedAmount: 90000.0,
+        currentValue: 112000.0,
+        monthlySipAmount: 3000.0,
+        sipDay: 5,
+      ),
+      InvestmentModel(
+        id: 'inv_3',
+        name: 'HDFC Bank Fixed Deposit',
+        type: InvestmentType.fixedDeposit,
+        investedAmount: 200000.0,
+        currentValue: 215000.0,
+      ),
+    ];
+
     return FinanceState(
       accounts: accounts,
       categories: categories,
@@ -305,8 +350,10 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       loans: loans,
       budgets: budgets,
       recurringPayments: recurringPayments,
+      investments: investments,
     );
   }
+
 
   // --- Actions & State Modifiers ---
 
@@ -465,7 +512,31 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     );
   }
 
+  void addInvestment({
+    required String name,
+    required InvestmentType type,
+    required double investedAmount,
+    required double currentValue,
+    double monthlySipAmount = 0.0,
+    int sipDay = 1,
+  }) {
+    final newInv = InvestmentModel(
+      id: _uuid.v4(),
+      name: name,
+      type: type,
+      investedAmount: investedAmount,
+      currentValue: currentValue,
+      monthlySipAmount: monthlySipAmount,
+      sipDay: sipDay,
+    );
+
+    state = state.copyWith(
+      investments: [...state.investments, newInv],
+    );
+  }
+
   void deleteTransaction(String id) {
+
     state = state.copyWith(
       transactions: state.transactions.where((t) => t.id != id).toList(),
     );

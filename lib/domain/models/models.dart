@@ -212,3 +212,28 @@ class RecurringPaymentModel {
     this.isAutoPay = false,
   });
 }
+
+class InvestmentModel {
+  final String id;
+  final String name;
+  final InvestmentType type;
+  final double investedAmount;
+  final double currentValue;
+  final double monthlySipAmount;
+  final int sipDay;
+
+  double get netReturns => currentValue - investedAmount;
+  double get returnsPercentage => investedAmount > 0 ? ((currentValue - investedAmount) / investedAmount) * 100 : 0.0;
+
+  InvestmentModel({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.investedAmount,
+    required this.currentValue,
+    this.monthlySipAmount = 0.0,
+    this.sipDay = 1,
+  });
+}
+
+

@@ -7,7 +7,9 @@ import '../../features/transactions/presentation/transactions_screen.dart';
 import '../../features/credit_cards/presentation/credit_cards_screen.dart';
 import '../../features/loans/presentation/loans_screen.dart';
 import '../../features/budgets/presentation/budgets_screen.dart';
+import '../../features/investments/presentation/investments_screen.dart';
 import '../../features/recurring/presentation/calendar_screen.dart';
+
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/net_worth/presentation/net_worth_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -58,6 +60,11 @@ final appRouter = GoRouter(
           path: '/budgets',
           builder: (context, state) => const BudgetsScreen(),
         ),
+        GoRoute(
+          path: '/investments',
+          builder: (context, state) => const InvestmentsScreen(),
+        ),
+
         GoRoute(
           path: '/recurring',
           builder: (context, state) => const CalendarScreen(),

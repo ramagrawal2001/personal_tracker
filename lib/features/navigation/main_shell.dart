@@ -97,10 +97,15 @@ class MainShell extends StatelessWidget {
                     Navigator.pop(ctx);
                     context.go('/budgets');
                   }),
+                  _buildMenuItem(ctx, 'Investments', LucideIcons.trendingUp, AppColors.transfer, () {
+                    Navigator.pop(ctx);
+                    context.go('/investments');
+                  }),
                   _buildMenuItem(ctx, 'Calendar', LucideIcons.calendar, AppColors.accent, () {
                     Navigator.pop(ctx);
                     context.go('/recurring');
                   }),
+
                   _buildMenuItem(ctx, 'Reports', LucideIcons.barChart3, AppColors.income, () {
                     Navigator.pop(ctx);
                     context.go('/reports');

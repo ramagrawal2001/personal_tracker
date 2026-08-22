@@ -87,3 +87,36 @@ enum PaymentFrequency {
     }
   }
 }
+
+enum InvestmentType {
+  mutualFundSip,
+  stocks,
+  fixedDeposit,
+  recurringDeposit,
+  gold,
+  ppf,
+  crypto,
+  other;
+
+  String get displayName {
+    switch (this) {
+      case InvestmentType.mutualFundSip:
+        return 'Mutual Fund SIP';
+      case InvestmentType.stocks:
+        return 'Stocks & Equity';
+      case InvestmentType.fixedDeposit:
+        return 'Fixed Deposit (FD)';
+      case InvestmentType.recurringDeposit:
+        return 'Recurring Deposit (RD)';
+      case InvestmentType.gold:
+        return 'Gold & Silver';
+      case InvestmentType.ppf:
+        return 'PPF / NPS';
+      case InvestmentType.crypto:
+        return 'Crypto';
+      case InvestmentType.other:
+        return 'Other Asset';
+    }
+  }
+}
+
