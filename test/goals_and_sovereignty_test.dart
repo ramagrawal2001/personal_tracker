@@ -24,12 +24,20 @@ void main() {
     });
 
     test('Add Funds to Savings Goal', () {
-      final initialSaved = notifier.state.goals.first.currentSavedAmount;
-      final targetGoalId = notifier.state.goals.first.id;
+      // Create a fresh goal directly via the notifier
+      notifier.addGoal(
+        name: 'Emergency Fund',
+        targetAmount: 100000.0,
+        currentSavedAmount: 50000.0,
+        icon: 'shield',
+      );
 
-      notifier.addFundsToGoal(targetGoalId, 10000.0);
+      final targetGoal = notifier.state.goals.first;
+      final initialSaved = targetGoal.currentSavedAmount;
 
-      final updatedGoal = notifier.state.goals.firstWhere((g) => g.id == targetGoalId);
+      notifier.addFundsToGoal(targetGoal.id, 10000.0);
+
+      final updatedGoal = notifier.state.goals.firstWhere((g) => g.id == targetGoal.id);
       expect(updatedGoal.currentSavedAmount, equals(initialSaved + 10000.0));
     });
 

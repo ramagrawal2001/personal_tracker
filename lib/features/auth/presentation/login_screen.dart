@@ -175,6 +175,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             prefixIcon: Icon(LucideIcons.lock, size: 18),
                           ),
                         ),
+
+                        // Error Message Display
+                        if (authState.errorMessage != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(LucideIcons.alertCircle, color: Colors.redAccent, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    authState.errorMessage!,
+                                    style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: 24),
 
                         SizedBox(

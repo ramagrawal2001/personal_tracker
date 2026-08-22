@@ -8,15 +8,23 @@ void main() {
   group('Offline-First Sync Engine Tests', () {
     late FinanceNotifier financeNotifier;
     late SyncEngineNotifier syncNotifier;
+    late String testAccountId;
 
     setUp(() {
       financeNotifier = FinanceNotifier();
       syncNotifier = SyncEngineNotifier();
+      // Create a test account
+      financeNotifier.addAccount(
+        name: 'Test Account',
+        type: AccountType.savingsAccount,
+        openingBalance: 10000.0,
+      );
+      testAccountId = financeNotifier.state.accounts.first.id;
     });
 
     test('Adding transaction in offline mode assigns SyncStatus.pending', () {
       financeNotifier.addTransaction(
-        accountId: 'acc_hdfc',
+        accountId: testAccountId,
         type: TransactionType.expense,
         amount: 1200.0,
         merchant: 'Offline Store',
@@ -30,7 +38,7 @@ void main() {
 
     test('Network restoration automatically flushes pending offline transactions', () async {
       financeNotifier.addTransaction(
-        accountId: 'acc_hdfc',
+        accountId: testAccountId,
         type: TransactionType.expense,
         amount: 850.0,
         merchant: 'No-Network Cafe',

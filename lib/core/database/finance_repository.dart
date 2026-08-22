@@ -34,8 +34,8 @@ class FinanceState {
     this.emergencyBuffer = 20000.0,
     this.currencySymbol = '₹',
     this.isBiometricEnabled = false,
-    this.isRoundUpEnabled = true,
-    this.isAutoBackupEnabled = true,
+    this.isRoundUpEnabled = false,
+    this.isAutoBackupEnabled = false,
   });
 
 
@@ -107,6 +107,11 @@ class FinanceState {
   /// Total Loan Debt
   double get totalLoanDebt {
     return loans.fold(0.0, (sum, l) => sum + l.outstandingAmount);
+  }
+
+  /// Total Monthly EMI across all active loans
+  double get totalMonthlyEmi {
+    return loans.fold(0.0, (sum, l) => sum + l.monthlyEmi);
   }
 
   /// Total Liabilities = Credit Cards + Loans
@@ -183,12 +188,11 @@ class FinanceState {
 }
 
 class FinanceNotifier extends StateNotifier<FinanceState> {
-  FinanceNotifier() : super(_initialSeedState());
+  FinanceNotifier() : super(_emptyState());
 
-  static FinanceState _initialSeedState() {
-    final now = DateTime.now();
-
-    final categories = [
+  /// Default categories always available to every user
+  static List<CategoryModel> _defaultCategories() {
+    return [
       CategoryModel(id: 'cat_food', name: 'Food & Dining', type: 'expense', icon: 'utensils', colorHex: '0xFFF59E0B'),
       CategoryModel(id: 'cat_groceries', name: 'Groceries', parentId: 'cat_food', type: 'expense', icon: 'shopping-bag', colorHex: '0xFF10B981'),
       CategoryModel(id: 'cat_transport', name: 'Transport & Fuel', type: 'expense', icon: 'car', colorHex: '0xFF3B82F6'),
@@ -199,207 +203,20 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       CategoryModel(id: 'cat_freelance', name: 'Freelancing', type: 'income', icon: 'laptop', colorHex: '0xFF0EA5E9'),
       CategoryModel(id: 'cat_investment', name: 'Investment / SIP', type: 'expense', icon: 'trending-up', colorHex: '0xFF8B5CF6'),
     ];
+  }
 
-    final accounts = [
-      AccountModel(
-        id: 'acc_hdfc',
-        name: 'HDFC Savings Account',
-        type: AccountType.savingsAccount,
-        bank: 'HDFC Bank',
-        accountNumberLast4: '5421',
-        openingBalance: 52430.0,
-        calculatedBalance: 52430.0,
-        createdAt: now.subtract(const Duration(days: 90)),
-      ),
-      AccountModel(
-        id: 'acc_sbi',
-        name: 'SBI Savings Account',
-        type: AccountType.savingsAccount,
-        bank: 'State Bank of India',
-        accountNumberLast4: '8812',
-        openingBalance: 21820.0,
-        calculatedBalance: 21820.0,
-        createdAt: now.subtract(const Duration(days: 90)),
-      ),
-      AccountModel(
-        id: 'acc_icici',
-        name: 'ICICI Savings',
-        type: AccountType.savingsAccount,
-        bank: 'ICICI Bank',
-        accountNumberLast4: '3341',
-        openingBalance: 18200.0,
-        calculatedBalance: 18200.0,
-        createdAt: now.subtract(const Duration(days: 60)),
-      ),
-      AccountModel(
-        id: 'acc_cash',
-        name: 'Cash Wallet',
-        type: AccountType.cash,
-        openingBalance: 4500.0,
-        calculatedBalance: 4500.0,
-        createdAt: now.subtract(const Duration(days: 90)),
-      ),
-    ];
-
-    final creditCards = [
-      CreditCardModel(
-        id: 'card_sbi',
-        name: 'SBI Cashback Card',
-        bank: 'SBI Card',
-        last4: '4321',
-        creditLimit: 200000.0,
-        currentOutstanding: 47700.0,
-        statementDay: 2,
-        dueDay: 22,
-        linkedAccountId: 'acc_sbi',
-      ),
-      CreditCardModel(
-        id: 'card_hdfc',
-        name: 'HDFC Regalia',
-        bank: 'HDFC Bank',
-        last4: '9981',
-        creditLimit: 150000.0,
-        currentOutstanding: 31200.0,
-        statementDay: 5,
-        dueDay: 25,
-        linkedAccountId: 'acc_hdfc',
-      ),
-    ];
-
-    final loans = [
-      LoanModel(
-        id: 'loan_home',
-        name: 'Home Loan',
-        provider: 'SBI Home Loans',
-        principalAmount: 3500000.0,
-        outstandingAmount: 2842000.0,
-        interestRate: 8.5,
-        monthlyEmi: 30000.0,
-        dueDay: 28,
-        startDate: DateTime(2023, 1, 15),
-        remainingTenureMonths: 168,
-      ),
-    ];
-
-    final transactions = [
-      TransactionModel(
-        id: 'tx_1',
-        accountId: 'acc_hdfc',
-        type: TransactionType.income,
-        amount: 86250.0,
-        categoryId: 'cat_salary',
-        merchant: 'TechCorp Pvt Ltd',
-        date: DateTime(now.year, now.month, 1),
-        description: 'August Salary',
-        createdAt: DateTime(now.year, now.month, 1),
-      ),
-      TransactionModel(
-        id: 'tx_2',
-        accountId: 'acc_hdfc',
-        type: TransactionType.expense,
-        amount: 2450.0,
-        categoryId: 'cat_shopping',
-        merchant: 'Amazon',
-        date: now.subtract(const Duration(days: 2)),
-        description: 'Electronics accessory',
-        tags: ['Shopping', 'Tech'],
-        createdAt: now.subtract(const Duration(days: 2)),
-      ),
-      TransactionModel(
-        id: 'tx_3',
-        accountId: 'acc_hdfc',
-        type: TransactionType.expense,
-        amount: 780.0,
-        categoryId: 'cat_food',
-        merchant: 'Swiggy',
-        date: now.subtract(const Duration(days: 1)),
-        description: 'Dinner order',
-        tags: ['Food'],
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-      TransactionModel(
-        id: 'tx_4',
-        accountId: 'acc_sbi',
-        type: TransactionType.expense,
-        amount: 3000.0,
-        categoryId: 'cat_transport',
-        merchant: 'Shell Fuel Station',
-        date: now.subtract(const Duration(days: 3)),
-        description: 'Petrol fill',
-        tags: ['Fuel'],
-        createdAt: now.subtract(const Duration(days: 3)),
-      ),
-    ];
-
-    final budgets = [
-      BudgetModel(id: 'b_1', categoryId: 'cat_food', monthlyLimit: 10000.0, monthYear: '${now.year}-${now.month.toString().padLeft(2, '0')}', spentAmount: 8000.0),
-      BudgetModel(id: 'b_2', categoryId: 'cat_shopping', monthlyLimit: 5000.0, monthYear: '${now.year}-${now.month.toString().padLeft(2, '0')}', spentAmount: 4500.0),
-      BudgetModel(id: 'b_3', categoryId: 'cat_transport', monthlyLimit: 4000.0, monthYear: '${now.year}-${now.month.toString().padLeft(2, '0')}', spentAmount: 2800.0),
-    ];
-
-    final recurringPayments = [
-      RecurringPaymentModel(id: 'rec_1', title: 'SBI Card Bill', amount: 12450.0, frequency: PaymentFrequency.monthly, nextDueDate: DateTime(now.year, now.month, 25), categoryId: 'cat_bills', accountId: 'acc_sbi'),
-      RecurringPaymentModel(id: 'rec_2', title: 'Home Loan EMI', amount: 30000.0, frequency: PaymentFrequency.monthly, nextDueDate: DateTime(now.year, now.month, 28), categoryId: 'cat_housing', accountId: 'acc_hdfc'),
-      RecurringPaymentModel(id: 'rec_3', title: 'Mutual Fund SIP', amount: 8000.0, frequency: PaymentFrequency.monthly, nextDueDate: DateTime(now.year, now.month + 1, 1), categoryId: 'cat_investment', accountId: 'acc_hdfc'),
-    ];
-
-    final investments = [
-      InvestmentModel(
-        id: 'inv_1',
-        name: 'Nifty 50 Index Fund SIP',
-        type: InvestmentType.mutualFundSip,
-        investedAmount: 150000.0,
-        currentValue: 182500.0,
-        monthlySipAmount: 5000.0,
-        sipDay: 1,
-      ),
-      InvestmentModel(
-        id: 'inv_2',
-        name: 'Parag Parikh Flexi Cap SIP',
-        type: InvestmentType.mutualFundSip,
-        investedAmount: 90000.0,
-        currentValue: 112000.0,
-        monthlySipAmount: 3000.0,
-        sipDay: 5,
-      ),
-      InvestmentModel(
-        id: 'inv_3',
-        name: 'HDFC Bank Fixed Deposit',
-        type: InvestmentType.fixedDeposit,
-        investedAmount: 200000.0,
-        currentValue: 215000.0,
-      ),
-    ];
-
-    final goals = [
-      GoalModel(
-        id: 'goal_1',
-        name: 'Emergency Vault Buffer',
-        targetAmount: 200000.0,
-        currentSavedAmount: 150000.0,
-        targetDate: DateTime(now.year, now.month + 6, 1),
-        icon: 'shield',
-      ),
-      GoalModel(
-        id: 'goal_2',
-        name: 'MacBook Pro M4 Workstation',
-        targetAmount: 250000.0,
-        currentSavedAmount: 85000.0,
-        targetDate: DateTime(now.year, now.month + 4, 15),
-        icon: 'laptop',
-      ),
-    ];
-
+  /// Clean empty state — every user starts fresh with no data
+  static FinanceState _emptyState() {
     return FinanceState(
-      accounts: accounts,
-      categories: categories,
-      transactions: transactions,
-      creditCards: creditCards,
-      loans: loans,
-      budgets: budgets,
-      recurringPayments: recurringPayments,
-      investments: investments,
-      goals: goals,
+      accounts: [],
+      categories: _defaultCategories(),
+      transactions: [],
+      creditCards: [],
+      loans: [],
+      budgets: [],
+      recurringPayments: [],
+      investments: [],
+      goals: [],
     );
   }
 
@@ -440,13 +257,22 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       createdAt: DateTime.now(),
     );
 
-    // If credit card payment transfer
+    // Credit card outstanding management
     List<CreditCardModel> updatedCards = List.from(state.creditCards);
-    if (type == TransactionType.creditCardPayment && creditCardId != null) {
+    if (creditCardId != null) {
       final cardIdx = updatedCards.indexWhere((c) => c.id == creditCardId);
       if (cardIdx != -1) {
         final card = updatedCards[cardIdx];
-        final newOutstanding = (card.currentOutstanding - amount).clamp(0.0, card.creditLimit);
+        double newOutstanding = card.currentOutstanding;
+
+        if (type == TransactionType.creditCardPayment) {
+          // Payment reduces outstanding
+          newOutstanding = (card.currentOutstanding - amount).clamp(0.0, card.creditLimit);
+        } else if (type == TransactionType.expense) {
+          // Spending charges to card increases outstanding
+          newOutstanding = (card.currentOutstanding + amount).clamp(0.0, card.creditLimit);
+        }
+
         updatedCards[cardIdx] = CreditCardModel(
           id: card.id,
           name: card.name,
@@ -460,6 +286,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
         );
       }
     }
+
 
     // If loan payment transfer
     List<LoanModel> updatedLoans = List.from(state.loans);
@@ -685,31 +512,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
   }
 
   void clearForNewUser(String userId) {
-    final now = DateTime.now();
-    final defaultAccounts = [
-      AccountModel(
-        id: 'acc_primary_${userId.length > 8 ? userId.substring(0, 8) : userId}',
-        name: 'Primary Savings Account',
-        type: AccountType.savingsAccount,
-        openingBalance: 0.0,
-        calculatedBalance: 0.0,
-        createdAt: now,
-      ),
-
-    ];
-
-    state = FinanceState(
-      accounts: defaultAccounts,
-      categories: state.categories,
-      transactions: [],
-      creditCards: [],
-      loans: [],
-      budgets: [],
-      recurringPayments: [],
-      investments: [],
-      goals: [],
-      isBiometricEnabled: false,
-    );
+    state = _emptyState();
   }
 
   void deleteTransaction(String id) {

@@ -58,23 +58,24 @@ class NetWorthCard extends StatelessWidget {
                     color: Colors.white70,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
+                if (netWorth > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(LucideIcons.trendingUp, color: Colors.white, size: 14),
+                        SizedBox(width: 4),
+                        Text(
+                          'Growing',
+                          style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: const Row(
-                    children: [
-                      Icon(LucideIcons.trendingUp, color: Colors.white, size: 14),
-                      SizedBox(width: 4),
-                      Text(
-                        '+5.2%',
-                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 10),

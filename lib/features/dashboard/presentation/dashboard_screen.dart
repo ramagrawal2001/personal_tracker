@@ -113,7 +113,7 @@ class DashboardScreen extends ConsumerWidget {
               MoneySummaryCard(
                 bankBalance: financeState.totalLiquidBalance,
                 creditCardDue: financeState.totalCreditCardDebt,
-                upcomingEmis: financeState.totalLoanDebt > 0 ? 30000.0 : 0.0,
+                upcomingEmis: financeState.totalMonthlyEmi,
                 monthlyIncome: financeState.monthlyIncome,
                 monthlyExpenses: financeState.monthlyExpenses,
               ),

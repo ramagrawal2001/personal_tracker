@@ -8,20 +8,22 @@ import '../../auth/presentation/auth_repository.dart';
 
 
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool _biometricLock = true;
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _localNotifications = true;
   bool _cloudSync = false;
 
   @override
   Widget build(BuildContext context) {
+    final financeState = ref.watch(financeNotifierProvider);
+    final financeNotifier = ref.read(financeNotifierProvider.notifier);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.background,
@@ -66,12 +68,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              user != null ? user.email ?? 'Logged In User' : 'Local Guest Mode',
+                              user != null ? user.email ?? 'Logged In User' : 'Not Signed In',
                               style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              user != null ? 'Supabase Account Linked' : 'Offline / Encrypted Storage',
+                              user != null ? 'Supabase Account Linked' : 'Sign in to sync your data',
                               style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
                             ),
                           ],
@@ -84,9 +86,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           if (user != null) {
-                            ref.read(authNotifierProvider.notifier).signOut();
+                            await ref.read(authNotifierProvider.notifier).signOut();
+                            if (context.mounted) {
+                              context.go('/login');
+                            }
                           } else {
                             context.go('/login');
                           }
@@ -103,52 +108,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Text('Financial Engine Preferences', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             const SizedBox(height: 12),
 
-            Consumer(
-              builder: (context, ref, _) {
-                final financeState = ref.watch(financeNotifierProvider);
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Minimum Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  const Text('Reserved in Safe-to-Spend formula before spending recommendation', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [10000.0, 20000.0, 50000.0].map((amount) {
+                      final isSelected = financeState.emergencyBuffer == amount;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text('₹${amount.toInt()}'),
+                          selected: isSelected,
+                          selectedColor: AppColors.income.withValues(alpha: 0.2),
+                          onSelected: (val) {
+                            if (val) {
+                              financeNotifier.setEmergencyBuffer(amount);
+                            }
+                          },
+                        ),
+                      );
+                    }).toList(),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Minimum Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
-                      const Text('Reserved in Safe-to-Spend formula before spending recommendation', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [10000.0, 20000.0, 50000.0].map((amount) {
-                          final isSelected = financeState.emergencyBuffer == amount;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text('₹${amount.toInt()}'),
-                              selected: isSelected,
-                              selectedColor: AppColors.income.withValues(alpha: 0.2),
-                              onSelected: (val) {
-                                if (val) {
-                                  ref.read(financeNotifierProvider.notifier).setEmergencyBuffer(amount);
-                                }
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                ],
+              ),
             ),
             const SizedBox(height: 24),
 
             const Text('Security & Privacy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             const SizedBox(height: 12),
-
-
 
             Container(
               decoration: BoxDecoration(
@@ -161,10 +159,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SwitchListTile(
                     secondary: const Icon(LucideIcons.fingerprint, color: AppColors.primary),
                     title: const Text('App Lock & Biometrics', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Require Face ID / Fingerprint on open', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                    value: _biometricLock,
+                    subtitle: Text(
+                      financeState.isBiometricEnabled
+                          ? 'Enabled — Face ID / Fingerprint required on open'
+                          : 'Disabled — No biometric lock on open',
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    ),
+                    value: financeState.isBiometricEnabled,
                     activeColor: AppColors.primary,
-                    onChanged: (val) => setState(() => _biometricLock = val),
+                    onChanged: (val) => financeNotifier.toggleBiometric(val),
                   ),
                   const Divider(color: AppColors.border, height: 1),
                   SwitchListTile(
@@ -261,3 +264,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
+
