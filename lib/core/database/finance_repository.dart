@@ -33,10 +33,11 @@ class FinanceState {
     required this.goals,
     this.emergencyBuffer = 20000.0,
     this.currencySymbol = '₹',
-    this.isBiometricEnabled = true,
+    this.isBiometricEnabled = false,
     this.isRoundUpEnabled = true,
     this.isAutoBackupEnabled = true,
   });
+
 
 
 

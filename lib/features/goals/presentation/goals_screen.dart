@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/currency_formatter.dart';
-import 'add_goal_modal.dart';
+
 
 class GoalsScreen extends ConsumerWidget {
   const GoalsScreen({super.key});
@@ -27,10 +29,11 @@ class GoalsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.plus, color: AppColors.primary),
-            onPressed: () => AddGoalModal.show(context),
+            onPressed: () => context.push('/goals/add'),
           ),
           const SizedBox(width: 8),
         ],
+
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

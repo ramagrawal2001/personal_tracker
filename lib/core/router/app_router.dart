@@ -8,6 +8,8 @@ import '../../features/credit_cards/presentation/credit_cards_screen.dart';
 import '../../features/loans/presentation/loans_screen.dart';
 import '../../features/budgets/presentation/budgets_screen.dart';
 import '../../features/goals/presentation/goals_screen.dart';
+import '../../features/goals/presentation/add_goal_screen.dart';
+
 import '../../features/categories/presentation/categories_screen.dart';
 
 import '../../features/investments/presentation/investments_screen.dart';
@@ -19,6 +21,7 @@ import '../../features/net_worth/presentation/net_worth_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/ai_assistant/presentation/ai_assistant_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/profile_screen.dart';
 
 
 
@@ -75,6 +78,11 @@ final appRouter = GoRouter(
           path: '/goals',
           builder: (context, state) => const GoalsScreen(),
         ),
+        GoRoute(
+          path: '/goals/add',
+          builder: (context, state) => const AddGoalScreen(),
+        ),
+
 
         GoRoute(
           path: '/categories',
@@ -102,6 +110,11 @@ final appRouter = GoRouter(
           path: '/settings',
           builder: (context, state) => const SettingsScreen(),
         ),
+        GoRoute(
+          path: '/profile',
+          builder: (context, state) => const ProfileScreen(),
+        ),
+
         GoRoute(
           path: '/ai-assistant',
           builder: (context, state) => const AiAssistantScreen(),

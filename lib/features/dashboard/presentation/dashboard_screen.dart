@@ -6,8 +6,8 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
-import '../../auth/presentation/profile_modal.dart';
 import 'widgets/net_worth_card.dart';
+
 
 import 'widgets/safe_to_spend_card.dart';
 import 'widgets/money_summary_card.dart';
@@ -76,7 +76,7 @@ class DashboardScreen extends ConsumerWidget {
               ),
               child: const Icon(LucideIcons.user, color: AppColors.textPrimary, size: 18),
             ),
-            onPressed: () => ProfileModal.show(context),
+            onPressed: () => context.push('/profile'),
           ),
           const SizedBox(width: 8),
         ],

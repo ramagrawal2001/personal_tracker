@@ -46,6 +46,8 @@ dependencies:
   lucide_icons: ^0.257.0
   supabase_flutter: ^2.5.0
   crypto: ^3.0.3
+  local_auth: ^2.3.0
+
 
 
 

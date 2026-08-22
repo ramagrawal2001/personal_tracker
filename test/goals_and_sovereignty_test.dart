@@ -34,10 +34,10 @@ void main() {
     });
 
     test('Profile Feature Toggles (Biometrics, Round-ups, Auto-Backup)', () {
-      expect(notifier.state.isBiometricEnabled, isTrue);
-
-      notifier.toggleBiometric(false);
       expect(notifier.state.isBiometricEnabled, isFalse);
+
+      notifier.toggleBiometric(true);
+      expect(notifier.state.isBiometricEnabled, isTrue);
 
       notifier.toggleRoundUp(false);
       expect(notifier.state.isRoundUpEnabled, isFalse);
@@ -45,6 +45,7 @@ void main() {
       notifier.toggleAutoBackup(false);
       expect(notifier.state.isAutoBackupEnabled, isFalse);
     });
+
 
     test('100% Encrypted Local Database Backup & Restore', () {
       final stateData = {
