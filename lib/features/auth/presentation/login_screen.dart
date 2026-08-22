@@ -37,14 +37,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     final authNotifier = ref.read(authNotifierProvider.notifier);
-    final success = _isSignUp
+    _isSignUp
         ? await authNotifier.signUp(email, password)
         : await authNotifier.signIn(email, password);
 
-    if (success && mounted) {
+    if (mounted) {
       context.go('/');
     }
   }
+
 
 
   @override
