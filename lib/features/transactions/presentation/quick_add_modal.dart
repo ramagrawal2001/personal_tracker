@@ -53,21 +53,27 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
     final creditCards = financeState.creditCards;
     final loans = financeState.loans;
 
-    if (_selectedAccountId == null && accounts.isNotEmpty) {
-      _selectedAccountId = accounts.first.id;
+    final filteredCategories = categories
+        .where((c) => _selectedType == TransactionType.expense ? c.type == 'expense' : c.type == 'income')
+        .toList();
+
+    if (!accounts.any((a) => a.id == _selectedAccountId)) {
+      _selectedAccountId = accounts.isNotEmpty ? accounts.first.id : null;
     }
-    if (_selectedToAccountId == null && accounts.length > 1) {
-      _selectedToAccountId = accounts[1].id;
+    final filteredToAccounts = accounts.where((a) => a.id != _selectedAccountId).toList();
+    if (!filteredToAccounts.any((a) => a.id == _selectedToAccountId)) {
+      _selectedToAccountId = filteredToAccounts.isNotEmpty ? filteredToAccounts.first.id : null;
     }
-    if (_selectedCategoryId == null && categories.isNotEmpty) {
-      _selectedCategoryId = categories.first.id;
+    if (!filteredCategories.any((c) => c.id == _selectedCategoryId)) {
+      _selectedCategoryId = filteredCategories.isNotEmpty ? filteredCategories.first.id : null;
     }
-    if (_selectedCardId == null && creditCards.isNotEmpty) {
-      _selectedCardId = creditCards.first.id;
+    if (!creditCards.any((c) => c.id == _selectedCardId)) {
+      _selectedCardId = creditCards.isNotEmpty ? creditCards.first.id : null;
     }
-    if (_selectedLoanId == null && loans.isNotEmpty) {
-      _selectedLoanId = loans.first.id;
+    if (!loans.any((l) => l.id == _selectedLoanId)) {
+      _selectedLoanId = loans.isNotEmpty ? loans.first.id : null;
     }
+
 
     return Padding(
       padding: EdgeInsets.only(
@@ -162,7 +168,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               DropdownButtonFormField<String>(
                 value: _selectedToAccountId,
                 dropdownColor: AppColors.surface,
-                items: accounts.where((a) => a.id != _selectedAccountId).map((acc) {
+                items: filteredToAccounts.map((acc) {
                   return DropdownMenuItem(
                     value: acc.id,
                     child: Text('${acc.name} (${CurrencyFormatter.format(acc.calculatedBalance)})'),
@@ -213,9 +219,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               DropdownButtonFormField<String>(
                 value: _selectedCategoryId,
                 dropdownColor: AppColors.surface,
-                items: categories
-                    .where((c) => _selectedType == TransactionType.expense ? c.type == 'expense' : c.type == 'income')
-                    .map((cat) {
+                items: filteredCategories.map((cat) {
                   return DropdownMenuItem(
                     value: cat.id,
                     child: Text(cat.name),
@@ -224,6 +228,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 onChanged: (val) => setState(() => _selectedCategoryId = val),
               ),
               const SizedBox(height: 14),
+
 
               TextField(
                 controller: _merchantController,

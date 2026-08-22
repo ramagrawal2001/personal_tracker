@@ -125,9 +125,11 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
   @override
   Widget build(BuildContext context) {
     final accounts = ref.watch(financeNotifierProvider).accountsWithCalculatedBalances;
-    if (_selectedAccountId == null && accounts.isNotEmpty) {
-      _selectedAccountId = accounts.first.id;
+    if (!accounts.any((a) => a.id == _selectedAccountId)) {
+      _selectedAccountId = accounts.isNotEmpty ? accounts.first.id : null;
     }
+
+
 
     return Padding(
       padding: EdgeInsets.only(
