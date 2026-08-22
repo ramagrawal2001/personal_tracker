@@ -13,14 +13,18 @@ class CurrencyFormatter {
     decimalDigits: 2,
   );
 
-  /// Format double amount to Indian Rupee notation, e.g., ₹1,52,300
+  /// Format double amount to Indian Rupee notation, e.g., ₹1,52,300 or -₹22,34,430
   static String format(double amount, {bool showDecimals = false, String symbol = '₹'}) {
+    final absAmount = amount.abs();
     final formatter = showDecimals ? _inrDecimalFormatter : _inrFormatter;
-    if (symbol != '₹') {
-      return NumberFormat.currency(symbol: symbol, decimalDigits: showDecimals ? 2 : 0).format(amount);
+    final formattedAbs = formatter.format(absAmount);
+    
+    if (amount < 0) {
+      return '-$formattedAbs';
     }
-    return formatter.format(amount);
+    return formattedAbs;
   }
+
 
   /// Compact representation: 1.5L, 25K, 4.2M
   static String compact(double amount, {String symbol = '₹'}) {

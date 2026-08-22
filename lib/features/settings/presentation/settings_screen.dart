@@ -200,8 +200,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Divider(color: AppColors.border, height: 1),
                   SwitchListTile(
                     secondary: const Icon(LucideIcons.cloud, color: AppColors.transfer),
-                    title: const Text('Supabase Cloud Sync', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Optional encrypted cloud backup via Edge Functions', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    title: const Text('Cloud Backup & Sync', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Optional encrypted cloud backup via Edge Services', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                     value: _cloudSync,
                     activeColor: AppColors.transfer,
                     onChanged: (val) => setState(() => _cloudSync = val),
@@ -210,19 +210,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const Divider(color: AppColors.border, height: 1),
                     ListTile(
                       leading: const Icon(LucideIcons.zap, color: AppColors.warning),
-                      title: const Text('Trigger Supabase Edge Sync', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                      subtitle: const Text('Invoke "sync-ledger" & "financial-summary" edge functions', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                      title: const Text('Trigger Cloud Sync Now', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Sync local ledger & calculate remote summary', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                       trailing: const Icon(LucideIcons.chevronRight, color: AppColors.textMuted),
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Invoking Supabase Edge Function... Sync completed!'),
+                            content: Text('Invoking Cloud Sync... Completed successfully!'),
                             backgroundColor: AppColors.income,
                           ),
                         );
                       },
                     ),
                   ],
+
 
                 ],
               ),

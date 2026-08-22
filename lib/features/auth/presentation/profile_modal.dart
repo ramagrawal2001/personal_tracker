@@ -81,7 +81,7 @@ class ProfileModal extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          user != null ? 'Supabase Sync Active' : 'Offline Encrypted Storage',
+                          user != null ? 'Cloud Storage Sync Active' : 'Offline Encrypted Storage',
                           style: TextStyle(
                             color: user != null ? AppColors.income : AppColors.warning,
                             fontSize: 11,
@@ -126,13 +126,14 @@ class ProfileModal extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 icon: const Icon(LucideIcons.logIn, size: 18, color: Colors.white),
-                label: const Text('Sign In to Supabase', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                label: const Text('Sign In to Account', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                 onPressed: () {
                   Navigator.pop(context);
                   context.go('/login');
                 },
               ),
             ),
+
         ],
       ),
     );

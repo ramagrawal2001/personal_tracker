@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:personal_tracker/main.dart';
 
 void main() {
-  testWidgets('App initializes successfully', (WidgetTester tester) async {
+  testWidgets('App initializes successfully on Login Screen', (WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
         child: PersonalTrackerApp(),
       ),
     );
-    expect(find.text('FINANCIAL DASHBOARD'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('Personal Finance OS'), findsOneWidget);
   });
 }
