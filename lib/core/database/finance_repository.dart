@@ -684,7 +684,36 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     state = state.copyWith(currencySymbol: symbol);
   }
 
+  void clearForNewUser(String userId) {
+    final now = DateTime.now();
+    final defaultAccounts = [
+      AccountModel(
+        id: 'acc_primary_${userId.length > 8 ? userId.substring(0, 8) : userId}',
+        name: 'Primary Savings Account',
+        type: AccountType.savingsAccount,
+        openingBalance: 0.0,
+        calculatedBalance: 0.0,
+        createdAt: now,
+      ),
+
+    ];
+
+    state = FinanceState(
+      accounts: defaultAccounts,
+      categories: state.categories,
+      transactions: [],
+      creditCards: [],
+      loans: [],
+      budgets: [],
+      recurringPayments: [],
+      investments: [],
+      goals: [],
+      isBiometricEnabled: false,
+    );
+  }
+
   void deleteTransaction(String id) {
+
 
 
     state = state.copyWith(

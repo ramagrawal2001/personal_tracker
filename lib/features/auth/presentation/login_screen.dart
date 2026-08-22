@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/database/finance_repository.dart';
 import 'auth_repository.dart';
+
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -38,14 +40,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     final authNotifier = ref.read(authNotifierProvider.notifier);
-    _isSignUp
+    final isNew = _isSignUp;
+    final success = isNew
         ? await authNotifier.signUp(email, password)
         : await authNotifier.signIn(email, password);
+
+    if (success && isNew) {
+      final userId = ref.read(authNotifierProvider).user?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
+      ref.read(financeNotifierProvider.notifier).clearForNewUser(userId);
+    }
 
     if (mounted) {
       context.go('/');
     }
   }
+
 
 
 
