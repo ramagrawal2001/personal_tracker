@@ -1,0 +1,78 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../features/navigation/main_shell.dart';
+import '../../features/dashboard/presentation/dashboard_screen.dart';
+import '../../features/accounts/presentation/accounts_screen.dart';
+import '../../features/transactions/presentation/transactions_screen.dart';
+import '../../features/credit_cards/presentation/credit_cards_screen.dart';
+import '../../features/loans/presentation/loans_screen.dart';
+import '../../features/budgets/presentation/budgets_screen.dart';
+import '../../features/recurring/presentation/calendar_screen.dart';
+import '../../features/reports/presentation/reports_screen.dart';
+import '../../features/net_worth/presentation/net_worth_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/ai_assistant/presentation/ai_assistant_screen.dart';
+
+
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
+
+final appRouter = GoRouter(
+  navigatorKey: _rootNavigatorKey,
+  initialLocation: '/',
+  routes: [
+    ShellRoute(
+      navigatorKey: _shellNavigatorKey,
+      builder: (context, state, child) {
+        return MainShell(child: child);
+      },
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const DashboardScreen(),
+        ),
+        GoRoute(
+          path: '/transactions',
+          builder: (context, state) => const TransactionsScreen(),
+        ),
+        GoRoute(
+          path: '/accounts',
+          builder: (context, state) => const AccountsScreen(),
+        ),
+        GoRoute(
+          path: '/credit-cards',
+          builder: (context, state) => const CreditCardsScreen(),
+        ),
+        GoRoute(
+          path: '/loans',
+          builder: (context, state) => const LoansScreen(),
+        ),
+        GoRoute(
+          path: '/budgets',
+          builder: (context, state) => const BudgetsScreen(),
+        ),
+        GoRoute(
+          path: '/recurring',
+          builder: (context, state) => const CalendarScreen(),
+        ),
+        GoRoute(
+          path: '/reports',
+          builder: (context, state) => const ReportsScreen(),
+        ),
+        GoRoute(
+          path: '/net-worth',
+          builder: (context, state) => const NetWorthScreen(),
+        ),
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: '/ai-assistant',
+          builder: (context, state) => const AiAssistantScreen(),
+        ),
+
+      ],
+    ),
+  ],
+);
