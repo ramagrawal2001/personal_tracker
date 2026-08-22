@@ -1,4 +1,7 @@
-# Miscellaneous
+# Environment secrets
+.env
+
+
 *.class
 *.log
 *.pyc

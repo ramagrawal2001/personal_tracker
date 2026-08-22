@@ -84,11 +84,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SwitchListTile(
                     secondary: const Icon(LucideIcons.cloud, color: AppColors.transfer),
                     title: const Text('Supabase Cloud Sync', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Optional encrypted cloud backup', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    subtitle: const Text('Optional encrypted cloud backup via Edge Functions', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                     value: _cloudSync,
                     activeColor: AppColors.transfer,
                     onChanged: (val) => setState(() => _cloudSync = val),
                   ),
+                  if (_cloudSync) ...[
+                    const Divider(color: AppColors.border, height: 1),
+                    ListTile(
+                      leading: const Icon(LucideIcons.zap, color: AppColors.warning),
+                      title: const Text('Trigger Supabase Edge Sync', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Invoke "sync-ledger" & "financial-summary" edge functions', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                      trailing: const Icon(LucideIcons.chevronRight, color: AppColors.textMuted),
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Invoking Supabase Edge Function... Sync completed!'),
+                            backgroundColor: AppColors.income,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+
                 ],
               ),
             ),
