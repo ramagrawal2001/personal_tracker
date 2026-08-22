@@ -12,20 +12,20 @@ class EdgeFunctionResponse {
 class EdgeFunctionService {
   static SupabaseClient get _client => Supabase.instance.client;
 
-  /// Invoke Supabase Edge Function 'financial-summary'
+  /// Invoke Edge Function 'financial-summary'
   static Future<EdgeFunctionResponse> fetchFinancialSummary() async {
     try {
       final res = await _client.functions.invoke('financial-summary');
       if (res.status == 200) {
         return EdgeFunctionResponse(success: true, data: res.data as Map<String, dynamic>?);
       }
-      return EdgeFunctionResponse(success: false, error: 'Edge function returned status ${res.status}');
+      return EdgeFunctionResponse(success: false, error: 'Edge function status ${res.status}');
     } catch (e) {
       return EdgeFunctionResponse(success: false, error: e.toString());
     }
   }
 
-  /// Invoke Supabase Edge Function 'sync-ledger' with local payload
+  /// Invoke Edge Function 'sync-ledger' with local payload
   static Future<EdgeFunctionResponse> syncLedger(FinanceState state) async {
     try {
       final payload = {
@@ -50,7 +50,29 @@ class EdgeFunctionService {
       if (res.status == 200) {
         return EdgeFunctionResponse(success: true, data: res.data as Map<String, dynamic>?);
       }
-      return EdgeFunctionResponse(success: false, error: 'Edge function returned status ${res.status}');
+      return EdgeFunctionResponse(success: false, error: 'Edge function status ${res.status}');
+    } catch (e) {
+      return EdgeFunctionResponse(success: false, error: e.toString());
+    }
+  }
+
+  /// Invoke Edge Function 'sync-ledger' for a single offline transaction item
+  static Future<EdgeFunctionResponse> syncLedgerItem({
+    required String transactionId,
+    required double amount,
+    required String type,
+  }) async {
+    try {
+      final payload = {
+        'transaction_id': transactionId,
+        'amount': amount,
+        'type': type,
+      };
+      final res = await _client.functions.invoke('sync-ledger', body: payload);
+      if (res.status == 200) {
+        return EdgeFunctionResponse(success: true, data: res.data as Map<String, dynamic>?);
+      }
+      return EdgeFunctionResponse(success: false, error: 'Edge function status ${res.status}');
     } catch (e) {
       return EdgeFunctionResponse(success: false, error: e.toString());
     }

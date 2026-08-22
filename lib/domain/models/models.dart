@@ -79,6 +79,23 @@ class TransactionSplit {
   });
 }
 
+enum SyncStatus {
+  pending,
+  synced,
+  failed;
+
+  String get displayName {
+    switch (this) {
+      case SyncStatus.pending:
+        return 'Pending Sync (Offline)';
+      case SyncStatus.synced:
+        return 'Synced to Cloud';
+      case SyncStatus.failed:
+        return 'Sync Failed';
+    }
+  }
+}
+
 class TransactionModel {
   final String id;
   final String accountId;
@@ -95,6 +112,7 @@ class TransactionModel {
   final String? attachmentPath;
   final String? creditCardId;
   final String? loanId;
+  final SyncStatus syncStatus;
   final DateTime createdAt;
 
   TransactionModel({
@@ -113,9 +131,51 @@ class TransactionModel {
     this.attachmentPath,
     this.creditCardId,
     this.loanId,
+    this.syncStatus = SyncStatus.synced,
     required this.createdAt,
   });
+
+  TransactionModel copyWith({
+    String? id,
+    String? accountId,
+    String? toAccountId,
+    TransactionType? type,
+    double? amount,
+    String? categoryId,
+    String? merchant,
+    DateTime? date,
+    String? description,
+    String? notes,
+    List<String>? tags,
+    List<TransactionSplit>? splits,
+    String? attachmentPath,
+    String? creditCardId,
+    String? loanId,
+    SyncStatus? syncStatus,
+    DateTime? createdAt,
+  }) {
+    return TransactionModel(
+      id: id ?? this.id,
+      accountId: accountId ?? this.accountId,
+      toAccountId: toAccountId ?? this.toAccountId,
+      type: type ?? this.type,
+      amount: amount ?? this.amount,
+      categoryId: categoryId ?? this.categoryId,
+      merchant: merchant ?? this.merchant,
+      date: date ?? this.date,
+      description: description ?? this.description,
+      notes: notes ?? this.notes,
+      tags: tags ?? this.tags,
+      splits: splits ?? this.splits,
+      attachmentPath: attachmentPath ?? this.attachmentPath,
+      creditCardId: creditCardId ?? this.creditCardId,
+      loanId: loanId ?? this.loanId,
+      syncStatus: syncStatus ?? this.syncStatus,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
+
 
 
 class CreditCardModel {

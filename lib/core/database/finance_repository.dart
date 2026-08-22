@@ -380,6 +380,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     List<String> tags = const [],
     String? creditCardId,
     String? loanId,
+    bool isOnline = true,
   }) {
     final newTx = TransactionModel(
       id: _uuid.v4(),
@@ -395,6 +396,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       tags: tags,
       creditCardId: creditCardId,
       loanId: loanId,
+      syncStatus: isOnline ? SyncStatus.synced : SyncStatus.pending,
       createdAt: DateTime.now(),
     );
 
@@ -445,6 +447,17 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       transactions: [newTx, ...state.transactions],
       creditCards: updatedCards,
       loans: updatedLoans,
+    );
+  }
+
+  void markTransactionSynced(String id) {
+    state = state.copyWith(
+      transactions: state.transactions.map((t) {
+        if (t.id == id) {
+          return t.copyWith(syncStatus: SyncStatus.synced);
+        }
+        return t;
+      }).toList(),
     );
   }
 
