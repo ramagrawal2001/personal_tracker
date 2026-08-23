@@ -2,6 +2,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/supabase_service.dart';
 
+/// Convert Supabase / Dart exceptions into friendly one-liners.
+String _friendlyError(Object e) {
+  if (e is AuthApiException) {
+    switch (e.code) {
+      case 'invalid_credentials':  return 'Incorrect email or password.';
+      case 'user_not_found':       return 'No account found with this email.';
+      case 'email_not_confirmed':  return 'Email not verified. Check your inbox.';
+      case 'over_email_send_rate_limit':
+      case 'email_rate_limit_exceeded':
+        return 'Too many attempts. Please wait a minute and try again.';
+      case 'email_address_invalid':
+      case 'invalid_email':        return 'Please enter a valid email address.';
+      case 'weak_password':        return 'Password is too weak. Use at least 8 characters.';
+      case 'user_already_exists':
+      case 'email_exists':         return 'An account with this email already exists.';
+      default:
+        return e.message.isNotEmpty ? e.message : 'Authentication error. Please try again.';
+    }
+  }
+  final msg = e.toString();
+  // Strip "Exception: " prefix if present
+  if (msg.startsWith('Exception: ')) return msg.substring(11);
+  return 'Something went wrong. Please try again.';
+}
+
 class AuthState {
   final bool isAuthenticated;
   final User? user;
@@ -59,7 +84,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, errorMessage: 'Sign in failed');
       return false;
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      state = state.copyWith(isLoading: false, errorMessage: _friendlyError(e));
       return false;
     }
   }
@@ -82,7 +107,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, errorMessage: 'Sign up failed');
       return false;
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      state = state.copyWith(isLoading: false, errorMessage: _friendlyError(e));
       return false;
     }
   }

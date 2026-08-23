@@ -102,32 +102,40 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Manual back row (no AppBar to avoid double arrow)
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary, size: 20),
+                    SizedBox(width: 6),
+                    Text('Back', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                  ],
+                ),
               ),
-              child: Icon(
-                isReset ? LucideIcons.keyRound : LucideIcons.mailCheck,
-                color: AppColors.primary,
-                size: 32,
+              const SizedBox(height: 24),
+
+              // Header icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isReset ? LucideIcons.keyRound : LucideIcons.mailCheck,
+                  color: AppColors.primary,
+                  size: 32,
+                ),
               ),
-            ),
+
             const SizedBox(height: 20),
             Text(
               isReset ? 'Check Your Email' : 'Verify Your Email',
@@ -222,6 +230,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     ),
             ),
           ],
+          ),
         ),
       ),
     );
