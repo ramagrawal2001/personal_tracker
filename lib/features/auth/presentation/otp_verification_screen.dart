@@ -10,12 +10,15 @@ class OtpVerificationScreen extends StatefulWidget {
   final OtpPurpose purpose;
   /// Called when OTP is verified successfully
   final Future<void> Function() onVerified;
+  /// Set to false when embedded inside a screen that already has a back button
+  final bool showBack;
 
   const OtpVerificationScreen({
     super.key,
     required this.email,
     required this.purpose,
     required this.onVerified,
+    this.showBack = true,
   });
 
   @override
@@ -109,7 +112,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Manual back row (no AppBar to avoid double arrow)
-              GestureDetector(
+              if (widget.showBack) GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
@@ -120,7 +123,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              if (widget.showBack) const SizedBox(height: 24),
 
               // Header icon
               Container(

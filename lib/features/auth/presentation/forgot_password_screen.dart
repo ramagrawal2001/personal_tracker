@@ -104,6 +104,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           email: _emailCtrl.text.trim(),
           purpose: OtpPurpose.resetPassword,
           onVerified: _onOtpVerified,
+          showBack: false, // Parent Scaffold already has AppBar with back button
         );
       case _ForgotStep.newPassword:
         return _buildNewPasswordStep();
