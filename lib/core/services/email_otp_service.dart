@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// These emails always accept the listed OTP without an actual email being sent.
 const Map<String, String> _testOtps = {
   'test@aspyric.app'  : '123456',
+  'test2@aspyric.app' : '123456',
   'demo@aspyric.app'  : '000000',
   'admin@aspyric.app' : '111111',
   'qa@aspyric.app'    : '999999',

@@ -178,33 +178,210 @@ class TransactionModel {
 
 
 
-class CreditCardModel {
+// ── Card Type ─────────────────────────────────────────────────────────────────
+enum CardType {
+  credit,
+  debit,
+  prepaid,
+  store,
+  forex;
+
+  String get displayName {
+    switch (this) {
+      case CardType.credit:  return 'Credit Card';
+      case CardType.debit:   return 'Debit Card';
+      case CardType.prepaid: return 'Prepaid Card';
+      case CardType.store:   return 'Store Card';
+      case CardType.forex:   return 'Forex Card';
+    }
+  }
+
+  String get emoji {
+    switch (this) {
+      case CardType.credit:  return '💳';
+      case CardType.debit:   return '🏦';
+      case CardType.prepaid: return '🎫';
+      case CardType.store:   return '🛍️';
+      case CardType.forex:   return '✈️';
+    }
+  }
+}
+
+// ── Card Network ──────────────────────────────────────────────────────────────
+enum CardNetwork {
+  visa,
+  mastercard,
+  rupay,
+  amex,
+  diners,
+  other;
+
+  String get displayName {
+    switch (this) {
+      case CardNetwork.visa:       return 'Visa';
+      case CardNetwork.mastercard: return 'Mastercard';
+      case CardNetwork.rupay:      return 'RuPay';
+      case CardNetwork.amex:       return 'Amex';
+      case CardNetwork.diners:     return 'Diners Club';
+      case CardNetwork.other:      return 'Other';
+    }
+  }
+}
+
+// ── Card Color Preset ─────────────────────────────────────────────────────────
+enum CardColorPreset {
+  midnight,    // Deep navy/indigo
+  gold,        // Premium gold
+  rose,        // Pink gradient
+  emerald,     // Green gradient
+  slate,       // Dark grey
+  violet,      // Purple gradient
+  crimson,     // Red gradient
+  ocean;       // Teal/blue gradient
+
+  List<int> get gradientColors {
+    switch (this) {
+      case CardColorPreset.midnight: return [0xFF1A1A2E, 0xFF16213E, 0xFF0F3460];
+      case CardColorPreset.gold:     return [0xFF8B6914, 0xFFD4A017, 0xFFF5C842];
+      case CardColorPreset.rose:     return [0xFF6B1F3A, 0xFFA83261, 0xFFD45C8A];
+      case CardColorPreset.emerald:  return [0xFF0D4429, 0xFF1A6B45, 0xFF28A265];
+      case CardColorPreset.slate:    return [0xFF1E293B, 0xFF334155, 0xFF475569];
+      case CardColorPreset.violet:   return [0xFF2D1B69, 0xFF5B21B6, 0xFF7C3AED];
+      case CardColorPreset.crimson:  return [0xFF450A0A, 0xFF991B1B, 0xFFEF4444];
+      case CardColorPreset.ocean:    return [0xFF0C4A6E, 0xFF075985, 0xFF0EA5E9];
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case CardColorPreset.midnight: return 'Midnight';
+      case CardColorPreset.gold:     return 'Gold';
+      case CardColorPreset.rose:     return 'Rose';
+      case CardColorPreset.emerald:  return 'Emerald';
+      case CardColorPreset.slate:    return 'Slate';
+      case CardColorPreset.violet:   return 'Violet';
+      case CardColorPreset.crimson:  return 'Crimson';
+      case CardColorPreset.ocean:    return 'Ocean';
+    }
+  }
+}
+
+// ── CardModel — universal for all card types ──────────────────────────────────
+class CardModel {
   final String id;
-  final String name;
-  final String bank;
-  final String last4;
+  final CardType cardType;
+  final String name;            // e.g. "HDFC Regalia"
+  final String bank;            // e.g. "HDFC Bank"
+  final String last4;           // Last 4 digits
+  final CardNetwork network;
+  final String cardholderName;
+  final int? expiryMonth;
+  final int? expiryYear;
+  final CardColorPreset colorPreset;
+  final bool isVirtual;
+  final String? notes;          // PIN hint, portal URL, etc.
+
+  // Credit-card-specific fields (only relevant for CardType.credit)
   final double creditLimit;
   final double currentOutstanding;
   final int statementDay;
   final int dueDay;
   final String? linkedAccountId;
 
-  double get availableLimit => creditLimit - currentOutstanding;
-  double get utilizationPercentage => (currentOutstanding / creditLimit) * 100;
-  double get minimumDue => currentOutstanding * 0.05; // 5% minimum due estimation
+  // Prepaid / Forex balance
+  final double? balance;        // Current balance (prepaid / forex cards)
+  final String? currency;       // For forex cards (USD, EUR, etc.)
 
-  CreditCardModel({
+  double get availableLimit => creditLimit > 0 ? creditLimit - currentOutstanding : 0;
+  double get utilizationPercentage => creditLimit > 0 ? (currentOutstanding / creditLimit) * 100 : 0;
+  double get minimumDue => currentOutstanding * 0.05;
+
+  bool get isExpired {
+    if (expiryMonth == null || expiryYear == null) return false;
+    final now = DateTime.now();
+    final expiry = DateTime(expiryYear!, expiryMonth! + 1, 0);
+    return now.isAfter(expiry);
+  }
+
+  bool get expiresThisYear {
+    if (expiryYear == null) return false;
+    return expiryYear == DateTime.now().year;
+  }
+
+  String get expiryDisplay {
+    if (expiryMonth == null || expiryYear == null) return '——';
+    return '${expiryMonth!.toString().padLeft(2, '0')}/${expiryYear! % 100}';
+  }
+
+  CardModel({
     required this.id,
+    required this.cardType,
     required this.name,
     required this.bank,
     required this.last4,
-    required this.creditLimit,
-    required this.currentOutstanding,
-    required this.statementDay,
-    required this.dueDay,
+    this.network = CardNetwork.visa,
+    required this.cardholderName,
+    this.expiryMonth,
+    this.expiryYear,
+    this.colorPreset = CardColorPreset.midnight,
+    this.isVirtual = false,
+    this.notes,
+    this.creditLimit = 0,
+    this.currentOutstanding = 0,
+    this.statementDay = 1,
+    this.dueDay = 15,
     this.linkedAccountId,
+    this.balance,
+    this.currency,
   });
+
+  CardModel copyWith({
+    CardType? cardType,
+    String? name,
+    String? bank,
+    String? last4,
+    CardNetwork? network,
+    String? cardholderName,
+    int? expiryMonth,
+    int? expiryYear,
+    CardColorPreset? colorPreset,
+    bool? isVirtual,
+    String? notes,
+    double? creditLimit,
+    double? currentOutstanding,
+    int? statementDay,
+    int? dueDay,
+    String? linkedAccountId,
+    double? balance,
+    String? currency,
+  }) {
+    return CardModel(
+      id: id,
+      cardType: cardType ?? this.cardType,
+      name: name ?? this.name,
+      bank: bank ?? this.bank,
+      last4: last4 ?? this.last4,
+      network: network ?? this.network,
+      cardholderName: cardholderName ?? this.cardholderName,
+      expiryMonth: expiryMonth ?? this.expiryMonth,
+      expiryYear: expiryYear ?? this.expiryYear,
+      colorPreset: colorPreset ?? this.colorPreset,
+      isVirtual: isVirtual ?? this.isVirtual,
+      notes: notes ?? this.notes,
+      creditLimit: creditLimit ?? this.creditLimit,
+      currentOutstanding: currentOutstanding ?? this.currentOutstanding,
+      statementDay: statementDay ?? this.statementDay,
+      dueDay: dueDay ?? this.dueDay,
+      linkedAccountId: linkedAccountId ?? this.linkedAccountId,
+      balance: balance ?? this.balance,
+      currency: currency ?? this.currency,
+    );
+  }
 }
+
+/// Backward-compat alias so existing code using CreditCardModel still compiles
+typedef CreditCardModel = CardModel;
+
 
 class LoanModel {
   final String id;

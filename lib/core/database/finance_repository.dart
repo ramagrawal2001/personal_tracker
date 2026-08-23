@@ -273,17 +273,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
           newOutstanding = (card.currentOutstanding + amount).clamp(0.0, card.creditLimit);
         }
 
-        updatedCards[cardIdx] = CreditCardModel(
-          id: card.id,
-          name: card.name,
-          bank: card.bank,
-          last4: card.last4,
-          creditLimit: card.creditLimit,
-          currentOutstanding: newOutstanding,
-          statementDay: card.statementDay,
-          dueDay: card.dueDay,
-          linkedAccountId: card.linkedAccountId,
-        );
+        updatedCards[cardIdx] = card.copyWith(currentOutstanding: newOutstanding);
       }
     }
 
@@ -351,6 +341,54 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     );
   }
 
+  void addCard({
+    required CardType cardType,
+    required String name,
+    required String bank,
+    required String last4,
+    required String cardholderName,
+    CardNetwork network = CardNetwork.visa,
+    int? expiryMonth,
+    int? expiryYear,
+    CardColorPreset colorPreset = CardColorPreset.midnight,
+    bool isVirtual = false,
+    String? notes,
+    // Credit-card fields
+    double creditLimit = 0,
+    int statementDay = 1,
+    int dueDay = 15,
+    String? linkedAccountId,
+    // Prepaid / forex fields
+    double? balance,
+    String? currency,
+  }) {
+    final newCard = CardModel(
+      id: _uuid.v4(),
+      cardType: cardType,
+      name: name,
+      bank: bank,
+      last4: last4,
+      cardholderName: cardholderName,
+      network: network,
+      expiryMonth: expiryMonth,
+      expiryYear: expiryYear,
+      colorPreset: colorPreset,
+      isVirtual: isVirtual,
+      notes: notes,
+      creditLimit: creditLimit,
+      currentOutstanding: 0.0,
+      statementDay: statementDay,
+      dueDay: dueDay,
+      linkedAccountId: linkedAccountId,
+      balance: balance,
+      currency: currency,
+    );
+    state = state.copyWith(
+      creditCards: [...state.creditCards, newCard],
+    );
+  }
+
+  /// Backward-compat wrapper so existing calls compile
   void addCreditCard({
     required String name,
     required String bank,
@@ -358,20 +396,23 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     required double creditLimit,
     required int statementDay,
     required int dueDay,
+    String cardholderName = '',
   }) {
-    final newCard = CreditCardModel(
-      id: _uuid.v4(),
+    addCard(
+      cardType: CardType.credit,
       name: name,
       bank: bank,
       last4: last4,
+      cardholderName: cardholderName,
       creditLimit: creditLimit,
-      currentOutstanding: 0.0,
       statementDay: statementDay,
       dueDay: dueDay,
     );
+  }
 
+  void deleteCard(String cardId) {
     state = state.copyWith(
-      creditCards: [...state.creditCards, newCard],
+      creditCards: state.creditCards.where((c) => c.id != cardId).toList(),
     );
   }
 

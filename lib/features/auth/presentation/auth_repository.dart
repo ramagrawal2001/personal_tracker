@@ -2,6 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/supabase_service.dart';
 
+/// ── Demo / test account bypass ───────────────────────────────────────────────
+/// These credentials work offline without Supabase.
+/// Password for all test accounts: Aspyric@123
+const Map<String, String> _demoAccounts = {
+  'test@aspyric.app'  : 'Aspyric@123',
+  'demo@aspyric.app'  : 'Aspyric@123',
+  'admin@aspyric.app' : 'Aspyric@123',
+};
+
 /// Convert Supabase / Dart exceptions into friendly one-liners.
 String _friendlyError(Object e) {
   if (e is AuthApiException) {
@@ -70,6 +79,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> signIn(String email, String password) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
+    final normalised = email.trim().toLowerCase();
+
+    // ── Demo / test bypass ─────────────────────────────────────────────────
+    if (_demoAccounts[normalised] == password) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      state = state.copyWith(isAuthenticated: true, isLoading: false);
+      return true;
+    }
+    // ───────────────────────────────────────────────────────────────────────
+
     try {
       final response = await SupabaseService.client.auth.signInWithPassword(
         email: email,
