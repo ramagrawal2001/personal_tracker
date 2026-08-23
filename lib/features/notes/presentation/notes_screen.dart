@@ -89,9 +89,9 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Row(
                 children: [
-                  _TabChip('All', NotesView.all),
-                  _TabChip('Pinned', NotesView.pinned),
-                  _TabChip('Archived', NotesView.archived),
+                  _buildTabChip('All', NotesView.all),
+                  _buildTabChip('Pinned', NotesView.pinned),
+                  _buildTabChip('Archived', NotesView.archived),
                 ],
               ),
             ),
@@ -128,7 +128,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     );
   }
 
-  Widget _TabChip(String label, NotesView view) {
+  Widget _buildTabChip(String label, NotesView view) {
     final selected = _view == view;
     return Padding(
       padding: const EdgeInsets.only(right: 8),

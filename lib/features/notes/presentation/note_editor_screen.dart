@@ -37,7 +37,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   void dispose() {
     _titleCtrl.dispose();
     _bodyCtrl.dispose();
-    for (final c in _checkCtrl) c.dispose();
+    for (final c in _checkCtrl) { c.dispose(); }
     super.dispose();
   }
 

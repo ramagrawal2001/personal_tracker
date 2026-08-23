@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../transactions/presentation/quick_add_modal.dart';
 import '../import_export/presentation/csv_import_modal.dart';
@@ -21,8 +22,8 @@ class _MainShellState extends State<MainShell> {
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
     if (_activeModule == AppModule.notes) {
-    if (location == '/notes') { return 0; }
-    return 0;
+      if (location == '/notes') { return 0; }
+      return 0;
     }
     if (location == '/') return 0;
     if (location == '/transactions') return 1;
@@ -34,7 +35,7 @@ class _MainShellState extends State<MainShell> {
         location.startsWith('/reports') ||
         location.startsWith('/net-worth') ||
         location.startsWith('/settings') ||
-        location.startsWith('/more')) return 4;
+        location.startsWith('/more')) { return 4; }
     return 0;
   }
 
@@ -79,7 +80,7 @@ class _MainShellState extends State<MainShell> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Financial Modules', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  const Text('Financial Modules', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       IconButton(icon: const Icon(LucideIcons.x, color: AppColors.textMuted), onPressed: () => Navigator.pop(ctx)),
                     ],
                   ),
@@ -157,7 +158,7 @@ class _MainShellState extends State<MainShell> {
                 children: [
                   Expanded(
                     child: _ModuleSwitcherTab(
-                      label: 'Finance',
+                      label: AppLocalizations.of(context).home,
                       icon: LucideIcons.trendingUp,
                       selected: !isNotes,
                       onTap: () => _switchModule(AppModule.finance),
@@ -166,7 +167,7 @@ class _MainShellState extends State<MainShell> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _ModuleSwitcherTab(
-                      label: 'Notes',
+                      label: AppLocalizations.of(context).notes,
                       icon: LucideIcons.stickyNote,
                       selected: isNotes,
                       onTap: () => _switchModule(AppModule.notes),
@@ -219,8 +220,16 @@ class _MainShellState extends State<MainShell> {
                 selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                 unselectedLabelStyle: const TextStyle(fontSize: 12),
                 items: [
-                  const BottomNavigationBarItem(icon: Icon(LucideIcons.layoutDashboard), activeIcon: Icon(LucideIcons.layoutDashboard, color: AppColors.primary), label: 'Home'),
-                  const BottomNavigationBarItem(icon: Icon(LucideIcons.receipt), activeIcon: Icon(LucideIcons.receipt, color: AppColors.primary), label: 'Transactions'),
+                  BottomNavigationBarItem(
+                    icon: const Icon(LucideIcons.layoutDashboard),
+                    activeIcon: const Icon(LucideIcons.layoutDashboard, color: AppColors.primary),
+                    label: AppLocalizations.of(context).home,
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(LucideIcons.receipt),
+                    activeIcon: const Icon(LucideIcons.receipt, color: AppColors.primary),
+                    label: AppLocalizations.of(context).transactions,
+                  ),
                   BottomNavigationBarItem(
                     icon: Container(
                       padding: const EdgeInsets.all(10),
@@ -233,8 +242,16 @@ class _MainShellState extends State<MainShell> {
                     ),
                     label: '',
                   ),
-                  const BottomNavigationBarItem(icon: Icon(LucideIcons.wallet), activeIcon: Icon(LucideIcons.wallet, color: AppColors.primary), label: 'Accounts'),
-                  const BottomNavigationBarItem(icon: Icon(LucideIcons.grid), activeIcon: Icon(LucideIcons.grid, color: AppColors.primary), label: 'More'),
+                  BottomNavigationBarItem(
+                    icon: const Icon(LucideIcons.wallet),
+                    activeIcon: const Icon(LucideIcons.wallet, color: AppColors.primary),
+                    label: AppLocalizations.of(context).accounts,
+                  ),
+                  BottomNavigationBarItem(
+                    icon: const Icon(LucideIcons.grid),
+                    activeIcon: const Icon(LucideIcons.grid, color: AppColors.primary),
+                    label: AppLocalizations.of(context).more,
+                  ),
                 ],
               ),
             ),

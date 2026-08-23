@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/widgets/biometric_gate.dart';
 import '../../features/navigation/main_shell.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/accounts/presentation/accounts_screen.dart';
@@ -66,7 +67,9 @@ final appRouter = GoRouter(
     // ── Shell routes (main nav with Finance/Notes switcher) ───────────────
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
-      builder: (context, state, child) => MainShell(child: child),
+      builder: (context, state, child) => BiometricGate(
+        child: MainShell(child: child),
+      ),
       routes: [
         GoRoute(path: '/',             builder: (_, __) => const DashboardScreen()),
         GoRoute(path: '/transactions', builder: (_, __) => const TransactionsScreen()),
