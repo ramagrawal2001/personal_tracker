@@ -66,6 +66,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
 
 
+  void clearError() => state = state.copyWith(errorMessage: null);
+
   Future<bool> signIn(String email, String password) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {

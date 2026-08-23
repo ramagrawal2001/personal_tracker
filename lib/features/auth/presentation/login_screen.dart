@@ -18,6 +18,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
 
   bool _isSignUp = false;
   bool _showPass = false;
@@ -27,6 +28,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
@@ -45,8 +47,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   // ── Sign Up → OTP verify ───────────────────────────────────────────────────
   Future<void> _signUp() async {
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    if (name.isEmpty) {
+      _showError('Please enter your full name');
+      return;
+    }
     if (email.isEmpty || password.isEmpty) {
       _showError('Please enter your email and password');
       return;
@@ -166,6 +173,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ],
                         const SizedBox(height: 18),
 
+                        // Full Name — signup only
+                        if (_isSignUp) ...[
+                          TextField(
+                            controller: _nameController,
+                            textCapitalization: TextCapitalization.words,
+                            decoration: const InputDecoration(
+                              labelText: 'Full Name',
+                              prefixIcon: Icon(LucideIcons.user, size: 18),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                        ],
+
                         // Email
                         TextField(
                           controller: _emailController,
@@ -238,7 +258,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
                             ),
                             TextButton(
-                              onPressed: () => setState(() { _isSignUp = !_isSignUp; }),
+                              onPressed: () {
+                                // Clear error when toggling mode
+                                ref.read(authNotifierProvider.notifier).clearError();
+                                setState(() { _isSignUp = !_isSignUp; });
+                              },
                               child: Text(
                                 _isSignUp ? 'Sign In' : 'Register',
                                 style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
