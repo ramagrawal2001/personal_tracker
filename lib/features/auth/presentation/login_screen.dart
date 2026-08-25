@@ -106,26 +106,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           onVerified: () async {
             final authNotifier = ref.read(authNotifierProvider.notifier);
 
-            // 3. Authenticate / Register user in Supabase after successful Resend OTP verification
-            bool signedIn = false;
+            // 3. Authenticate / Register user & persist session after successful Resend OTP verification
             try {
-              final upOk = await authNotifier.signUp(email, password);
-              if (upOk && ref.read(authNotifierProvider).isAuthenticated) {
-                signedIn = true;
-              } else {
-                signedIn = await authNotifier.signIn(email, password);
+              final upOk = await authNotifier.signUp(email, password, name: name.isNotEmpty ? name : null);
+              if (!upOk || !ref.read(authNotifierProvider).isAuthenticated) {
+                final inOk = await authNotifier.signIn(email, password);
+                if (!inOk || !ref.read(authNotifierProvider).isAuthenticated) {
+                  await authNotifier.activateSession(email: email, name: name.isNotEmpty ? name : null);
+                }
               }
             } catch (_) {
-              signedIn = await authNotifier.signIn(email, password);
-            }
-
-            if (!signedIn) {
-              // If Supabase network is unavailable, activate demo session for the user
-              await authNotifier.signIn(email, password);
+              await authNotifier.activateSession(email: email, name: name.isNotEmpty ? name : null);
             }
 
             final userId = ref.read(authNotifierProvider).user?.id
-                ?? DateTime.now().millisecondsSinceEpoch.toString();
+                ?? 'user_${email.trim().toLowerCase().hashCode}';
             ref.read(financeNotifierProvider.notifier).clearForNewUser(userId);
 
             if (mounted) {

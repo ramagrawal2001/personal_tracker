@@ -12,8 +12,9 @@ void main() {
     await tester.pump();
     expect(find.text('Aspyric'), findsOneWidget);
 
-    // Pump timer to complete splash navigation
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    // Pump duration to complete splash navigation
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
     expect(find.text('Aspyric'), findsWidgets);
   });
 }

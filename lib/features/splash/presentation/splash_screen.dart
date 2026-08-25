@@ -34,17 +34,23 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     );
 
     _controller.forward();
+    _checkSessionAndNavigate();
+  }
 
-    // Auto-navigate after 2.0s delay
-    Timer(const Duration(milliseconds: 2200), () {
-      if (!mounted) return;
-      final authState = ref.read(authNotifierProvider);
-      if (authState.isAuthenticated) {
-        context.go('/');
-      } else {
-        context.go('/login');
-      }
-    });
+  Future<void> _checkSessionAndNavigate() async {
+    // Wait for animations and ensure session state is restored from storage
+    await Future.wait([
+      Future.delayed(const Duration(milliseconds: 1800)),
+      ref.read(authNotifierProvider.notifier).ensureSessionRestored(),
+    ]);
+
+    if (!mounted) return;
+    final authState = ref.read(authNotifierProvider);
+    if (authState.isAuthenticated) {
+      context.go('/');
+    } else {
+      context.go('/login');
+    }
   }
 
   @override
