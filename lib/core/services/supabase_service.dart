@@ -19,8 +19,16 @@ class SupabaseService {
     }
   }
 
+  static bool get isInitialized => _isInitialized;
   static SupabaseClient get client => Supabase.instance.client;
-  static User? get currentUser => _isInitialized ? client.auth.currentUser : null;
+  static User? get currentUser {
+    if (!_isInitialized) return null;
+    try {
+      return client.auth.currentUser;
+    } catch (_) {
+      return null;
+    }
+  }
 
 
   /// Sync local SQLite Finance state to Supabase PostgreSQL database

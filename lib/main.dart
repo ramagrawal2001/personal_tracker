@@ -10,8 +10,16 @@ import 'core/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseService.initialize();
-  await NotificationService.init();
+  try {
+    await SupabaseService.initialize();
+  } catch (e) {
+    debugPrint('Supabase initialization fallback: $e');
+  }
+  try {
+    await NotificationService.init();
+  } catch (e) {
+    debugPrint('Notification initialization fallback: $e');
+  }
 
   runApp(
     const ProviderScope(
