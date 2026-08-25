@@ -328,7 +328,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 TextField(
                   controller: amountCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: 'Amount (₹)', errorText: error, prefixIcon: const Icon(LucideIcons.indianRupee, size: 16)),
+                  decoration: InputDecoration(labelText: 'Amount (${CurrencyFormatter.symbol})', errorText: error, prefixIcon: const Icon(LucideIcons.indianRupee, size: 16)),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<PaymentFrequency>(

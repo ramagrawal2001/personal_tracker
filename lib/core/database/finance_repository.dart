@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../constants/app_constants.dart';
+import '../utils/currency_formatter.dart';
 import '../../domain/models/models.dart';
 import 'app_database.dart';
 import 'finance_mappers.dart';
@@ -363,6 +364,8 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
         isRoundUpEnabled: prefs.getBool(_kRoundUpEnabled) ?? false,
         isAutoBackupEnabled: prefs.getBool(_kAutoBackupEnabled) ?? false,
       );
+      // Push persisted symbol into the static formatter immediately.
+      CurrencyFormatter.updateSymbol(state.currencySymbol);
     } catch (e, st) {
       debugPrint('FinanceNotifier: failed to load persisted data: $e\n$st');
     }
@@ -882,6 +885,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
 
   void setCurrencySymbol(String symbol) {
     state = state.copyWith(currencySymbol: symbol);
+    CurrencyFormatter.updateSymbol(symbol);
     _savePref((prefs) => prefs.setString(_kCurrencySymbol, symbol));
   }
 
@@ -889,6 +893,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
   /// used when switching to a different signed-in user on the same device.
   void clearForNewUser(String userId) {
     state = _emptyState();
+    CurrencyFormatter.updateSymbol('₹'); // reset to default for the new user
     _fireAndForget(() async {
       await _db.wipeAllData();
       for (final cat in _defaultCategories()) {

@@ -186,11 +186,11 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 autofocus: !_isEditing,
                 style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                decoration: const InputDecoration(
-                  prefixText: '₹ ',
-                  prefixStyle: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.primary),
+                decoration: InputDecoration(
+                  prefixText: '${CurrencyFormatter.symbol} ',
+                  prefixStyle: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.primary),
                   hintText: '0',
-                  hintStyle: TextStyle(color: AppColors.textMuted),
+                  hintStyle: const TextStyle(color: AppColors.textMuted),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,

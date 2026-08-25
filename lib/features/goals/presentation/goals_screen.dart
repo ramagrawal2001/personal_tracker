@@ -219,9 +219,9 @@ class GoalsScreen extends ConsumerWidget {
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Deposit Amount (₹)',
-            prefixIcon: Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
+          decoration: InputDecoration(
+            labelText: 'Deposit Amount (${CurrencyFormatter.symbol})',
+            prefixIcon: const Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
           ),
         ),
         actions: [
@@ -275,7 +275,7 @@ class GoalsScreen extends ConsumerWidget {
                   controller: targetCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   style: const TextStyle(color: AppColors.textPrimary),
-                  decoration: InputDecoration(labelText: 'Target Amount (₹)', errorText: error),
+                  decoration: InputDecoration(labelText: 'Target Amount (${CurrencyFormatter.symbol})', errorText: error),
                 ),
                 const SizedBox(height: 12),
                 InkWell(

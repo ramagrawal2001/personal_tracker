@@ -313,7 +313,7 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
                 if (isCredit) ...[
                   const SizedBox(height: 12),
                   Row(children: [
-                    Expanded(child: TextField(controller: limitCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Credit Limit (₹)'))),
+                    Expanded(child: TextField(controller: limitCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Credit Limit (${CurrencyFormatter.symbol})'))),
                     const SizedBox(width: 12),
                     Expanded(child: TextField(controller: statementDayCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Statement Day'))),
                   ]),
@@ -1055,7 +1055,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                   if (_selectedType == CardType.credit) ...[
                     _field(
                       _limitCtrl,
-                      'Credit Limit (₹)',
+                    'Credit Limit (${CurrencyFormatter.symbol})',
                       hint: '100000',
                       icon: LucideIcons.trendingUp,
                       inputType: TextInputType.number,

@@ -174,7 +174,7 @@ class BudgetsScreen extends ConsumerWidget {
                 controller: limitCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Monthly Limit (₹)',
+                  labelText: 'Monthly Limit (${CurrencyFormatter.symbol})',
                   prefixIcon: const Icon(LucideIcons.indianRupee, size: 16),
                   errorText: error,
                 ),
@@ -243,7 +243,7 @@ class BudgetsScreen extends ConsumerWidget {
                 controller: limitCtrl,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
-                  labelText: 'Monthly Limit (₹)',
+                  labelText: 'Monthly Limit (${CurrencyFormatter.symbol})',
                   prefixIcon: const Icon(LucideIcons.indianRupee, size: 16),
                   errorText: error,
                 ),

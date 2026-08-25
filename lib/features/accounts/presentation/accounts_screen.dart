@@ -121,7 +121,7 @@ class AccountsScreen extends ConsumerWidget {
                   controller: openingCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   style: const TextStyle(color: AppColors.textPrimary),
-                  decoration: _dec('Opening Balance (₹)', LucideIcons.indianRupee).copyWith(errorText: error),
+                  decoration: _dec('Opening Balance (${CurrencyFormatter.symbol})', LucideIcons.indianRupee).copyWith(errorText: error),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(width: double.infinity, child: ElevatedButton(

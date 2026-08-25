@@ -192,13 +192,13 @@ class LoansScreen extends ConsumerWidget {
               TextField(controller: providerCtrl, decoration: _dec('Bank / Provider', LucideIcons.building2)),
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: TextField(controller: principalCtrl, keyboardType: TextInputType.number, decoration: _dec('Principal (₹)', LucideIcons.indianRupee))),
+                Expanded(child: TextField(controller: principalCtrl, keyboardType: TextInputType.number, decoration: _dec('Principal (${CurrencyFormatter.symbol})', LucideIcons.indianRupee))),
                 const SizedBox(width: 12),
                 Expanded(child: TextField(controller: rateCtrl, keyboardType: TextInputType.number, decoration: _dec('Rate % p.a.', LucideIcons.percent))),
               ]),
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: TextField(controller: emiCtrl, keyboardType: TextInputType.number, decoration: _dec('Monthly EMI (₹)', LucideIcons.calendarClock))),
+                Expanded(child: TextField(controller: emiCtrl, keyboardType: TextInputType.number, decoration: _dec('Monthly EMI (${CurrencyFormatter.symbol})', LucideIcons.calendarClock))),
                 const SizedBox(width: 12),
                 Expanded(child: TextField(controller: tenureCtrl, keyboardType: TextInputType.number, decoration: _dec('Tenure (months)', LucideIcons.clock))),
               ]),
@@ -280,9 +280,9 @@ class LoansScreen extends ConsumerWidget {
               TextField(controller: providerCtrl, decoration: _dec('Bank / Provider', LucideIcons.building2)),
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: TextField(controller: outCtrl, keyboardType: TextInputType.number, decoration: _dec('Outstanding (₹)', LucideIcons.indianRupee))),
+                Expanded(child: TextField(controller: outCtrl, keyboardType: TextInputType.number, decoration: _dec('Outstanding (${CurrencyFormatter.symbol})', LucideIcons.indianRupee))),
                 const SizedBox(width: 12),
-                Expanded(child: TextField(controller: emiCtrl, keyboardType: TextInputType.number, decoration: _dec('Monthly EMI (₹)', LucideIcons.calendarClock))),
+                Expanded(child: TextField(controller: emiCtrl, keyboardType: TextInputType.number, decoration: _dec('Monthly EMI (${CurrencyFormatter.symbol})', LucideIcons.calendarClock))),
               ]),
               const SizedBox(height: 12),
               TextField(controller: dueDayCtrl, keyboardType: TextInputType.number, decoration: _dec('Due Day (1-31)', LucideIcons.calendarClock)),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
@@ -83,9 +84,9 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                       child: TextField(
                         controller: _targetController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(
-                          labelText: 'Target Amount (₹)',
-                          prefixIcon: Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
+                        decoration: InputDecoration(
+                          labelText: 'Target Amount (${CurrencyFormatter.symbol})',
+                          prefixIcon: const Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
                         ),
                       ),
                     ),
@@ -94,9 +95,9 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                       child: TextField(
                         controller: _savedController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(
-                          labelText: 'Already Saved (₹)',
-                          prefixIcon: Icon(LucideIcons.wallet, color: AppColors.warning, size: 18),
+                        decoration: InputDecoration(
+                          labelText: 'Already Saved (${CurrencyFormatter.symbol})',
+                          prefixIcon: const Icon(LucideIcons.wallet, color: AppColors.warning, size: 18),
                         ),
                       ),
                     ),

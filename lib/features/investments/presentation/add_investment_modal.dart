@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/database/finance_repository.dart';
 
 class AddInvestmentModal extends ConsumerStatefulWidget {
@@ -114,9 +115,9 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                   child: TextField(
                     controller: _investedController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Invested (₹)',
-                      prefixText: '₹ ',
+                    decoration: InputDecoration(
+                      labelText: 'Invested (${CurrencyFormatter.symbol})',
+                      prefixText: '${CurrencyFormatter.symbol} ',
                     ),
                   ),
                 ),
@@ -125,9 +126,9 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                   child: TextField(
                     controller: _currentValController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Current Value (₹)',
-                      prefixText: '₹ ',
+                    decoration: InputDecoration(
+                      labelText: 'Current Value (${CurrencyFormatter.symbol})',
+                      prefixText: '${CurrencyFormatter.symbol} ',
                     ),
                   ),
                 ),
@@ -140,9 +141,9 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                   child: TextField(
                     controller: _sipController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Monthly SIP (₹) (Optional)',
-                      prefixText: '₹ ',
+                    decoration: InputDecoration(
+                      labelText: 'Monthly SIP (${CurrencyFormatter.symbol}) (Optional)',
+                      prefixText: '${CurrencyFormatter.symbol} ',
                     ),
                   ),
                 ),

@@ -191,12 +191,12 @@ class InvestmentsScreen extends ConsumerWidget {
                 TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Investment Name', prefixIcon: Icon(LucideIcons.trendingUp, size: 16))),
                 const SizedBox(height: 12),
                 Row(children: [
-                  Expanded(child: TextField(controller: investedCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Invested (₹)', prefixIcon: Icon(LucideIcons.indianRupee, size: 16)))),
+                  Expanded(child: TextField(controller: investedCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Invested (${CurrencyFormatter.symbol})', prefixIcon: const Icon(LucideIcons.indianRupee, size: 16)))),
                   const SizedBox(width: 12),
-                  Expanded(child: TextField(controller: currentCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Current Value (₹)', prefixIcon: Icon(LucideIcons.indianRupee, size: 16)))),
+                  Expanded(child: TextField(controller: currentCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Current Value (${CurrencyFormatter.symbol})', prefixIcon: const Icon(LucideIcons.indianRupee, size: 16)))),
                 ]),
                 const SizedBox(height: 12),
-                TextField(controller: sipCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monthly SIP (₹)', prefixIcon: Icon(LucideIcons.repeat, size: 16))),
+                TextField(controller: sipCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Monthly SIP (${CurrencyFormatter.symbol})', prefixIcon: const Icon(LucideIcons.repeat, size: 16))),
                 if (error != null) ...[
                   const SizedBox(height: 8),
                   Text(error!, style: const TextStyle(color: AppColors.expense, fontSize: 12)),

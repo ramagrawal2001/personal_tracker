@@ -145,7 +145,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 18),
 
-          // ── Notifications ─────────────────────────────────────────────
+          // ── Currency & Region ─────────────────────────────────────────
+          const SectionLabel(label: 'Currency & Region'),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Currency Symbol', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _CurrencyChip('₹', 'INR', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip(r'$', 'USD', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('€', 'EUR', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('£', 'GBP', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('¥', 'JPY', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('₩', 'KRW', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('₺', 'TRY', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('₴', 'UAH', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('৳', 'BDT', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('₦', 'NGN', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('﷼', 'SAR', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('Fr', 'CHF', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('A\$', 'AUD', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('C\$', 'CAD', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('RM', 'MYR', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                    _CurrencyChip('฿', 'THB', financeState.currencySymbol, financeNotifier.setCurrencySymbol),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.eye, color: AppColors.textMuted, size: 14),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Preview: ${CurrencyFormatter.format(100000)} • ${CurrencyFormatter.format(25499.50, showDecimals: true)}',
+                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontFamily: 'monospace'),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // ── Notifications ──────────────────────────────────────────────
           const SectionLabel(label: 'Notifications'),
           AppCard(
             child: Column(
@@ -355,7 +412,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             autofocus: true,
             decoration: InputDecoration(
-              labelText: 'Amount (₹)',
+              labelText: 'Amount (${CurrencyFormatter.symbol})',
               errorText: error,
               prefixIcon: const Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 18),
             ),
@@ -426,6 +483,34 @@ class _LangChip extends StatelessWidget {
       side: BorderSide(color: selected ? AppColors.primary : AppColors.border),
       labelStyle: TextStyle(color: selected ? AppColors.primary : AppColors.textSecondary, fontWeight: selected ? FontWeight.bold : FontWeight.normal, fontSize: 13),
       onSelected: (_) => onSelect(locale),
+    );
+  }
+}
+
+class _CurrencyChip extends StatelessWidget {
+  final String symbol;
+  final String code;
+  final String current;
+  final void Function(String) onSelect;
+
+  const _CurrencyChip(this.symbol, this.code, this.current, this.onSelect);
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = current == symbol;
+    return ChoiceChip(
+      label: Text('$symbol  $code'),
+      selected: selected,
+      showCheckmark: false,
+      selectedColor: AppColors.primary.withValues(alpha: 0.2),
+      backgroundColor: AppColors.surfaceLight,
+      side: BorderSide(color: selected ? AppColors.primary : AppColors.border),
+      labelStyle: TextStyle(
+        color: selected ? AppColors.primary : AppColors.textSecondary,
+        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+        fontSize: 13,
+      ),
+      onSelected: (_) => onSelect(symbol),
     );
   }
 }

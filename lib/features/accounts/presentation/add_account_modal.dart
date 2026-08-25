@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/database/finance_repository.dart';
 
 class AddAccountModal extends ConsumerStatefulWidget {
@@ -135,10 +136,10 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
             TextField(
               controller: _openingBalanceController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Opening Balance (₹)',
+              decoration: InputDecoration(
+                labelText: 'Opening Balance (${CurrencyFormatter.symbol})',
                 hintText: '50000',
-                prefixText: '₹ ',
+                prefixText: '${CurrencyFormatter.symbol} ',
               ),
             ),
             const SizedBox(height: 24),
