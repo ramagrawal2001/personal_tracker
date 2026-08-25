@@ -48,29 +48,16 @@ final appRouter = GoRouter(
     GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
     GoRoute(path: '/privacy-policy',  builder: (_, __) => const PrivacyPolicyScreen()),
     GoRoute(path: '/terms',           builder: (_, __) => const TermsScreen()),
-    GoRoute(path: '/analytics',       builder: (_, __) => const AnalyticsScreen()),
     GoRoute(path: '/admin',           builder: (_, __) => const AdminScreen()),
-    GoRoute(path: '/profile',         builder: (_, __) => const ProfileScreen()),
-    GoRoute(path: '/notes',           builder: (_, __) => const NotesScreen()),
-    GoRoute(
-      path: '/notes/editor',
-      builder: (_, state) {
-        final note = state.extra as dynamic;
-        return NoteEditorScreen(note: note);
-      },
-    ),
-    GoRoute(path: '/ai-assistant',    builder: (_, __) => const AiAssistantScreen()),
-    GoRoute(path: '/settings',        builder: (_, __) => const SettingsScreen()),
-    GoRoute(path: '/net-worth',       builder: (_, __) => const NetWorthScreen()),
-    GoRoute(path: '/reports',         builder: (_, __) => const ReportsScreen()),
 
-    // ── Shell routes (main nav with Finance/Notes switcher) ───────────────
+    // ── Shell routes (all authenticated routes with Finance/Notes switcher) ─
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) => BiometricGate(
         child: MainShell(child: child),
       ),
       routes: [
+        // Finance
         GoRoute(path: '/',             builder: (_, __) => const DashboardScreen()),
         GoRoute(path: '/transactions', builder: (_, __) => const TransactionsScreen()),
         GoRoute(path: '/accounts',     builder: (_, __) => const AccountsScreen()),
@@ -82,6 +69,22 @@ final appRouter = GoRouter(
         GoRoute(path: '/categories',   builder: (_, __) => const CategoriesScreen()),
         GoRoute(path: '/investments',  builder: (_, __) => const InvestmentsScreen()),
         GoRoute(path: '/recurring',    builder: (_, __) => const CalendarScreen()),
+        GoRoute(path: '/net-worth',    builder: (_, __) => const NetWorthScreen()),
+        GoRoute(path: '/reports',      builder: (_, __) => const ReportsScreen()),
+        GoRoute(path: '/analytics',    builder: (_, __) => const AnalyticsScreen()),
+        GoRoute(path: '/settings',     builder: (_, __) => const SettingsScreen()),
+        GoRoute(path: '/profile',      builder: (_, __) => const ProfileScreen()),
+        // Notes module
+        GoRoute(path: '/notes',        builder: (_, __) => const NotesScreen()),
+        GoRoute(
+          path: '/notes/editor',
+          builder: (_, state) {
+            final note = state.extra as dynamic;
+            return NoteEditorScreen(note: note);
+          },
+        ),
+        // AI Assistant
+        GoRoute(path: '/ai-assistant', builder: (_, __) => const AiAssistantScreen()),
       ],
     ),
   ],

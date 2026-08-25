@@ -19,10 +19,14 @@ class LoansScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text(
-          'LOANS & EMIS',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-        ),
+        title: const Text('LOANS & EMIS', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.plus, color: AppColors.primary),
+            onPressed: () => _showAddLoanSheet(context, ref),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -89,22 +93,26 @@ class LoansScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            loan.name,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                          ),
+                          Expanded(child: Text(loan.name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary))),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.loan.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${loan.interestRate}% p.a.',
-                              style: const TextStyle(color: AppColors.loan, fontSize: 12, fontWeight: FontWeight.bold),
-                            ),
+                            decoration: BoxDecoration(color: AppColors.loan.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+                            child: Text('${loan.interestRate}% p.a.', style: const TextStyle(color: AppColors.loan, fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 4),
+                          PopupMenuButton<String>(
+                            icon: const Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
+                            color: AppColors.surface,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Edit', style: TextStyle(color: AppColors.textPrimary))])),
+                              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.expense))])),
+                            ],
+                            onSelected: (v) {
+                              if (v == 'edit') _showEditLoanSheet(context, ref, loan);
+                              if (v == 'delete') _confirmDeleteLoan(context, ref, loan);
+                            },
                           ),
                         ],
                       ),
@@ -189,4 +197,132 @@ class LoansScreen extends ConsumerWidget {
       ),
     );
   }
+
+  // ── Add Loan ────────────────────────────────────────────────────────────────
+  void _showAddLoanSheet(BuildContext context, WidgetRef ref) {
+    final nameCtrl = TextEditingController();
+    final providerCtrl = TextEditingController();
+    final principalCtrl = TextEditingController();
+    final rateCtrl = TextEditingController();
+    final emiCtrl = TextEditingController();
+    final tenureCtrl = TextEditingController();
+    int dueDay = 1;
+
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSt) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Add Loan / EMI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 20),
+                TextField(controller: nameCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Loan Name', LucideIcons.landmark)),
+                const SizedBox(height: 12),
+                TextField(controller: providerCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Bank / Provider', LucideIcons.building2)),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: TextField(controller: principalCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Principal (₹)', LucideIcons.indianRupee))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: rateCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Rate % p.a.', LucideIcons.percent))),
+                ]),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: TextField(controller: emiCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Monthly EMI (₹)', LucideIcons.calendarClock))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: tenureCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Tenure (months)', LucideIcons.clock))),
+                ]),
+                const SizedBox(height: 24),
+                SizedBox(width: double.infinity, child: ElevatedButton(
+                  onPressed: () {
+                    final p = double.tryParse(principalCtrl.text) ?? 0;
+                    final r = double.tryParse(rateCtrl.text) ?? 0;
+                    final e = double.tryParse(emiCtrl.text) ?? 0;
+                    final t = int.tryParse(tenureCtrl.text) ?? 12;
+                    if (nameCtrl.text.trim().isEmpty || p == 0) return;
+                    ref.read(financeNotifierProvider.notifier).addLoan(
+                      name: nameCtrl.text.trim(), provider: providerCtrl.text.trim(),
+                      principalAmount: p, interestRate: r, monthlyEmi: e, dueDay: dueDay, tenureMonths: t,
+                    );
+                    Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  child: const Text('Add Loan', style: TextStyle(fontWeight: FontWeight.bold)),
+                )),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showEditLoanSheet(BuildContext context, WidgetRef ref, loan) {
+    final nameCtrl = TextEditingController(text: loan.name);
+    final outCtrl = TextEditingController(text: loan.outstandingAmount.toStringAsFixed(0));
+    final emiCtrl = TextEditingController(text: loan.monthlyEmi.toStringAsFixed(0));
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Edit Loan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const SizedBox(height: 20),
+            TextField(controller: nameCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Loan Name', LucideIcons.landmark)),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: TextField(controller: outCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Outstanding (₹)', LucideIcons.indianRupee))),
+              const SizedBox(width: 12),
+              Expanded(child: TextField(controller: emiCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Monthly EMI (₹)', LucideIcons.calendarClock))),
+            ]),
+            const SizedBox(height: 24),
+            SizedBox(width: double.infinity, child: ElevatedButton(
+              onPressed: () {
+                ref.read(financeNotifierProvider.notifier).updateLoan(loan.id,
+                  name: nameCtrl.text.trim(),
+                  outstandingAmount: double.tryParse(outCtrl.text),
+                  monthlyEmi: double.tryParse(emiCtrl.text),
+                );
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+            )),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteLoan(BuildContext context, WidgetRef ref, loan) {
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text('Delete Loan?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+      content: Text('Remove "${loan.name}" from your loans?', style: const TextStyle(color: AppColors.textSecondary)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+          onPressed: () { ref.read(financeNotifierProvider.notifier).deleteLoan(loan.id); Navigator.pop(ctx); },
+          child: const Text('Delete'),
+        ),
+      ],
+    ));
+  }
+
+  InputDecoration _dec(String label, IconData icon) => InputDecoration(
+    labelText: label, prefixIcon: Icon(icon, size: 16, color: AppColors.textMuted),
+    filled: true, fillColor: AppColors.surfaceLight,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+    labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+  );
 }

@@ -149,24 +149,26 @@ class InvestmentsScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: Text(
-                              inv.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 15),
-                            ),
-                          ),
+                          Expanded(child: Text(inv.name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 15))),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              inv.type.displayName,
-                              style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
+                            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                            child: Text(inv.type.displayName, style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                          const SizedBox(width: 4),
+                          PopupMenuButton<String>(
+                            icon: const Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
+                            color: AppColors.surface,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Update Value', style: TextStyle(color: AppColors.textPrimary))])),
+                              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Remove', style: TextStyle(color: AppColors.expense))])),
+                            ],
+                            onSelected: (v) {
+                              if (v == 'edit') _showEditInvestmentSheet(context, ref, inv);
+                              if (v == 'delete') _confirmDeleteInvestment(context, ref, inv);
+                            },
                           ),
                         ],
                       ),
@@ -219,4 +221,70 @@ class InvestmentsScreen extends ConsumerWidget {
       ),
     );
   }
+
+  void _showEditInvestmentSheet(BuildContext context, WidgetRef ref, inv) {
+    final nameCtrl = TextEditingController(text: inv.name);
+    final currentCtrl = TextEditingController(text: inv.currentValue.toStringAsFixed(0));
+    final sipCtrl = TextEditingController(text: inv.monthlySipAmount > 0 ? inv.monthlySipAmount.toStringAsFixed(0) : '');
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Update Investment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const SizedBox(height: 20),
+            TextField(controller: nameCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Investment Name', LucideIcons.trendingUp)),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: TextField(controller: currentCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Current Value (₹)', LucideIcons.indianRupee))),
+              const SizedBox(width: 12),
+              Expanded(child: TextField(controller: sipCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Monthly SIP (₹)', LucideIcons.repeat))),
+            ]),
+            const SizedBox(height: 24),
+            SizedBox(width: double.infinity, child: ElevatedButton(
+              onPressed: () {
+                ref.read(financeNotifierProvider.notifier).updateInvestment(inv.id,
+                  name: nameCtrl.text.trim(),
+                  currentValue: double.tryParse(currentCtrl.text),
+                  monthlySipAmount: double.tryParse(sipCtrl.text) ?? 0,
+                );
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+            )),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteInvestment(BuildContext context, WidgetRef ref, inv) {
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text('Remove Investment?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+      content: Text('Remove "${inv.name}" from your portfolio?', style: const TextStyle(color: AppColors.textSecondary)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+          onPressed: () { ref.read(financeNotifierProvider.notifier).deleteInvestment(inv.id); Navigator.pop(ctx); },
+          child: const Text('Remove'),
+        ),
+      ],
+    ));
+  }
+
+  InputDecoration _dec(String label, IconData icon) => InputDecoration(
+    labelText: label, prefixIcon: Icon(icon, size: 16, color: AppColors.textMuted),
+    filled: true, fillColor: AppColors.surfaceLight,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+    labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+  );
 }

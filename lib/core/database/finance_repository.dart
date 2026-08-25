@@ -557,11 +557,114 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
   }
 
   void deleteTransaction(String id) {
-
-
-
     state = state.copyWith(
       transactions: state.transactions.where((t) => t.id != id).toList(),
+    );
+  }
+
+  // ── Accounts ───────────────────────────────────────────────────────────────
+  void deleteAccount(String id) {
+    state = state.copyWith(
+      accounts: state.accounts.where((a) => a.id != id).toList(),
+    );
+  }
+
+  void updateAccount(String id, {String? name, String? bank, String? accountNumberLast4, double? openingBalance}) {
+    state = state.copyWith(
+      accounts: state.accounts.map((a) {
+        if (a.id != id) return a;
+        return a.copyWith(name: name, bank: bank, accountNumberLast4: accountNumberLast4, openingBalance: openingBalance);
+      }).toList(),
+    );
+  }
+
+  // ── Loans ──────────────────────────────────────────────────────────────────
+  void deleteLoan(String id) {
+    state = state.copyWith(loans: state.loans.where((l) => l.id != id).toList());
+  }
+
+  void updateLoan(String id, {String? name, String? provider, double? outstandingAmount, double? monthlyEmi, int? dueDay}) {
+    state = state.copyWith(
+      loans: state.loans.map((l) {
+        if (l.id != id) return l;
+        return LoanModel(
+          id: l.id,
+          name: name ?? l.name,
+          provider: provider ?? l.provider,
+          principalAmount: l.principalAmount,
+          outstandingAmount: outstandingAmount ?? l.outstandingAmount,
+          interestRate: l.interestRate,
+          monthlyEmi: monthlyEmi ?? l.monthlyEmi,
+          dueDay: dueDay ?? l.dueDay,
+          startDate: l.startDate,
+          remainingTenureMonths: l.remainingTenureMonths,
+        );
+      }).toList(),
+    );
+  }
+
+  // ── Budgets ────────────────────────────────────────────────────────────────
+  void deleteBudget(String id) {
+    state = state.copyWith(budgets: state.budgets.where((b) => b.id != id).toList());
+  }
+
+  void updateBudget(String id, {double? limitAmount, String? categoryId}) {
+    state = state.copyWith(
+      budgets: state.budgets.map((b) {
+        if (b.id != id) return b;
+        return BudgetModel(
+          id: b.id,
+          categoryId: categoryId ?? b.categoryId,
+          monthlyLimit: limitAmount ?? b.monthlyLimit,
+          monthYear: b.monthYear,
+          spentAmount: b.spentAmount,
+        );
+      }).toList(),
+    );
+  }
+
+  // ── Investments ────────────────────────────────────────────────────────────
+  void deleteInvestment(String id) {
+    state = state.copyWith(investments: state.investments.where((i) => i.id != id).toList());
+  }
+
+  void updateInvestment(String id, {String? name, double? currentValue, double? investedAmount, double? monthlySipAmount}) {
+    state = state.copyWith(
+      investments: state.investments.map((inv) {
+        if (inv.id != id) return inv;
+        return InvestmentModel(
+          id: inv.id,
+          name: name ?? inv.name,
+          type: inv.type,
+          investedAmount: investedAmount ?? inv.investedAmount,
+          currentValue: currentValue ?? inv.currentValue,
+          monthlySipAmount: monthlySipAmount ?? inv.monthlySipAmount,
+          sipDay: inv.sipDay,
+        );
+      }).toList(),
+    );
+  }
+
+  // ── Goals (update) ─────────────────────────────────────────────────────────
+  void updateGoal(String id, {String? name, double? targetAmount, DateTime? targetDate}) {
+    state = state.copyWith(
+      goals: state.goals.map((g) {
+        if (g.id != id) return g;
+        return g.copyWith(name: name, targetAmount: targetAmount, targetDate: targetDate);
+      }).toList(),
+    );
+  }
+
+  // ── Categories (update) ───────────────────────────────────────────────────
+  void updateCategory(String id, {String? name, String? icon, String? colorHex}) {
+    state = state.copyWith(
+      categories: state.categories.map((c) {
+        if (c.id != id) return c;
+        return CategoryModel(
+          id: c.id, name: name ?? c.name, type: c.type,
+          icon: icon ?? c.icon, colorHex: colorHex ?? c.colorHex, parentId: c.parentId,
+        );
+      }).toList(),
     );
   }
 }

@@ -83,8 +83,20 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   void _setColor(NoteColor color) {
     setState(() {
       _note = _note.copyWith(color: color);
-      
     });
+  }
+
+  /// Returns black or white depending on note background luminance
+  Color _textColor() {
+    final bg = _note.color.color;
+    final luminance = bg.computeLuminance();
+    return luminance > 0.3 ? const Color(0xFF1A1A2E) : Colors.white;
+  }
+
+  Color _hintColor() {
+    final bg = _note.color.color;
+    final luminance = bg.computeLuminance();
+    return luminance > 0.3 ? const Color(0x801A1A2E) : const Color(0x80FFFFFF);
   }
 
   @override
@@ -130,11 +142,17 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             TextField(
               controller: _titleCtrl,
               onChanged: (_) {},
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-              decoration: const InputDecoration(
+              cursorColor: _textColor(),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _textColor()),
+              decoration: InputDecoration(
                 hintText: 'Title',
-                hintStyle: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold, fontSize: 22),
+                hintStyle: TextStyle(color: _hintColor(), fontWeight: FontWeight.bold, fontSize: 22),
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: true,
+                fillColor: Colors.transparent,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
               ),
             ),
             if (_note.isChecklist) ...[
@@ -154,7 +172,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                       },
                       child: Icon(
                         isChecked ? LucideIcons.checkSquare : LucideIcons.square,
-                        color: isChecked ? AppColors.income : AppColors.textMuted,
+                        color: isChecked ? AppColors.income : _hintColor(),
                         size: 20,
                       ),
                     ),
@@ -163,19 +181,25 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                       child: TextField(
                         controller: _checkCtrl[i],
                         onChanged: (_) {},
+                        cursorColor: _textColor(),
                         style: TextStyle(
-                          color: AppColors.textPrimary,
+                          color: _textColor(),
                           decoration: isChecked ? TextDecoration.lineThrough : null,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'List item',
-                          hintStyle: TextStyle(color: AppColors.textMuted),
+                          hintStyle: TextStyle(color: _hintColor()),
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: true,
+                          fillColor: Colors.transparent,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(LucideIcons.x, size: 16, color: AppColors.textMuted),
+                      icon: Icon(LucideIcons.x, size: 16, color: _hintColor()),
                       onPressed: () {
                         setState(() {
                           _checkCtrl.removeAt(i);
@@ -189,22 +213,31 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                   ],
                 );
               }),
+              // ── Add item button — only visible in checklist mode ──
               TextButton.icon(
                 onPressed: _addCheckItem,
-                icon: const Icon(LucideIcons.plus, size: 16),
-                label: const Text('Add item'),
-                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+                icon: Icon(LucideIcons.plus, size: 16, color: _textColor()),
+                label: Text('Add item', style: TextStyle(color: _textColor())),
+                style: TextButton.styleFrom(foregroundColor: _textColor()),
               ),
             ] else
+              // ── Body text field — regular note mode ──
               TextField(
                 controller: _bodyCtrl,
                 onChanged: (_) {},
                 maxLines: null,
-                style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, height: 1.6),
-                decoration: const InputDecoration(
-                  hintText: 'Note…',
-                  hintStyle: TextStyle(color: AppColors.textMuted),
+                minLines: 8,
+                cursorColor: _textColor(),
+                style: TextStyle(color: _textColor(), fontSize: 16, height: 1.6),
+                decoration: InputDecoration(
+                  hintText: 'Start typing your note…',
+                  hintStyle: TextStyle(color: _hintColor()),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: true,
+                  fillColor: Colors.transparent,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 ),
               ),
           ],

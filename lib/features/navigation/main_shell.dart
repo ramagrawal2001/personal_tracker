@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:go_router/go_router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/l10n/app_localizations.dart';
@@ -21,10 +23,19 @@ class _MainShellState extends State<MainShell> {
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
-    if (_activeModule == AppModule.notes) {
-      if (location == '/notes') { return 0; }
-      return 0;
+
+    // Auto-switch module based on path
+    if (location.startsWith('/notes') && _activeModule != AppModule.notes) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _activeModule = AppModule.notes);
+      });
+    } else if (!location.startsWith('/notes') && !location.startsWith('/ai-assistant')
+        && _activeModule == AppModule.notes && !location.startsWith('/notes')) {
+      // stay — handled by _switchModule
     }
+
+    if (_activeModule == AppModule.notes) return 0;
+
     if (location == '/') return 0;
     if (location == '/transactions') return 1;
     if (location == '/accounts') return 3;
@@ -34,7 +45,10 @@ class _MainShellState extends State<MainShell> {
         location.startsWith('/recurring') ||
         location.startsWith('/reports') ||
         location.startsWith('/net-worth') ||
+        location.startsWith('/analytics') ||
         location.startsWith('/settings') ||
+        location.startsWith('/profile') ||
+        location.startsWith('/ai-assistant') ||
         location.startsWith('/more')) { return 4; }
     return 0;
   }
@@ -93,7 +107,7 @@ class _MainShellState extends State<MainShell> {
                     childAspectRatio: 1.2,
                     physics: const NeverScrollableScrollPhysics(),
                     children: [
-                      _buildMenuItem(ctx, 'Credit Cards', LucideIcons.creditCard, AppColors.creditCard, () { Navigator.pop(ctx); context.go('/credit-cards'); }),
+                      _buildMenuItem(ctx, 'Cards Vault', LucideIcons.creditCard, AppColors.creditCard, () { Navigator.pop(ctx); context.go('/credit-cards'); }),
                       _buildMenuItem(ctx, 'Loans & EMI', LucideIcons.landmark, AppColors.loan, () { Navigator.pop(ctx); context.go('/loans'); }),
                       _buildMenuItem(ctx, 'Budgets', LucideIcons.pieChart, AppColors.warning, () { Navigator.pop(ctx); context.go('/budgets'); }),
                       _buildMenuItem(ctx, 'Savings Goals', LucideIcons.target, AppColors.income, () { Navigator.pop(ctx); context.go('/goals'); }),
@@ -144,6 +158,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final selectedIndex = _calculateSelectedIndex(context);
     final isNotes = _activeModule == AppModule.notes;
+    final location = GoRouterState.of(context).uri.path;
 
     return Scaffold(
       body: Column(
@@ -182,79 +197,83 @@ class _MainShellState extends State<MainShell> {
           Expanded(child: widget.child),
         ],
       ),
-      // ── Bottom Nav ───────────────────────────────────────────────────────
-      bottomNavigationBar: isNotes
-          ? Container(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+      // ── Bottom Nav ──────────────────────────────────────────
+      bottomNavigationBar: _buildBottomNav(context, selectedIndex, isNotes, location),
+    );
+  }
+
+  Widget? _buildBottomNav(BuildContext context, int selectedIndex, bool isNotes, String location) {
+    if (location == '/notes/editor') return null;
+    if (location.startsWith('/settings') || location.startsWith('/profile') ||
+        location.startsWith('/analytics') || location.startsWith('/ai-assistant')) return null;
+
+    if (isNotes) {
+      return Container(
+        decoration: const BoxDecoration(color: AppColors.surface, border: Border(top: BorderSide(color: AppColors.border, width: 1))),
+        child: BottomNavigationBar(
+          currentIndex: 0,
+          onTap: (i) => _onItemTapped(i, context),
+          backgroundColor: AppColors.surface,
+          selectedItemColor: AppColors.primary,
+          unselectedItemColor: AppColors.textMuted,
+          type: BottomNavigationBarType.fixed,
+          showUnselectedLabels: true,
+          items: const [
+            BottomNavigationBarItem(icon: Icon(LucideIcons.stickyNote), label: 'All Notes'),
+            BottomNavigationBarItem(icon: Icon(LucideIcons.pin), label: 'Pinned'),
+            BottomNavigationBarItem(icon: Icon(LucideIcons.archive), label: 'Archive'),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      decoration: const BoxDecoration(color: AppColors.surface, border: Border(top: BorderSide(color: AppColors.border, width: 1))),
+      child: BottomNavigationBar(
+        currentIndex: selectedIndex,
+        onTap: (index) => _onItemTapped(index, context),
+        backgroundColor: AppColors.surface,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textMuted,
+        type: BottomNavigationBarType.fixed,
+        showUnselectedLabels: true,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
+        items: [
+          BottomNavigationBarItem(
+            icon: const Icon(LucideIcons.layoutDashboard),
+            activeIcon: const Icon(LucideIcons.layoutDashboard, color: AppColors.primary),
+            label: AppLocalizations.of(context).home,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(LucideIcons.receipt),
+            activeIcon: const Icon(LucideIcons.receipt, color: AppColors.primary),
+            label: AppLocalizations.of(context).transactions,
+          ),
+          BottomNavigationBarItem(
+            icon: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 4))],
               ),
-              child: BottomNavigationBar(
-                currentIndex: 0,
-                onTap: (i) => _onItemTapped(i, context),
-                backgroundColor: AppColors.surface,
-                selectedItemColor: AppColors.primary,
-                unselectedItemColor: AppColors.textMuted,
-                type: BottomNavigationBarType.fixed,
-                showUnselectedLabels: true,
-                items: const [
-                  BottomNavigationBarItem(icon: Icon(LucideIcons.stickyNote), label: 'All Notes'),
-                  BottomNavigationBarItem(icon: Icon(LucideIcons.pin), label: 'Pinned'),
-                  BottomNavigationBarItem(icon: Icon(LucideIcons.archive), label: 'Archive'),
-                ],
-              ),
-            )
-          : Container(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.border, width: 1)),
-              ),
-              child: BottomNavigationBar(
-                currentIndex: selectedIndex,
-                onTap: (index) => _onItemTapped(index, context),
-                backgroundColor: AppColors.surface,
-                selectedItemColor: AppColors.primary,
-                unselectedItemColor: AppColors.textMuted,
-                type: BottomNavigationBarType.fixed,
-                showUnselectedLabels: true,
-                selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                unselectedLabelStyle: const TextStyle(fontSize: 12),
-                items: [
-                  BottomNavigationBarItem(
-                    icon: const Icon(LucideIcons.layoutDashboard),
-                    activeIcon: const Icon(LucideIcons.layoutDashboard, color: AppColors.primary),
-                    label: AppLocalizations.of(context).home,
-                  ),
-                  BottomNavigationBarItem(
-                    icon: const Icon(LucideIcons.receipt),
-                    activeIcon: const Icon(LucideIcons.receipt, color: AppColors.primary),
-                    label: AppLocalizations.of(context).transactions,
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 10, offset: const Offset(0, 4))],
-                      ),
-                      child: const Icon(LucideIcons.plus, color: Colors.white, size: 22),
-                    ),
-                    label: '',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: const Icon(LucideIcons.wallet),
-                    activeIcon: const Icon(LucideIcons.wallet, color: AppColors.primary),
-                    label: AppLocalizations.of(context).accounts,
-                  ),
-                  BottomNavigationBarItem(
-                    icon: const Icon(LucideIcons.grid),
-                    activeIcon: const Icon(LucideIcons.grid, color: AppColors.primary),
-                    label: AppLocalizations.of(context).more,
-                  ),
-                ],
-              ),
+              child: const Icon(LucideIcons.plus, color: Colors.white, size: 22),
             ),
+            label: '',
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(LucideIcons.wallet),
+            activeIcon: const Icon(LucideIcons.wallet, color: AppColors.primary),
+            label: AppLocalizations.of(context).accounts,
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(LucideIcons.grid),
+            activeIcon: const Icon(LucideIcons.grid, color: AppColors.primary),
+            label: AppLocalizations.of(context).more,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -81,15 +81,23 @@ class BudgetsScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            cat.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16),
-                          ),
-                          Text(
-                            '${CurrencyFormatter.format(budget.spentAmount)} / ${CurrencyFormatter.format(budget.monthlyLimit)}',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: isWarning ? AppColors.expense : AppColors.textPrimary, fontSize: 14),
+                          Expanded(child: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16))),
+                          Text('${CurrencyFormatter.format(budget.spentAmount)} / ${CurrencyFormatter.format(budget.monthlyLimit)}',
+                            style: TextStyle(fontWeight: FontWeight.bold, color: isWarning ? AppColors.expense : AppColors.textPrimary, fontSize: 13)),
+                          const SizedBox(width: 4),
+                          PopupMenuButton<String>(
+                            icon: const Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
+                            color: AppColors.surface,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Edit Limit', style: TextStyle(color: AppColors.textPrimary))])),
+                              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.expense))])),
+                            ],
+                            onSelected: (v) {
+                              if (v == 'edit') _showEditBudgetSheet(context, ref, budget);
+                              if (v == 'delete') _confirmDeleteBudget(context, ref, budget);
+                            },
                           ),
                         ],
                       ),
@@ -126,5 +134,62 @@ class BudgetsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _showEditBudgetSheet(BuildContext context, WidgetRef ref, budget) {
+    final limitCtrl = TextEditingController(text: budget.monthlyLimit.toStringAsFixed(0));
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (_) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Edit Budget Limit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: limitCtrl, keyboardType: TextInputType.number,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Monthly Limit (₹)', prefixIcon: const Icon(LucideIcons.indianRupee, size: 16, color: AppColors.textMuted),
+                filled: true, fillColor: AppColors.surfaceLight,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
+                labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(width: double.infinity, child: ElevatedButton(
+              onPressed: () {
+                final limit = double.tryParse(limitCtrl.text);
+                if (limit != null) ref.read(financeNotifierProvider.notifier).updateBudget(budget.id, limitAmount: limit);
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              child: const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+            )),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteBudget(BuildContext context, WidgetRef ref, budget) {
+    showDialog(context: context, builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text('Delete Budget?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+      content: const Text('Remove this budget?', style: TextStyle(color: AppColors.textSecondary)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+          onPressed: () { ref.read(financeNotifierProvider.notifier).deleteBudget(budget.id); Navigator.pop(ctx); },
+          child: const Text('Delete'),
+        ),
+      ],
+    ));
   }
 }

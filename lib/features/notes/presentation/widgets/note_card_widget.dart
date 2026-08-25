@@ -3,6 +3,13 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../domain/models/note_model.dart';
 import '../../../../core/theme/app_colors.dart';
 
+/// Returns dark or light text colour based on background luminance
+Color _cardTextColor(Color bg) =>
+    bg.computeLuminance() > 0.3 ? const Color(0xFF1A1A2E) : Colors.white;
+
+Color _cardHintColor(Color bg) =>
+    bg.computeLuminance() > 0.3 ? const Color(0x801A1A2E) : const Color(0x80FFFFFF);
+
 class NoteCard extends StatelessWidget {
   final NoteModel note;
   final VoidCallback onTap;
@@ -21,12 +28,16 @@ class NoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bg = note.color.color;
+    final textColor = _cardTextColor(bg);
+    final hintColor = _cardHintColor(bg);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: note.color.color,
+          color: bg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: note.color.borderColor, width: 1.5),
         ),
@@ -40,9 +51,9 @@ class NoteCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       note.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: textColor,
                         fontSize: 15,
                       ),
                       maxLines: 2,
@@ -50,7 +61,7 @@ class NoteCard extends StatelessWidget {
                     ),
                   ),
                   if (note.isPinned)
-                    const Icon(LucideIcons.pin, size: 14, color: AppColors.primary),
+                    Icon(LucideIcons.pin, size: 14, color: textColor),
                 ],
               ),
               const SizedBox(height: 6),
@@ -64,7 +75,7 @@ class NoteCard extends StatelessWidget {
                     Icon(
                       item.isChecked ? LucideIcons.checkSquare : LucideIcons.square,
                       size: 14,
-                      color: item.isChecked ? AppColors.income : AppColors.textMuted,
+                      color: item.isChecked ? AppColors.income : hintColor,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -72,7 +83,7 @@ class NoteCard extends StatelessWidget {
                         item.text,
                         style: TextStyle(
                           fontSize: 13,
-                          color: item.isChecked ? AppColors.textMuted : AppColors.textPrimary,
+                          color: item.isChecked ? hintColor : textColor,
                           decoration: item.isChecked ? TextDecoration.lineThrough : null,
                         ),
                         maxLines: 1,
@@ -85,7 +96,7 @@ class NoteCard extends StatelessWidget {
             else if (note.body.isNotEmpty)
               Text(
                 note.body,
-                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 13, color: hintColor),
                 maxLines: 8,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -94,8 +105,8 @@ class NoteCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                _ActionBtn(icon: note.isPinned ? LucideIcons.pinOff : LucideIcons.pin, onTap: onPin),
-                _ActionBtn(icon: LucideIcons.archive, onTap: onArchive),
+                _ActionBtn(icon: note.isPinned ? LucideIcons.pinOff : LucideIcons.pin, onTap: onPin, color: textColor),
+                _ActionBtn(icon: LucideIcons.archive, onTap: onArchive, color: textColor),
                 _ActionBtn(icon: LucideIcons.trash2, onTap: onDelete, color: AppColors.expense),
               ],
             ),
