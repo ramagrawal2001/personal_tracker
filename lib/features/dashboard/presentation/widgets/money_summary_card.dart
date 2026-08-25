@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/widgets/app_card.dart';
 
 class MoneySummaryCard extends StatelessWidget {
   final double bankBalance;
@@ -23,18 +25,11 @@ class MoneySummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final double remainingIncome = monthlyIncome - monthlyExpenses;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildMetricCard(
                 'Bank Balance',
@@ -42,12 +37,14 @@ class MoneySummaryCard extends StatelessWidget {
                 LucideIcons.landmark,
                 AppColors.accent,
               ),
+              const SizedBox(width: 8),
               _buildMetricCard(
-                'Credit Card Due',
+                'Card Due',
                 CurrencyFormatter.format(creditCardDue),
                 LucideIcons.creditCard,
                 AppColors.creditCard,
               ),
+              const SizedBox(width: 8),
               _buildMetricCard(
                 'Upcoming EMIs',
                 CurrencyFormatter.format(upcomingEmis),
@@ -56,41 +53,42 @@ class MoneySummaryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.surfaceLight,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('THIS MONTH', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: AppColors.textMuted)),
+                    const Text('MONTHLY FLOW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textMuted)),
                     Text(
                       'Savings: ${CurrencyFormatter.format(remainingIncome > 0 ? remainingIncome : 0.0)}',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.income),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        const Icon(LucideIcons.arrowDownLeft, color: AppColors.income, size: 16),
+                        const Icon(LucideIcons.arrowDownLeft, color: AppColors.income, size: 15),
                         const SizedBox(width: 4),
-                        Text('Income: ${CurrencyFormatter.format(monthlyIncome)}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                        Text('In: ${CurrencyFormatter.format(monthlyIncome)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                       ],
                     ),
                     Row(
                       children: [
-                        const Icon(LucideIcons.arrowUpRight, color: AppColors.expense, size: 16),
+                        const Icon(LucideIcons.arrowUpRight, color: AppColors.expense, size: 15),
                         const SizedBox(width: 4),
-                        Text('Expenses: ${CurrencyFormatter.format(monthlyExpenses)}', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                        Text('Out: ${CurrencyFormatter.format(monthlyExpenses)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                       ],
                     ),
                   ],
@@ -106,21 +104,24 @@ class MoneySummaryCard extends StatelessWidget {
   Widget _buildMetricCard(String title, String amount, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 6),
-            Text(title, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: AppDecorations.iconBadge(color, circle: true),
+              child: Icon(icon, color: color, size: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(title, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
-            Text(amount, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(amount, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color), maxLines: 1, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),

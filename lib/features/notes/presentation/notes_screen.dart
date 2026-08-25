@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/notes_provider.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../domain/models/note_model.dart';
 import 'widgets/note_card_widget.dart';
 import 'note_editor_screen.dart';
@@ -53,13 +55,25 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     final totalCount = (_view == NotesView.archived ? state.archived : state.notes.where((n) => !n.isArchived)).length;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
         elevation: 0,
-        title: const Text('NOTES', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        scrolledUnderElevation: 0,
+        title: const Text(
+          'Notes & Scratchpad',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary, letterSpacing: -0.2),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(LucideIcons.plus, color: AppColors.primary),
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(LucideIcons.plus, color: AppColors.primary, size: 20),
+            ),
             onPressed: () => _openEditor(null),
           ),
           const SizedBox(width: 8),
@@ -67,29 +81,35 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       ),
       body: Column(
         children: [
-          // Search
+          // Search Bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: TextField(
               controller: _searchCtrl,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: 'Search notes…',
-                prefixIcon: const Icon(LucideIcons.search, color: AppColors.textMuted, size: 20),
+                hintText: 'Search notes & checklists…',
+                prefixIcon: const Icon(LucideIcons.search, color: AppColors.textMuted, size: 18),
                 suffixIcon: query.isNotEmpty
-                    ? IconButton(icon: const Icon(LucideIcons.x, size: 18, color: AppColors.textMuted), onPressed: () { _searchCtrl.clear(); setState(() {}); })
+                    ? IconButton(
+                        icon: const Icon(LucideIcons.x, size: 16, color: AppColors.textMuted),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() {});
+                        },
+                      )
                     : null,
               ),
             ),
           ),
-          // View tabs
+          // View filter tabs
           if (query.isEmpty)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(
                 children: [
-                  _buildTabChip('All', NotesView.all),
+                  _buildTabChip('All Notes', NotesView.all),
                   _buildTabChip('Pinned', NotesView.pinned),
                   _buildTabChip('Archived', NotesView.archived),
                 ],
@@ -98,20 +118,30 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           // Notes grid
           Expanded(
             child: totalCount == 0 && pinned.isEmpty
-                ? _EmptyState(view: _view, onAdd: () => _openEditor(null))
+                ? Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Center(
+                      child: EmptyState(
+                        icon: _view == NotesView.archived ? LucideIcons.archive : LucideIcons.stickyNote,
+                        title: _view == NotesView.archived ? 'No archived notes' : 'No notes yet',
+                        description: _view == NotesView.archived
+                            ? 'Archived notes will be stored here safely.'
+                            : 'Create financial checklists, PIN reminders, or shopping lists.',
+                        actionLabel: _view == NotesView.archived ? null : 'Create Note',
+                        onAction: _view == NotesView.archived ? null : () => _openEditor(null),
+                      ),
+                    ),
+                  )
                 : SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (pinned.isNotEmpty && query.isEmpty) ...[
-                          const Text('PINNED', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1)),
-                          const SizedBox(height: 10),
+                          const SectionLabel(label: 'Pinned'),
                           _NotesGrid(notes: pinned, notifier: notifier, onTap: _openEditor),
                           const SizedBox(height: 20),
-                          if (others.isNotEmpty)
-                            const Text('OTHERS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 1)),
-                          const SizedBox(height: 10),
+                          if (others.isNotEmpty) const SectionLabel(label: 'All Notes'),
                         ],
                         _NotesGrid(notes: others, notifier: notifier, onTap: _openEditor),
                       ],
@@ -132,14 +162,19 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     final selected = _view == view;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
+      child: FilterChip(
         label: Text(label),
         selected: selected,
+        showCheckmark: false,
+        onSelected: (_) => setState(() => _view = view),
         selectedColor: AppColors.primary.withValues(alpha: 0.2),
         backgroundColor: AppColors.surface,
         side: BorderSide(color: selected ? AppColors.primary : AppColors.border),
-        labelStyle: TextStyle(color: selected ? AppColors.primary : AppColors.textSecondary, fontWeight: selected ? FontWeight.bold : FontWeight.normal),
-        onSelected: (_) => setState(() => _view = view),
+        labelStyle: TextStyle(
+          color: selected ? AppColors.primary : AppColors.textSecondary,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+          fontSize: 13,
+        ),
       ),
     );
   }
@@ -174,38 +209,6 @@ class _NotesGrid extends StatelessWidget {
           onDelete: () => notifier.deleteNote(note.id),
         );
       },
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final NotesView view;
-  final VoidCallback onAdd;
-  const _EmptyState({required this.view, required this.onAdd});
-
-  @override
-  Widget build(BuildContext context) {
-    final isArchived = view == NotesView.archived;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(isArchived ? LucideIcons.archive : LucideIcons.stickyNote, size: 56, color: AppColors.textMuted),
-          const SizedBox(height: 16),
-          Text(isArchived ? 'No archived notes' : 'No notes yet', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 8),
-          Text(isArchived ? 'Notes you archive appear here' : 'Tap + to create your first note', style: const TextStyle(color: AppColors.textMuted)),
-          if (!isArchived) ...[
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(LucideIcons.plus, size: 18),
-              label: const Text('New Note'),
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

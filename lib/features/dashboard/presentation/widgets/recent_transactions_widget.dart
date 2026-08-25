@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_decorations.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/section_header.dart';
 import '../../../../domain/models/models.dart';
 
 class RecentTransactionsWidget extends StatelessWidget {
@@ -21,31 +24,19 @@ class RecentTransactionsWidget extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Recent Transactions',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-            ),
-            if (onViewAll != null)
-              TextButton(
-                onPressed: onViewAll,
-                child: const Text('See All', style: TextStyle(color: AppColors.primary, fontSize: 13)),
-              ),
-          ],
+        SectionHeader(
+          title: 'Recent Transactions',
+          actionLabel: onViewAll != null ? 'See All' : null,
+          onAction: onViewAll,
         ),
-        const SizedBox(height: 8),
         if (transactions.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: const Center(
-              child: Text('No transactions recorded yet', style: TextStyle(color: AppColors.textMuted)),
+          const AppCard(
+            padding: EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                'No transactions recorded yet',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+              ),
             ),
           )
         else
@@ -73,21 +64,13 @@ class RecentTransactionsWidget extends StatelessWidget {
                       ? LucideIcons.arrowRightLeft
                       : LucideIcons.arrowUpRight;
 
-              return Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                ),
+              return AppCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      decoration: AppDecorations.iconBadge(color),
                       child: Icon(icon, color: color, size: 18),
                     ),
                     const SizedBox(width: 12),
@@ -97,7 +80,7 @@ class RecentTransactionsWidget extends StatelessWidget {
                         children: [
                           Text(
                             tx.merchant ?? tx.description ?? tx.type.displayName,
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
+                            style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

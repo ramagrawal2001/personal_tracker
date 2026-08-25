@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/widgets/app_scaffold.dart';
 
 class ChatMessage {
   final String text;
@@ -60,13 +62,13 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     if (lower.contains('food') || lower.contains('swiggy') || lower.contains('groceries')) {
       final foodTx = financeState.transactions.where((t) => t.categoryId == 'cat_food' || t.categoryId == 'cat_groceries');
       final foodTotal = foodTx.fold(0.0, (sum, t) => sum + t.amount);
-      responseText = "You spent ${CurrencyFormatter.format(foodTotal > 0 ? foodTotal : 8540.0)} on food in August.\nThat's within your ₹10,000 monthly food budget buffer!";
+      responseText = "You spent ${CurrencyFormatter.format(foodTotal > 0 ? foodTotal : 8540.0)} on food this month.\nThat's within your monthly food budget buffer!";
     } else if (lower.contains('afford') || lower.contains('buy') || lower.contains('phone')) {
       final liquid = financeState.totalLiquidBalance;
       final upcoming = financeState.upcomingPaymentsTotal;
       final safe = financeState.safeToSpend;
 
-      responseText = "Current liquid balance: ${CurrencyFormatter.format(liquid)}\nUpcoming obligations: ${CurrencyFormatter.format(upcoming)}\nSafe to spend buffer: ${CurrencyFormatter.format(safe)}\n\nA ₹20,000 purchase is technically affordable, leaving a ₹${(safe - 20000 > 0 ? safe - 20000 : 4450).toStringAsFixed(0)} safe margin!";
+      responseText = "Current liquid balance: ${CurrencyFormatter.format(liquid)}\nUpcoming obligations: ${CurrencyFormatter.format(upcoming)}\nSafe to spend cushion: ${CurrencyFormatter.format(safe)}\n\nA ₹20,000 purchase is technically affordable, leaving a ₹${(safe - 20000 > 0 ? safe - 20000 : 4450).toStringAsFixed(0)} safe margin!";
     } else if (lower.contains('owe') || lower.contains('credit') || lower.contains('debt')) {
       final totalDebt = financeState.totalCreditCardDebt;
       final cards = financeState.creditCards;
@@ -76,7 +78,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     } else if (lower.contains('net worth') || lower.contains('assets')) {
       responseText = "Your current Net Worth is ${CurrencyFormatter.format(financeState.netWorth)}.\nTotal Assets: ${CurrencyFormatter.format(financeState.totalAssets)}\nTotal Liabilities: ${CurrencyFormatter.format(financeState.totalLiabilities)}";
     } else {
-      responseText = "Based on your August ledger:\n- Liquid Bank Balance: ${CurrencyFormatter.format(financeState.totalLiquidBalance)}\n- Monthly Income: ${CurrencyFormatter.format(financeState.monthlyIncome)}\n- Safe to Spend Cushion: ${CurrencyFormatter.format(financeState.safeToSpend)}";
+      responseText = "Based on your real-time ledger:\n- Liquid Bank Balance: ${CurrencyFormatter.format(financeState.totalLiquidBalance)}\n- Monthly Income: ${CurrencyFormatter.format(financeState.monthlyIncome)}\n- Safe to Spend Cushion: ${CurrencyFormatter.format(financeState.safeToSpend)}";
     }
 
     Future.delayed(const Duration(milliseconds: 300), () {
@@ -90,20 +92,27 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: const Row(
-          children: [
-            Icon(LucideIcons.bot, color: AppColors.primary, size: 22),
-            SizedBox(width: 8),
-            Text(
-              'AI FINANCIAL ASSISTANT',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+    return AppScaffold(
+      title: 'AI Financial Assistant',
+      showBackButton: true,
+      titleWidget: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: AppDecorations.iconBadge(AppColors.primary, circle: true),
+            child: const Icon(LucideIcons.bot, color: AppColors.primary, size: 18),
+          ),
+          const SizedBox(width: 10),
+          const Text(
+            'AI Financial Assistant',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.2,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -128,39 +137,18 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
-                return Align(
-                  alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: msg.isUser ? AppColors.primary : AppColors.surface,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(msg.isUser ? 16 : 4),
-                        bottomRight: Radius.circular(msg.isUser ? 4 : 16),
-                      ),
-                      border: Border.all(color: msg.isUser ? AppColors.primary : AppColors.border),
-                    ),
-                    child: Text(
-                      msg.text,
-                      style: TextStyle(
-                        color: msg.isUser ? Colors.white : AppColors.textPrimary,
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                );
+                if (msg.isUser) {
+                  return _buildUserBubble(msg);
+                } else {
+                  return _buildBotBubble(msg);
+                }
               },
             ),
           ),
 
           // Input Bar
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).viewInsets.bottom + 12),
             decoration: const BoxDecoration(
               color: AppColors.surface,
               border: Border(top: BorderSide(color: AppColors.border)),
@@ -171,17 +159,35 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                   child: TextField(
                     controller: _inputController,
                     onSubmitted: _handlePrompt,
-                    decoration: const InputDecoration(
-                      hintText: 'Ask financial assistant...',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
+                    decoration: InputDecoration(
+                      hintText: 'Ask financial assistant…',
+                      prefixIcon: const Icon(LucideIcons.sparkles, color: AppColors.primary, size: 18),
+                      filled: true,
+                      fillColor: AppColors.surfaceLight,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.border)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(LucideIcons.send, color: AppColors.primary),
-                  onPressed: () => _handlePrompt(_inputController.text),
+                const SizedBox(width: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: const Icon(LucideIcons.send, color: Colors.white, size: 18),
+                    onPressed: () => _handlePrompt(_inputController.text),
+                  ),
                 ),
               ],
             ),
@@ -191,12 +197,77 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     );
   }
 
+  Widget _buildUserBubble(ChatMessage msg) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(4),
+          ),
+        ),
+        child: Text(
+          msg.text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBotBubble(ChatMessage msg) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+        padding: const EdgeInsets.all(14),
+        decoration: AppDecorations.card(radius: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: AppDecorations.iconBadge(AppColors.primary, circle: true),
+              child: const Icon(LucideIcons.bot, color: AppColors.primary, size: 16),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                msg.text,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPromptChip(String prompt) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ActionChip(
-        label: Text(prompt, style: const TextStyle(fontSize: 12, color: AppColors.textPrimary)),
-        backgroundColor: AppColors.surfaceLight,
+        label: Text(
+          prompt,
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: AppColors.surface,
+        side: const BorderSide(color: AppColors.border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         onPressed: () => _handlePrompt(prompt),
       ),

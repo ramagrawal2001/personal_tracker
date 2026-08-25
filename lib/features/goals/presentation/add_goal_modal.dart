@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
 
@@ -39,19 +40,39 @@ class _AddGoalModalState extends ConsumerState<AddGoalModal> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         left: 20,
         right: 20,
-        top: 20,
+        top: 12,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Create Custom Savings Goal',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Create Goal Bucket',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                IconButton(
+                  icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
@@ -59,6 +80,7 @@ class _AddGoalModalState extends ConsumerState<AddGoalModal> {
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Goal Name (e.g. Emergency Vault, MacBook Pro)',
+                prefixIcon: Icon(LucideIcons.target, color: AppColors.primary, size: 18),
               ),
             ),
             const SizedBox(height: 14),
@@ -69,7 +91,10 @@ class _AddGoalModalState extends ConsumerState<AddGoalModal> {
                   child: TextField(
                     controller: _targetController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Target Amount (₹)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Target Amount (₹)',
+                      prefixIcon: Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -77,7 +102,10 @@ class _AddGoalModalState extends ConsumerState<AddGoalModal> {
                   child: TextField(
                     controller: _savedController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Already Saved (₹)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Already Saved (₹)',
+                      prefixIcon: Icon(LucideIcons.wallet, color: AppColors.warning, size: 18),
+                    ),
                   ),
                 ),
               ],
@@ -86,9 +114,16 @@ class _AddGoalModalState extends ConsumerState<AddGoalModal> {
 
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              height: 52,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                icon: const Icon(LucideIcons.check, size: 20),
+                label: const Text('Save Savings Goal', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 onPressed: _saveGoal,
-                child: const Text('Save Savings Goal'),
               ),
             ),
           ],
@@ -104,7 +139,7 @@ class _AddGoalModalState extends ConsumerState<AddGoalModal> {
 
     if (name.isEmpty || target <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid goal name and target amount')),
+        const SnackBar(content: Text('Please enter a valid goal name and target amount'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -118,7 +153,7 @@ class _AddGoalModalState extends ConsumerState<AddGoalModal> {
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Savings Goal created!'), backgroundColor: AppColors.income),
+      const SnackBar(content: Text('Savings Goal created!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
     );
   }
 }

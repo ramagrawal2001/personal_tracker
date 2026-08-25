@@ -20,12 +20,13 @@ String _friendlyError(Object e) {
       case 'email_not_confirmed':  return 'Email not verified. Check your inbox.';
       case 'over_email_send_rate_limit':
       case 'email_rate_limit_exceeded':
-        return 'Too many attempts. Please wait a minute and try again.';
+      case 'over_request_rate_limit':
+        return 'Too many attempts. If you already signed up, please tap Sign In with your password.';
       case 'email_address_invalid':
       case 'invalid_email':        return 'Please enter a valid email address.';
-      case 'weak_password':        return 'Password is too weak. Use at least 8 characters.';
+      case 'weak_password':        return 'Password is too weak. Use at least 6 characters.';
       case 'user_already_exists':
-      case 'email_exists':         return 'An account with this email already exists.';
+      case 'email_exists':         return 'An account with this email already exists. Please tap Sign In.';
       default:
         return e.message.isNotEmpty ? e.message : 'Authentication error. Please try again.';
     }

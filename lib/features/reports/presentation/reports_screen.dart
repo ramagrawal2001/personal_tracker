@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/widgets/app_scaffold.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/summary_card.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/empty_state.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -16,116 +23,188 @@ class ReportsScreen extends ConsumerWidget {
     final savings = income - expenses;
     final savingsRate = income > 0 ? (savings / income) * 100 : 0.0;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: const Text(
-          'FINANCIAL REPORTS',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Monthly Summary Card
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('AUGUST FINANCIAL SUMMARY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0, color: AppColors.textMuted)),
-                  const SizedBox(height: 12),
+    final now = DateTime.now();
+    final monthTxns = financeState.transactions.where((t) =>
+      t.type == TransactionType.expense &&
+      t.date.year == now.year &&
+      t.date.month == now.month
+    ).toList();
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildStat('Income', CurrencyFormatter.format(income), AppColors.income),
-                      _buildStat('Expenses', CurrencyFormatter.format(expenses), AppColors.expense),
-                      _buildStat('Savings Rate', '${savingsRate.toStringAsFixed(1)}%', AppColors.primary),
-                    ],
+    final Map<String, double> catSpend = {};
+    for (final t in monthTxns) {
+      final catId = t.categoryId ?? 'Other';
+      catSpend[catId] = (catSpend[catId] ?? 0) + t.amount;
+    }
+    final sortedCats = catSpend.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+
+    String getCatName(String id) {
+      final match = financeState.categories.where((c) => c.id == id);
+      if (match.isNotEmpty) return match.first.name;
+      if (id.startsWith('cat_')) {
+        return id.substring(4).replaceAll('_', ' ').toUpperCase();
+      }
+      return id;
+    }
+    final palette = [
+      AppColors.primary,
+      AppColors.warning,
+      AppColors.expense,
+      AppColors.accent,
+      AppColors.transfer,
+      AppColors.income,
+      AppColors.loan,
+    ];
+
+    return AppScaffold(
+      title: 'Financial Reports',
+      scrollable: true,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Monthly Summary Hero Card
+          SummaryCard(
+            label: 'Current Month Financial Summary',
+            value: CurrencyFormatter.format(savings > 0 ? savings : 0),
+            icon: LucideIcons.barChart3,
+            accentColor: AppColors.income,
+            gradient: true,
+            badge: '${savingsRate.toStringAsFixed(1)}% Savings Rate',
+            badgeColor: savingsRate >= 20 ? AppColors.income : AppColors.warning,
+            footer: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Total Income', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    const SizedBox(height: 2),
+                    Text(
+                      CurrencyFormatter.format(income),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.income),
+                    ),
+                  ],
+                ),
+                Container(height: 30, width: 1, color: AppColors.border),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Total Expenses', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    const SizedBox(height: 2),
+                    Text(
+                      CurrencyFormatter.format(expenses),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.expense),
+                    ),
+                  ],
+                ),
+                Container(height: 30, width: 1, color: AppColors.border),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text('Net Savings', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    const SizedBox(height: 2),
+                    Text(
+                      CurrencyFormatter.format(savings),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: savings >= 0 ? AppColors.primary : AppColors.expense,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          const SectionHeader(title: 'Expense Distribution'),
+
+          if (sortedCats.isEmpty)
+            const EmptyState(
+              icon: LucideIcons.pieChart,
+              title: 'No expenses recorded',
+              description: 'Log your daily expenses to see a categorized breakdown and visual analytics.',
+            )
+          else ...[
+            // FL Chart Pie Chart Card
+            AppCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: 200,
+                    child: PieChart(
+                      PieChartData(
+                        sectionsSpace: 3,
+                        centerSpaceRadius: 44,
+                        sections: sortedCats.asMap().entries.map((entry) {
+                          final i = entry.key;
+                          final e = entry.value;
+                          final color = palette[i % palette.length];
+                          final catName = getCatName(e.key);
+                          final pct = expenses > 0 ? (e.value / expenses * 100).toStringAsFixed(0) : '0';
+                          return PieChartSectionData(
+                            value: e.value,
+                            title: '$catName\n$pct%',
+                            color: color,
+                            radius: 44,
+                            titleStyle: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            const Text('Expense Distribution', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 16),
+            const SectionHeader(title: 'Top Expense Categories'),
 
-            // FL Chart Pie Chart
-            Container(
-              height: 220,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: PieChart(
-                PieChartData(
-                  sectionsSpace: 4,
-                  centerSpaceRadius: 45,
-                  sections: [
-                    PieChartSectionData(value: 8500, title: 'Food\n8.5k', color: AppColors.warning, radius: 45, titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
-                    PieChartSectionData(value: 7200, title: 'Shop\n7.2k', color: AppColors.expense, radius: 45, titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
-                    PieChartSectionData(value: 4800, title: 'Fuel\n4.8k', color: AppColors.accent, radius: 45, titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
-                    PieChartSectionData(value: 5200, title: 'Bills\n5.2k', color: AppColors.primary, radius: 45, titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
-                    PieChartSectionData(value: 30000, title: 'EMI\n30k', color: AppColors.loan, radius: 45, titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
-                  ],
+            ...sortedCats.asMap().entries.map((entry) {
+              final i = entry.key;
+              final e = entry.value;
+              final color = palette[i % palette.length];
+              final catName = getCatName(e.key);
+              final pct = expenses > 0 ? (e.value / expenses * 100).toStringAsFixed(1) : '0.0';
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: AppCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          catName,
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
+                        ),
+                      ),
+                      Text(
+                        '$pct%',
+                        style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        CurrencyFormatter.format(e.value),
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Category Breakdown Table
-            const Text('Top Categories', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 12),
-
-            _buildCategoryRow('Home Loan EMI', '₹30,000', AppColors.loan),
-            _buildCategoryRow('Food & Dining', '₹8,500', AppColors.warning),
-            _buildCategoryRow('Shopping', '₹7,200', AppColors.expense),
-            _buildCategoryRow('Bills & Utilities', '₹5,200', AppColors.primary),
-            _buildCategoryRow('Transport & Fuel', '₹4,800', AppColors.accent),
+              );
+            }),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStat(String title, String value, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-        const SizedBox(height: 2),
-        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-      ],
-    );
-  }
-
-  Widget _buildCategoryRow(String name, String amount, Color color) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 12),
-          Expanded(child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14))),
-          Text(amount, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14)),
         ],
       ),
     );

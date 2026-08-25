@@ -20,7 +20,6 @@ import '../../features/recurring/presentation/calendar_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/net_worth/presentation/net_worth_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
-import '../../features/ai_assistant/presentation/ai_assistant_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/profile_screen.dart';
 
@@ -83,8 +82,8 @@ final appRouter = GoRouter(
             return NoteEditorScreen(note: note);
           },
         ),
-        // AI Assistant
-        GoRoute(path: '/ai-assistant', builder: (_, __) => const AiAssistantScreen()),
+        // AI Assistant (temporarily disabled)
+        // GoRoute(path: '/ai-assistant', builder: (_, __) => const AiAssistantScreen()),
       ],
     ),
   ],

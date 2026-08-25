@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
@@ -44,29 +45,56 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         left: 20,
         right: 20,
-        top: 20,
+        top: 12,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Add New Account',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Add New Account',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                IconButton(
+                  icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Account Name (e.g. HDFC Salary Acc)'),
+              decoration: const InputDecoration(
+                labelText: 'Account Name (e.g. HDFC Salary Acc)',
+                prefixIcon: Icon(LucideIcons.wallet, size: 18),
+              ),
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<AccountType>(
               value: _selectedType,
               dropdownColor: AppColors.surface,
+              decoration: const InputDecoration(
+                labelText: 'Account Type',
+                prefixIcon: Icon(LucideIcons.landmark, size: 18),
+              ),
               items: AccountType.values.map((type) {
                 return DropdownMenuItem(
                   value: type,
@@ -83,7 +111,10 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
                 Expanded(
                   child: TextField(
                     controller: _bankController,
-                    decoration: const InputDecoration(labelText: 'Bank Name'),
+                    decoration: const InputDecoration(
+                      labelText: 'Bank Name',
+                      prefixIcon: Icon(LucideIcons.building, size: 18),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -107,14 +138,21 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
               decoration: const InputDecoration(
                 labelText: 'Opening Balance (₹)',
                 hintText: '50000',
+                prefixText: '₹ ',
               ),
             ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
+              height: 52,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
                 onPressed: _saveAccount,
-                child: const Text('Create Account'),
+                child: const Text('Create Account', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -130,7 +168,7 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an account name')),
+        const SnackBar(content: Text('Please enter an account name'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -145,7 +183,7 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Account created successfully!'), backgroundColor: AppColors.income),
+      const SnackBar(content: Text('Account created successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
     );
   }
 }

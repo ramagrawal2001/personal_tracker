@@ -118,6 +118,7 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
       SnackBar(
         content: Text('Successfully imported ${_previewRows.length} transactions!'),
         backgroundColor: AppColors.income,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -129,20 +130,29 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
       _selectedAccountId = accounts.isNotEmpty ? accounts.first.id : null;
     }
 
-
-
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         left: 20,
         right: 20,
-        top: 20,
+        top: 12,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -156,13 +166,20 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
             const Text('Destination Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: _selectedAccountId,
               dropdownColor: AppColors.surface,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                filled: true,
+                fillColor: AppColors.surfaceLight,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+              ),
               items: accounts.map((acc) {
                 return DropdownMenuItem(
                   value: acc.id,
@@ -182,13 +199,18 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
                 hintText: 'Date,Description,Amount\n22-08-2026,SWIGGY,780',
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
             SizedBox(
               width: double.infinity,
+              height: 48,
               child: OutlinedButton.icon(
-                icon: const Icon(LucideIcons.fileSpreadsheet, size: 18),
-                label: const Text('Parse & Preview Statement'),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.primary),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                icon: const Icon(LucideIcons.fileSpreadsheet, size: 18, color: AppColors.primary),
+                label: const Text('Parse & Preview Statement', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
                 onPressed: _parseCsv,
               ),
             ),
@@ -207,11 +229,12 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
                 itemBuilder: (context, index) {
                   final row = _previewRows[index];
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.all(10),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -220,12 +243,13 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(row.merchantName, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 13)),
+                            const SizedBox(height: 2),
                             Text('Auto Category: ${row.categoryId}', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
                           ],
                         ),
                         Text(
                           '- ${CurrencyFormatter.format(row.amount)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.expense, fontSize: 13),
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.expense, fontSize: 14),
                         ),
                       ],
                     ),
@@ -235,9 +259,15 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
+                height: 52,
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
                   onPressed: _importAll,
-                  child: Text('Import ${_previewRows.length} Transactions'),
+                  child: Text('Import ${_previewRows.length} Transactions', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

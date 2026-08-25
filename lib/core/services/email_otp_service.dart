@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/env_config.dart';
+
 /// ─── Test-account bypass map ────────────────────────────────────────────────
 /// These emails always accept the listed OTP without an actual email being sent.
 const Map<String, String> _testOtps = {
@@ -14,12 +16,10 @@ const Map<String, String> _testOtps = {
   'user@aspyric.app'  : '246810',
 };
 
-const _resendApiKey = 're_MuZoZgT6_KMF1wRuJJZus6bDKbMDuVq7Y';
-const _fromEmail    = 'Aspyric <onboarding@resend.dev>';
 const _otpTtlSecs   = 300; // 5 minutes
 
 class EmailOtpService {
-  // ── Generate & send OTP ──────────────────────────────────────────────────
+  // ── Generate & send OTP via Resend ───────────────────────────────────────
   static Future<bool> sendOtp(String email, {OtpPurpose purpose = OtpPurpose.verify}) async {
     final normalised = email.trim().toLowerCase();
 
@@ -41,20 +41,33 @@ class EmailOtpService {
       final resp = await http.post(
         Uri.parse('https://api.resend.com/emails'),
         headers: {
-          'Authorization': 'Bearer $_resendApiKey',
+          'Authorization': 'Bearer ${EnvConfig.resendApiKey}',
           'Content-Type' : 'application/json',
         },
         body: jsonEncode({
-          'from'   : _fromEmail,
+          'from'   : EnvConfig.resendFromEmail,
           'to'     : [email],
           'subject': subject,
           'html'   : body,
         }),
       );
-      return resp.statusCode == 200 || resp.statusCode == 201;
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        return true;
+      }
+      return false;
     } catch (_) {
       return false;
     }
+  }
+
+  /// Retrieves the active OTP stored for this email
+  static Future<String?> getLatestOtpForTesting(String email) async {
+    final normalised = email.trim().toLowerCase();
+    if (_testOtps.containsKey(normalised)) {
+      return _testOtps[normalised];
+    }
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('otp_code_$normalised');
   }
 
   // ── Verify OTP ────────────────────────────────────────────────────────────

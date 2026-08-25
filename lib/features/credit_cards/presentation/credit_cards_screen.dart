@@ -1,11 +1,13 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../domain/models/models.dart';
 import '../../transactions/presentation/quick_add_modal.dart';
 
@@ -59,14 +61,27 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
             pinned: true,
             floating: true,
             title: const Text(
-              'CARDS VAULT',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary, letterSpacing: 1.2),
+              'Cards Vault',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.2,
+              ),
             ),
             actions: [
               IconButton(
-                icon: const Icon(LucideIcons.plus, color: AppColors.primary),
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(LucideIcons.plus, color: AppColors.primary, size: 20),
+                ),
                 onPressed: () => _showAddCardModal(context),
               ),
+              const SizedBox(width: 8),
             ],
             bottom: TabBar(
               controller: _tabController,
@@ -76,7 +91,7 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
               indicatorWeight: 3,
               labelColor: AppColors.primary,
               unselectedLabelColor: AppColors.textMuted,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               unselectedLabelStyle: const TextStyle(fontSize: 13),
               tabs: _tabs.map((t) => Tab(text: t.$1)).toList(),
             ),
@@ -96,14 +111,25 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
         backgroundColor: AppColors.primary,
         onPressed: () => _showAddCardModal(context),
         icon: const Icon(LucideIcons.plus, color: Colors.white, size: 18),
-        label: const Text('Add Card', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text('Add Card', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
       ),
     );
   }
 
   Widget _buildTabContent(List<CardModel> cards, List<CardModel> allCards) {
     if (cards.isEmpty) {
-      return _buildEmptyState();
+      return Padding(
+        padding: const EdgeInsets.all(20),
+        child: Center(
+          child: EmptyState(
+            icon: LucideIcons.creditCard,
+            title: 'No Cards Yet',
+            description: 'Add your credit, debit, prepaid, store, or forex cards to track them securely.',
+            actionLabel: 'Add Your First Card',
+            onAction: () => _showAddCardModal(context),
+          ),
+        ),
+      );
     }
 
     return SingleChildScrollView(
@@ -111,11 +137,11 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // ── Swipeable Card Carousel ──
           SizedBox(
-            height: 220,
+            height: 210,
             child: PageView.builder(
               controller: _pageController,
               itemCount: cards.length,
@@ -148,7 +174,7 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
             ),
           ],
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 24),
 
           // ── Summary banner ──
           _buildSummaryBanner(cards),
@@ -161,8 +187,7 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Your Cards', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 12),
+                const SectionHeader(title: 'Your Cards'),
                 ...cards.map((c) => _CardListTile(
                   card: c,
                   onPayBill: () => QuickAddModal.show(context),
@@ -186,15 +211,7 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.surface, AppColors.surfaceLight],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
-        ),
+        decoration: AppDecorations.card(radius: AppDecorations.radiusLg),
         child: Column(
           children: [
             Row(
@@ -225,13 +242,18 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Credit Utilization', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                  Text('${utilPct.toStringAsFixed(1)}%',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold,
-                        color: utilPct > 30 ? AppColors.warning : AppColors.income)),
+                  const Text('Credit Utilization', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  Text(
+                    '${utilPct.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: utilPct > 30 ? AppColors.warning : AppColors.income,
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: LinearProgressIndicator(
@@ -242,49 +264,6 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
                 ),
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(28),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppColors.primary.withValues(alpha: 0.15), AppColors.primary.withValues(alpha: 0.05)],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(LucideIcons.creditCard, size: 48, color: AppColors.primary),
-            ),
-            const SizedBox(height: 24),
-            const Text('No Cards Yet', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 10),
-            const Text(
-              'Add your credit, debit, prepaid,\nstore or forex cards to track them all.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.textMuted, height: 1.6),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () => _showAddCardModal(context),
-              icon: const Icon(LucideIcons.plus, size: 16),
-              label: const Text('Add Your First Card'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
           ],
         ),
       ),
@@ -312,10 +291,16 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
           style: const TextStyle(color: AppColors.textSecondary),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense, foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.expense,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               ref.read(financeNotifierProvider.notifier).deleteCard(card.id);
               Navigator.pop(ctx);
@@ -361,30 +346,49 @@ class _GlassCard extends StatelessWidget {
       child: Stack(
         children: [
           // Decorative circles
-          Positioned(right: -30, top: -40,
-            child: Container(width: 140, height: 140,
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.06)))),
-          Positioned(left: -20, bottom: -30,
-            child: Container(width: 100, height: 100,
-              decoration: BoxDecoration(shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.04)))),
+          Positioned(
+            right: -30,
+            top: -40,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.06),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -20,
+            bottom: -30,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.04),
+              ),
+            ),
+          ),
 
           // Chip graphic
           Positioned(
-            left: 24, top: 60,
+            left: 24,
+            top: 60,
             child: _ChipGraphic(),
           ),
 
           // Network logo (top right)
           Positioned(
-            right: 20, top: 20,
+            right: 20,
+            top: 20,
             child: _NetworkBadge(network: card.network),
           ),
 
           // Card type badge (top left)
           Positioned(
-            left: 20, top: 20,
+            left: 20,
+            top: 20,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -398,8 +402,10 @@ class _GlassCard extends StatelessWidget {
                     const Icon(LucideIcons.wifi, size: 10, color: Colors.white),
                     const SizedBox(width: 4),
                   ],
-                  Text(card.isVirtual ? 'Virtual ${card.cardType.displayName}' : card.cardType.displayName,
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                  Text(
+                    card.isVirtual ? 'Virtual ${card.cardType.displayName}' : card.cardType.displayName,
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
             ),
@@ -407,7 +413,9 @@ class _GlassCard extends StatelessWidget {
 
           // Card number + name (bottom)
           Positioned(
-            left: 20, right: 20, bottom: 20,
+            left: 20,
+            right: 20,
+            bottom: 20,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -428,7 +436,10 @@ class _GlassCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('CARD HOLDER', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9, letterSpacing: 1)),
+                        Text(
+                          'CARD HOLDER',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9, letterSpacing: 1),
+                        ),
                         Text(
                           card.cardholderName.isEmpty ? card.bank : card.cardholderName.toUpperCase(),
                           style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
@@ -438,11 +449,16 @@ class _GlassCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text('EXPIRES', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9, letterSpacing: 1)),
-                        Text(card.expiryDisplay,
+                        Text(
+                          'EXPIRES',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9, letterSpacing: 1),
+                        ),
+                        Text(
+                          card.expiryDisplay,
                           style: TextStyle(
                             color: card.isExpired ? Colors.red[300] : Colors.white,
-                            fontSize: 13, fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
@@ -462,7 +478,8 @@ class _ChipGraphic extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 40, height: 30,
+      width: 40,
+      height: 30,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFFD4B483), Color(0xFFB8943A)],
@@ -485,10 +502,15 @@ class _ChipPainter extends CustomPainter {
       ..strokeWidth = 0.8;
     canvas.drawLine(Offset(size.width * 0.5, 0), Offset(size.width * 0.5, size.height), paint);
     canvas.drawLine(Offset(0, size.height * 0.5), Offset(size.width, size.height * 0.5), paint);
-    canvas.drawRRect(RRect.fromRectAndRadius(
-      Rect.fromLTWH(size.width * 0.25, size.height * 0.2, size.width * 0.5, size.height * 0.6),
-      const Radius.circular(3)), paint);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(size.width * 0.25, size.height * 0.2, size.width * 0.5, size.height * 0.6),
+        const Radius.circular(3),
+      ),
+      paint,
+    );
   }
+
   @override
   bool shouldRepaint(_) => false;
 }
@@ -527,14 +549,9 @@ class _CardListTile extends StatelessWidget {
     final hasFunds = (card.balance ?? 0) > 0;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2))],
-      ),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: AppDecorations.card(radius: AppDecorations.radiusMd),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -542,9 +559,14 @@ class _CardListTile extends StatelessWidget {
             children: [
               // Color indicator strip
               Container(
-                width: 4, height: 48,
+                width: 4,
+                height: 44,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [colors.first, colors.last], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                  gradient: LinearGradient(
+                    colors: [colors.first, colors.last],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -558,17 +580,39 @@ class _CardListTile extends StatelessWidget {
                         Text(card.cardType.emoji, style: const TextStyle(fontSize: 14)),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: Text(card.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                          child: Text(
+                            card.name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
                         ),
                         if (card.isExpired)
-                          Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: AppColors.expense.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-                            child: const Text('EXPIRED', style: TextStyle(fontSize: 9, color: AppColors.expense, fontWeight: FontWeight.bold, letterSpacing: 0.5))),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.expense.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'EXPIRED',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: AppColors.expense,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: 3),
-                    Text('${card.bank}  •  ${card.network.displayName}  •  •••• ${card.last4}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    Text(
+                      '${card.bank}  •  ${card.network.displayName}  •  •••• ${card.last4}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    ),
                   ],
                 ),
               ),
@@ -578,10 +622,34 @@ class _CardListTile extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 itemBuilder: (_) => [
                   if (isCredit)
-                    const PopupMenuItem(value: 'pay', child: Row(children: [Icon(LucideIcons.arrowRightLeft, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Pay Bill', style: TextStyle(color: AppColors.textPrimary))])),
-                  const PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Remove', style: TextStyle(color: AppColors.expense))])),
+                    const PopupMenuItem(
+                      value: 'pay',
+                      child: Row(
+                        children: [
+                          Icon(LucideIcons.arrowRightLeft, size: 14, color: AppColors.primary),
+                          SizedBox(width: 8),
+                          Text('Pay Bill', style: TextStyle(color: AppColors.textPrimary)),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.trash2, size: 14, color: AppColors.expense),
+                        SizedBox(width: 8),
+                        Text('Remove', style: TextStyle(color: AppColors.expense)),
+                      ],
+                    ),
+                  ),
                 ],
-                onSelected: (v) { if (v == 'pay') onPayBill(); else onDelete(); },
+                onSelected: (v) {
+                  if (v == 'pay') {
+                    onPayBill();
+                  } else {
+                    onDelete();
+                  }
+                },
               ),
             ],
           ),
@@ -593,9 +661,21 @@ class _CardListTile extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _InfoChip(label: 'Outstanding', value: CurrencyFormatter.format(card.currentOutstanding), valueColor: AppColors.expense),
-                _InfoChip(label: 'Available', value: CurrencyFormatter.format(card.availableLimit), valueColor: AppColors.income),
-                _InfoChip(label: 'Limit', value: CurrencyFormatter.format(card.creditLimit), valueColor: AppColors.textPrimary),
+                _InfoChip(
+                  label: 'Outstanding',
+                  value: CurrencyFormatter.format(card.currentOutstanding),
+                  valueColor: AppColors.expense,
+                ),
+                _InfoChip(
+                  label: 'Available',
+                  value: CurrencyFormatter.format(card.availableLimit),
+                  valueColor: AppColors.income,
+                ),
+                _InfoChip(
+                  label: 'Limit',
+                  value: CurrencyFormatter.format(card.creditLimit),
+                  valueColor: AppColors.textPrimary,
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -612,8 +692,10 @@ class _CardListTile extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Stmt: ${card.statementDay}th  •  Due: ${card.dueDay}th',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                Text(
+                  'Stmt: ${card.statementDay}th  •  Due: ${card.dueDay}th',
+                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                ),
                 GestureDetector(
                   onTap: onPayBill,
                   child: Container(
@@ -623,7 +705,10 @@ class _CardListTile extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                     ),
-                    child: const Text('Pay Bill', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Pay Bill',
+                      style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ],
@@ -638,11 +723,11 @@ class _CardListTile extends StatelessWidget {
               children: [
                 const Icon(LucideIcons.wallet, size: 14, color: AppColors.income),
                 const SizedBox(width: 6),
-                Text('Balance: ', style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                const Text('Balance: ', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                 Text(
                   card.currency != null && card.currency != 'INR'
-                    ? '${card.currency} ${card.balance!.toStringAsFixed(2)}'
-                    : CurrencyFormatter.format(card.balance!),
+                      ? '${card.currency} ${card.balance!.toStringAsFixed(2)}'
+                      : CurrencyFormatter.format(card.balance!),
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.income),
                 ),
               ],
@@ -653,11 +738,18 @@ class _CardListTile extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(LucideIcons.calendar, size: 12, color: card.isExpired ? AppColors.expense : AppColors.textMuted),
+                Icon(
+                  LucideIcons.calendar,
+                  size: 12,
+                  color: card.isExpired ? AppColors.expense : AppColors.textMuted,
+                ),
                 const SizedBox(width: 5),
                 Text(
                   card.isExpired ? 'Expired ${card.expiryDisplay}' : 'Expires ${card.expiryDisplay}',
-                  style: TextStyle(fontSize: 11, color: card.isExpired ? AppColors.expense : AppColors.textMuted),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: card.isExpired ? AppColors.expense : AppColors.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -672,6 +764,7 @@ class _InfoChip extends StatelessWidget {
   final String label, value;
   final Color valueColor;
   const _InfoChip({required this.label, required this.value, required this.valueColor});
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -688,12 +781,13 @@ class _SummaryItem extends StatelessWidget {
   final IconData icon;
   final Color color;
   const _SummaryItem({required this.label, required this.value, required this.icon, required this.color});
+
   @override
   Widget build(BuildContext context) => Column(
     children: [
       Container(
         padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+        decoration: AppDecorations.iconBadge(color, circle: true),
         child: Icon(icon, size: 16, color: color),
       ),
       const SizedBox(height: 6),
@@ -753,14 +847,21 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
         child: Column(
           children: [
             // Handle
-            Container(margin: const EdgeInsets.only(top: 12), width: 40, height: 4,
-              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Add New Card', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  const Text(
+                    'Add New Card',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  ),
                   IconButton(
                     icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
                     onPressed: () => Navigator.pop(context),
@@ -792,9 +893,17 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(child: _field(_last4Ctrl, 'Last 4 Digits', hint: '1234',
-                        icon: LucideIcons.hash, inputType: TextInputType.number,
-                        formatter: FilteringTextInputFormatter.digitsOnly, maxLen: 4)),
+                      Expanded(
+                        child: _field(
+                          _last4Ctrl,
+                          'Last 4 Digits',
+                          hint: '1234',
+                          icon: LucideIcons.hash,
+                          inputType: TextInputType.number,
+                          formatter: FilteringTextInputFormatter.digitsOnly,
+                          maxLen: 4,
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(child: _field(_holderCtrl, 'Cardholder Name', hint: 'Your Name', icon: LucideIcons.user)),
                     ],
@@ -810,47 +919,64 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                   // Expiry
                   Row(
                     children: [
-                      Expanded(child: _buildDropdown<int?>(
-                        label: 'Expiry Month',
-                        value: _expiryMonth,
-                        items: [null, ...List.generate(12, (i) => i + 1)],
-                        display: (v) => v == null ? '—' : v.toString().padLeft(2, '0'),
-                        onChanged: (v) => setState(() => _expiryMonth = v),
-                      )),
+                      Expanded(
+                        child: _buildDropdown<int?>(
+                          label: 'Expiry Month',
+                          value: _expiryMonth,
+                          items: [null, ...List.generate(12, (i) => i + 1)],
+                          display: (v) => v == null ? '—' : v.toString().padLeft(2, '0'),
+                          onChanged: (v) => setState(() => _expiryMonth = v),
+                        ),
+                      ),
                       const SizedBox(width: 12),
-                      Expanded(child: _buildDropdown<int?>(
-                        label: 'Expiry Year',
-                        value: _expiryYear,
-                        items: [null, ...List.generate(12, (i) => DateTime.now().year + i)],
-                        display: (v) => v == null ? '—' : v.toString(),
-                        onChanged: (v) => setState(() => _expiryYear = v),
-                      )),
+                      Expanded(
+                        child: _buildDropdown<int?>(
+                          label: 'Expiry Year',
+                          value: _expiryYear,
+                          items: [null, ...List.generate(12, (i) => DateTime.now().year + i)],
+                          display: (v) => v == null ? '—' : v.toString(),
+                          onChanged: (v) => setState(() => _expiryYear = v),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
 
                   // Credit-card-specific
                   if (_selectedType == CardType.credit) ...[
-                    _field(_limitCtrl, 'Credit Limit (₹)', hint: '100000',
-                      icon: LucideIcons.trendingUp, inputType: TextInputType.number),
+                    _field(
+                      _limitCtrl,
+                      'Credit Limit (₹)',
+                      hint: '100000',
+                      icon: LucideIcons.trendingUp,
+                      inputType: TextInputType.number,
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(child: _buildDropdown<int>(
-                          label: 'Statement Day',
-                          value: _statementDay,
-                          items: List.generate(28, (i) => i + 1),
-                          display: (v) => '${v}th',
-                          onChanged: (v) { if (v != null) setState(() => _statementDay = v); },
-                        )),
+                        Expanded(
+                          child: _buildDropdown<int>(
+                            label: 'Statement Day',
+                            value: _statementDay,
+                            items: List.generate(28, (i) => i + 1),
+                            display: (v) => '${v}th',
+                            onChanged: (v) {
+                              if (v != null) setState(() => _statementDay = v);
+                            },
+                          ),
+                        ),
                         const SizedBox(width: 12),
-                        Expanded(child: _buildDropdown<int>(
-                          label: 'Due Day',
-                          value: _dueDay,
-                          items: List.generate(28, (i) => i + 1),
-                          display: (v) => '${v}th',
-                          onChanged: (v) { if (v != null) setState(() => _dueDay = v); },
-                        )),
+                        Expanded(
+                          child: _buildDropdown<int>(
+                            label: 'Due Day',
+                            value: _dueDay,
+                            items: List.generate(28, (i) => i + 1),
+                            display: (v) => '${v}th',
+                            onChanged: (v) {
+                              if (v != null) setState(() => _dueDay = v);
+                            },
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -858,8 +984,13 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
 
                   // Prepaid / forex balance
                   if (_selectedType == CardType.prepaid || _selectedType == CardType.forex) ...[
-                    _field(_balanceCtrl, 'Current Balance', hint: '5000',
-                      icon: LucideIcons.wallet, inputType: TextInputType.number),
+                    _field(
+                      _balanceCtrl,
+                      'Current Balance',
+                      hint: '5000',
+                      icon: LucideIcons.wallet,
+                      inputType: TextInputType.number,
+                    ),
                     const SizedBox(height: 12),
                     if (_selectedType == CardType.forex) ...[
                       _field(_currencyCtrl, 'Currency Code', hint: 'USD, EUR, GBP…', icon: LucideIcons.globe),
@@ -905,8 +1036,13 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                   const SizedBox(height: 12),
 
                   // Notes
-                  _field(_notesCtrl, 'Notes / Hints (Optional)', hint: 'PIN hint, portal URL…',
-                    icon: LucideIcons.stickyNote, maxLines: 2),
+                  _field(
+                    _notesCtrl,
+                    'Notes / Hints (Optional)',
+                    hint: 'PIN hint, portal URL…',
+                    icon: LucideIcons.stickyNote,
+                    maxLines: 2,
+                  ),
                   const SizedBox(height: 28),
 
                   // Save button
@@ -962,8 +1098,10 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                 ),
               ],
             ),
-            Text(_selectedNetwork.displayName,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+            Text(
+              _selectedNetwork.displayName,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
           ],
         ),
       ),
@@ -991,11 +1129,14 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                 children: [
                   Text(type.emoji, style: const TextStyle(fontSize: 14)),
                   const SizedBox(width: 6),
-                  Text(type.displayName, style: TextStyle(
-                    color: selected ? Colors.white : AppColors.textSecondary,
-                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                    fontSize: 12,
-                  )),
+                  Text(
+                    type.displayName,
+                    style: TextStyle(
+                      color: selected ? Colors.white : AppColors.textSecondary,
+                      fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1022,11 +1163,14 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: selected ? AppColors.primary : AppColors.border, width: selected ? 2 : 1),
               ),
-              child: Text(net.displayName, style: TextStyle(
-                color: selected ? AppColors.primary : AppColors.textSecondary,
-                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 12,
-              )),
+              child: Text(
+                net.displayName,
+                style: TextStyle(
+                  color: selected ? AppColors.primary : AppColors.textSecondary,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 12,
+                ),
+              ),
             ),
           );
         }).toList(),
@@ -1098,7 +1242,9 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     );
   }
 
-  Widget _field(TextEditingController ctrl, String label, {
+  Widget _field(
+    TextEditingController ctrl,
+    String label, {
     String hint = '',
     IconData? icon,
     TextInputType inputType = TextInputType.text,
@@ -1161,11 +1307,13 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(children: [
-          const Icon(LucideIcons.checkCircle, color: Colors.white, size: 18),
-          const SizedBox(width: 10),
-          Text('${_nameCtrl.text} added to vault!'),
-        ]),
+        content: Row(
+          children: [
+            const Icon(LucideIcons.checkCircle, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Text('${_nameCtrl.text} added to vault!'),
+          ],
+        ),
         backgroundColor: AppColors.income,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

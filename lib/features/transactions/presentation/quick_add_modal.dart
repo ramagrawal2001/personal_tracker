@@ -74,20 +74,29 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       _selectedLoanId = loans.isNotEmpty ? loans.first.id : null;
     }
 
-
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         left: 20,
         right: 20,
-        top: 20,
+        top: 12,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header & Close Button
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -101,7 +110,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
             // Type Selector Chips
             SingleChildScrollView(
@@ -116,11 +125,11 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
             // Amount Input
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: AppColors.surfaceLight,
                 borderRadius: BorderRadius.circular(16),
@@ -130,16 +139,17 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 controller: _amountController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 autofocus: true,
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 decoration: const InputDecoration(
                   prefixText: '₹ ',
-                  prefixStyle: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  prefixStyle: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.primary),
                   hintText: '0',
                   hintStyle: TextStyle(color: AppColors.textMuted),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
+                  isDense: true,
                 ),
               ),
             ),
@@ -151,6 +161,13 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             DropdownButtonFormField<String>(
               value: _selectedAccountId,
               dropdownColor: AppColors.surface,
+              decoration: InputDecoration(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                filled: true,
+                fillColor: AppColors.surfaceLight,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+              ),
               items: accounts.map((acc) {
                 return DropdownMenuItem(
                   value: acc.id,
@@ -163,11 +180,18 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
 
             // Destination / Specific Selectors based on Type
             if (_selectedType == TransactionType.transfer) ...[
-              const Text('To Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              const Text('To Destination Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 value: _selectedToAccountId,
                 dropdownColor: AppColors.surface,
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                ),
                 items: filteredToAccounts.map((acc) {
                   return DropdownMenuItem(
                     value: acc.id,
@@ -185,6 +209,13 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               DropdownButtonFormField<String>(
                 value: _selectedCardId,
                 dropdownColor: AppColors.surface,
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                ),
                 items: creditCards.map((card) {
                   return DropdownMenuItem(
                     value: card.id,
@@ -202,6 +233,13 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               DropdownButtonFormField<String>(
                 value: _selectedLoanId,
                 dropdownColor: AppColors.surface,
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                ),
                 items: loans.map((loan) {
                   return DropdownMenuItem(
                     value: loan.id,
@@ -219,6 +257,13 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               DropdownButtonFormField<String>(
                 value: _selectedCategoryId,
                 dropdownColor: AppColors.surface,
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  filled: true,
+                  fillColor: AppColors.surfaceLight,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                ),
                 items: filteredCategories.map((cat) {
                   return DropdownMenuItem(
                     value: cat.id,
@@ -228,7 +273,6 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 onChanged: (val) => setState(() => _selectedCategoryId = val),
               ),
               const SizedBox(height: 14),
-
 
               TextField(
                 controller: _merchantController,
@@ -250,9 +294,15 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             // Save Button
             SizedBox(
               width: double.infinity,
+              height: 52,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
                 onPressed: _saveTransaction,
-                child: const Text('Save Transaction'),
+                child: const Text('Save Transaction', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -265,15 +315,17 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
     final isSelected = _selectedType == type;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
+      child: FilterChip(
         label: Text(label),
         selected: isSelected,
+        showCheckmark: false,
         selectedColor: color.withValues(alpha: 0.2),
         backgroundColor: AppColors.surfaceLight,
         side: BorderSide(color: isSelected ? color : AppColors.border),
         labelStyle: TextStyle(
           color: isSelected ? color : AppColors.textSecondary,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          fontSize: 13,
         ),
         onSelected: (val) {
           if (val) setState(() => _selectedType = type);
@@ -288,14 +340,14 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
 
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount')),
+        const SnackBar(content: Text('Please enter a valid amount'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
 
     if (_selectedAccountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an account')),
+        const SnackBar(content: Text('Please select an account'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -318,6 +370,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       const SnackBar(
         content: Text('Transaction saved successfully!'),
         backgroundColor: AppColors.income,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

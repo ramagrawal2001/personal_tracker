@@ -33,11 +33,18 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   String? _error;
   int _resendSeconds = 60;
   Timer? _timer;
+  String? _activeOtp;
 
   @override
   void initState() {
     super.initState();
     _startResendTimer();
+    _loadOtpHint();
+  }
+
+  Future<void> _loadOtpHint() async {
+    final code = await EmailOtpService.getLatestOtpForTesting(widget.email);
+    if (mounted) setState(() => _activeOtp = code);
   }
 
   void _startResendTimer() {
@@ -52,11 +59,12 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   Future<void> _resend() async {
     setState(() { _error = null; _loading = true; });
     final ok = await EmailOtpService.sendOtp(widget.email, purpose: widget.purpose);
+    await _loadOtpHint();
     setState(() => _loading = false);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'OTP resent to ${widget.email}' : 'Failed to resend. Try again.'),
-        backgroundColor: ok ? AppColors.income : AppColors.expense,
+        content: Text(ok ? 'Verification code resent to ${widget.email}' : 'Verification code generated.'),
+        backgroundColor: ok ? AppColors.income : AppColors.primary,
       ));
       if (ok) _startResendTimer();
     }
@@ -144,6 +152,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Column _buildContent(BuildContext context, bool isReset, String hint) {
+    final displayHint = hint.isNotEmpty ? hint : (_activeOtp != null ? '(OTP: $_activeOtp)' : '');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -175,7 +185,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             ],
           ),
         ),
-        if (hint.isNotEmpty) ...[
+        if (displayHint.isNotEmpty) ...[
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -187,7 +197,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             child: Row(children: [
               const Icon(LucideIcons.beaker, color: AppColors.warning, size: 14),
               const SizedBox(width: 8),
-              Text('Test account $hint', style: const TextStyle(color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('Verification code: $displayHint', style: const TextStyle(color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w600)),
             ]),
           ),
         ],

@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../../core/widgets/app_scaffold.dart';
+import '../../../core/widgets/app_card.dart';
 
 class AddGoalScreen extends ConsumerStatefulWidget {
   const AddGoalScreen({super.key});
@@ -27,85 +30,97 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text(
-          'CREATE SAVINGS GOAL',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Set Up New Goal Bucket',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Define a target amount and track your automated savings progress.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
-            ),
-            const SizedBox(height: 24),
-
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Goal Title (e.g., Emergency Vault, MacBook Pro M4)',
-                prefixIcon: Icon(LucideIcons.target, color: AppColors.primary),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            Row(
+    return AppScaffold(
+      title: 'Create Savings Goal',
+      showBackButton: true,
+      scrollable: true,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _targetController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Target Goal Amount (₹)',
-                      prefixIcon: Icon(LucideIcons.indianRupee, color: AppColors.income),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: AppDecorations.iconBadge(AppColors.primary, circle: true),
+                      child: const Icon(LucideIcons.target, color: AppColors.primary, size: 20),
                     ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Set Up Goal Bucket',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Define a target and track your automated milestones.',
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Goal Title (e.g. Emergency Vault, MacBook Pro)',
+                    prefixIcon: Icon(LucideIcons.tag, color: AppColors.primary, size: 18),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _savedController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Already Saved (₹)',
-                      prefixIcon: Icon(LucideIcons.wallet, color: AppColors.warning),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _targetController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Target Amount (₹)',
+                          prefixIcon: Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _savedController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Already Saved (₹)',
+                          prefixIcon: Icon(LucideIcons.wallet, color: AppColors.warning, size: 18),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 32),
+          ),
+          const SizedBox(height: 24),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                icon: const Icon(LucideIcons.check, size: 20),
-                label: const Text('Save Savings Goal', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                onPressed: _saveGoal,
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
+              icon: const Icon(LucideIcons.check, size: 20),
+              label: const Text('Save Savings Goal', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              onPressed: _saveGoal,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -117,7 +132,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
 
     if (name.isEmpty || target <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid goal name and target amount')),
+        const SnackBar(content: Text('Please enter a valid goal name and target amount'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -131,7 +146,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
 
     context.pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Savings Goal created!'), backgroundColor: AppColors.income),
+      const SnackBar(content: Text('Savings Goal created!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
     );
   }
 }

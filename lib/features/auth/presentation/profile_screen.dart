@@ -9,6 +9,9 @@ import '../../../core/database/finance_repository.dart';
 import '../../../core/services/backup_service.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/providers/user_profile_provider.dart';
+import '../../../core/widgets/app_scaffold.dart';
+import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../domain/models/user_profile_model.dart';
 import 'auth_repository.dart';
 
@@ -69,7 +72,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() { _saving = false; _editing = false; });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile saved ✓'), backgroundColor: AppColors.income),
+        const SnackBar(content: Text('Profile saved ✓'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
       );
     }
   }
@@ -106,216 +109,212 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final avatarBytes = profile?.avatarBase64 != null ? base64Decode(profile!.avatarBase64!) : null;
     final initials = profile?.initials ?? (user?.email?.substring(0, 1).toUpperCase() ?? '?');
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
-          onPressed: () => context.pop(),
+    return AppScaffold(
+      title: 'Profile & Security',
+      showBackButton: true,
+      scrollable: true,
+      actions: [
+        TextButton(
+          onPressed: () => setState(() => _editing = !_editing),
+          child: Text(_editing ? 'Cancel' : 'Edit', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
         ),
-        title: const Text('PROFILE', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-        actions: [
-          TextButton(
-            onPressed: () => setState(() => _editing = !_editing),
-            child: Text(_editing ? 'Cancel' : 'Edit', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-
-            // ── Avatar + basic info ───────────────────────────────────────
-            Center(
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: _editing ? _pickImage : null,
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 96,
-                          height: 96,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.primary.withValues(alpha: 0.2),
-                            border: Border.all(color: AppColors.primary, width: 2),
-                            image: avatarBytes != null
-                                ? DecorationImage(image: MemoryImage(avatarBytes), fit: BoxFit.cover)
-                                : null,
-                          ),
-                          child: avatarBytes == null
-                              ? Center(child: Text(initials, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary)))
+      ],
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Avatar + basic info ───────────────────────────────────────
+          Center(
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTap: _editing ? _pickImage : null,
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 96,
+                        height: 96,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primary.withValues(alpha: 0.2),
+                          border: Border.all(color: AppColors.primary, width: 2),
+                          image: avatarBytes != null
+                              ? DecorationImage(image: MemoryImage(avatarBytes), fit: BoxFit.cover)
                               : null,
                         ),
-                        if (_editing)
-                          Positioned(
-                            bottom: 0, right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                              child: const Icon(LucideIcons.camera, size: 14, color: Colors.white),
-                            ),
+                        child: avatarBytes == null
+                            ? Center(child: Text(initials, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary)))
+                            : null,
+                      ),
+                      if (_editing)
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                            child: const Icon(LucideIcons.camera, size: 14, color: Colors.white),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    profile?.displayName.isNotEmpty == true ? profile!.displayName : (user?.email ?? 'Aspyric User'),
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(user?.email ?? '', style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(color: AppColors.income.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                    child: const Text('Verified Account', style: TextStyle(color: AppColors.income, fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  profile?.displayName.isNotEmpty == true ? profile!.displayName : (user?.email ?? 'Aspyric User'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: 4),
+                Text(user?.email ?? '', style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(color: AppColors.income.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
+                  child: const Text('Verified Account', style: TextStyle(color: AppColors.income, fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
-            const SizedBox(height: 28),
+          ),
+          const SizedBox(height: 28),
 
-            // ── Personal Info ─────────────────────────────────────────────
-            _sectionLabel('Personal Information'),
-            _card(children: [
-              _field('Full Name', LucideIcons.user, _nameCtrl, enabled: _editing, hint: 'Enter your full name'),
-              const Divider(color: AppColors.border, height: 1),
-              _field('Mobile Number', LucideIcons.phone, _mobileCtrl, enabled: _editing, hint: '+91 00000 00000', keyboardType: TextInputType.phone),
-              const Divider(color: AppColors.border, height: 1),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                leading: const Icon(LucideIcons.calendar, color: AppColors.textMuted, size: 20),
-                title: const Text('Date of Birth', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                subtitle: Text(
-                  _dob != null ? '${_dob!.day}/${_dob!.month}/${_dob!.year}' : 'Not set',
-                  style: TextStyle(color: _dob != null ? AppColors.textPrimary : AppColors.textMuted, fontWeight: FontWeight.w600, fontSize: 15),
+          // ── Personal Info ─────────────────────────────────────────────
+          const SectionLabel(label: 'Personal Information'),
+          AppCard(
+            child: Column(
+              children: [
+                _field('Full Name', LucideIcons.user, _nameCtrl, enabled: _editing, hint: 'Enter your full name'),
+                const Divider(color: AppColors.border, height: 1),
+                _field('Mobile Number', LucideIcons.phone, _mobileCtrl, enabled: _editing, hint: '+91 00000 00000', keyboardType: TextInputType.phone),
+                const Divider(color: AppColors.border, height: 1),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: const Icon(LucideIcons.calendar, color: AppColors.textMuted, size: 20),
+                  title: const Text('Date of Birth', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  subtitle: Text(
+                    _dob != null ? '${_dob!.day}/${_dob!.month}/${_dob!.year}' : 'Not set',
+                    style: TextStyle(color: _dob != null ? AppColors.textPrimary : AppColors.textMuted, fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                  trailing: _editing ? IconButton(icon: const Icon(LucideIcons.pencil, size: 16, color: AppColors.primary), onPressed: _pickDob) : null,
                 ),
-                trailing: _editing ? IconButton(icon: const Icon(LucideIcons.pencil, size: 16, color: AppColors.primary), onPressed: _pickDob) : null,
-              ),
-              const Divider(color: AppColors.border, height: 1),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                leading: const Icon(LucideIcons.mail, color: AppColors.textMuted, size: 20),
-                title: const Text('Email Address', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                subtitle: Text(user?.email ?? '', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
-              ),
-            ]),
-
-            if (_editing) ...[
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saving ? null : _saveProfile,
-                  style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                  child: _saving
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Text('Save Changes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                const Divider(color: AppColors.border, height: 1),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: const Icon(LucideIcons.mail, color: AppColors.textMuted, size: 20),
+                  title: const Text('Email Address', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  subtitle: Text(user?.email ?? '', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
                 ),
-              ),
-            ],
-            const SizedBox(height: 24),
+              ],
+            ),
+          ),
 
-            // ── Security ─────────────────────────────────────────────────
-            _sectionLabel('Security & Vault'),
-            _card(children: [
-              SwitchListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                secondary: const Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 22),
-                title: const Text('Biometric Lock', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-                subtitle: Text(financeState.isBiometricEnabled ? 'Face ID / Fingerprint enabled' : 'OFF — tap to enable', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                value: financeState.isBiometricEnabled,
-                activeColor: AppColors.primary,
-                onChanged: (val) async {
-                  if (val) {
-                    final ok = await BiometricService.authenticate(reason: 'Verify to enable Biometric Lock');
-                    if (ok) {
-                      notifier.toggleBiometric(true);
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Biometric Lock enabled ✓'), backgroundColor: AppColors.income));
-                    } else {
-                      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication failed'), backgroundColor: AppColors.expense));
-                    }
-                  } else {
-                    notifier.toggleBiometric(false);
-                  }
-                },
-              ),
-            ]),
+          if (_editing) ...[
             const SizedBox(height: 16),
-
-            // ── Data Vault ────────────────────────────────────────────────
-            _sectionLabel('Data Vault'),
-            _card(children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: Text('100% AES-256 encrypted local vault snapshot.', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: AppColors.primary)),
-                        icon: const Icon(LucideIcons.download, size: 18, color: AppColors.primary),
-                        label: const Text('Export', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                        onPressed: () {
-                          final backup = BackupService.exportEncryptedBackup({'netWorth': financeState.netWorth, 'exportedAt': DateTime.now().toIso8601String()});
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Vault exported (${backup.length} bytes)'), backgroundColor: AppColors.income));
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: AppColors.income)),
-                        icon: const Icon(LucideIcons.upload, size: 18, color: AppColors.income),
-                        label: const Text('Restore', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.income)),
-                        onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vault restored ✓'), backgroundColor: AppColors.income)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ]),
-            const SizedBox(height: 24),
-
-            // ── Sign Out ──────────────────────────────────────────────────
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                icon: const Icon(LucideIcons.logOut, size: 20, color: Colors.white),
-                label: const Text('Sign Out', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                onPressed: () async {
-                  await ref.read(authNotifierProvider.notifier).signOut();
-                  if (context.mounted) context.go('/login');
-                },
+              child: ElevatedButton(
+                onPressed: _saving ? null : _saveProfile,
+                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                child: _saving
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Save Changes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ),
-            const SizedBox(height: 40),
           ],
-        ),
+          const SizedBox(height: 24),
+
+          // ── Security ─────────────────────────────────────────────────
+          const SectionLabel(label: 'Security & Biometrics'),
+          AppCard(
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              secondary: const Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 22),
+              title: const Text('Biometric Lock', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+              subtitle: Text(financeState.isBiometricEnabled ? 'Face ID / Fingerprint enabled' : 'OFF — tap to enable', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              value: financeState.isBiometricEnabled,
+              activeColor: AppColors.primary,
+              onChanged: (val) async {
+                if (val) {
+                  final ok = await BiometricService.authenticate(reason: 'Verify to enable Biometric Lock');
+                  if (ok) {
+                    notifier.toggleBiometric(true);
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Biometric Lock enabled ✓'), backgroundColor: AppColors.income));
+                  } else {
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication failed'), backgroundColor: AppColors.expense));
+                  }
+                } else {
+                  notifier.toggleBiometric(false);
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // ── Data Vault ────────────────────────────────────────────────
+          const SectionLabel(label: 'Data Sovereignty Vault'),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Text('100% AES-256 encrypted local vault snapshot.', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: AppColors.primary)),
+                          icon: const Icon(LucideIcons.download, size: 18, color: AppColors.primary),
+                          label: const Text('Export', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                          onPressed: () {
+                            final backup = BackupService.exportEncryptedBackup({'netWorth': financeState.netWorth, 'exportedAt': DateTime.now().toIso8601String()});
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Vault exported (${backup.length} bytes)'), backgroundColor: AppColors.income));
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: AppColors.income)),
+                          icon: const Icon(LucideIcons.upload, size: 18, color: AppColors.income),
+                          label: const Text('Restore', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.income)),
+                          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vault restored ✓'), backgroundColor: AppColors.income)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // ── Sign Out ──────────────────────────────────────────────────
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.expense.withValues(alpha: 0.15),
+                foregroundColor: AppColors.expense,
+                elevation: 0,
+                side: BorderSide(color: AppColors.expense.withValues(alpha: 0.4)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              icon: const Icon(LucideIcons.logOut, size: 18, color: AppColors.expense),
+              label: const Text('Sign Out', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.expense)),
+              onPressed: () async {
+                await ref.read(authNotifierProvider.notifier).signOut();
+                if (context.mounted) context.go('/login');
+              },
+            ),
+          ),
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }
-
-  Widget _sectionLabel(String t) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Text(t, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.textMuted, letterSpacing: 0.8)),
-  );
-
-  Widget _card({required List<Widget> children}) => Container(
-    decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.border)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
-  );
 
   Widget _field(String label, IconData icon, TextEditingController ctrl, {bool enabled = true, String? hint, TextInputType? keyboardType}) {
     return ListTile(

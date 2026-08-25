@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
@@ -46,29 +47,56 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
         left: 20,
         right: 20,
-        top: 20,
+        top: 12,
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Add Manual Investment / SIP',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Add Asset / Investment',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                ),
+                IconButton(
+                  icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Investment Name (e.g. Parag Parikh Flexi Cap)'),
+              decoration: const InputDecoration(
+                labelText: 'Investment Name (e.g. Parag Parikh Flexi Cap)',
+                prefixIcon: Icon(LucideIcons.trendingUp, size: 18),
+              ),
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<InvestmentType>(
               value: _selectedType,
               dropdownColor: AppColors.surface,
+              decoration: const InputDecoration(
+                labelText: 'Asset Category',
+                prefixIcon: Icon(LucideIcons.pieChart, size: 18),
+              ),
               items: InvestmentType.values.map((type) {
                 return DropdownMenuItem(
                   value: type,
@@ -86,7 +114,10 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                   child: TextField(
                     controller: _investedController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Invested Amount (₹)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Invested (₹)',
+                      prefixText: '₹ ',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -94,7 +125,10 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                   child: TextField(
                     controller: _currentValController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Current Value (₹)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Current Value (₹)',
+                      prefixText: '₹ ',
+                    ),
                   ),
                 ),
               ],
@@ -106,7 +140,10 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                   child: TextField(
                     controller: _sipController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Monthly SIP (₹) (Optional)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Monthly SIP (₹) (Optional)',
+                      prefixText: '₹ ',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -114,7 +151,10 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                   child: TextField(
                     controller: _sipDayController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'SIP Day (1-28)'),
+                    decoration: const InputDecoration(
+                      labelText: 'SIP Day (1-28)',
+                      prefixIcon: Icon(LucideIcons.calendar, size: 16),
+                    ),
                   ),
                 ),
               ],
@@ -122,9 +162,15 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
+              height: 52,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
                 onPressed: _saveInvestment,
-                child: const Text('Save Investment'),
+                child: const Text('Save Investment', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -142,7 +188,7 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
 
     if (name.isEmpty || invested <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid investment name and invested amount')),
+        const SnackBar(content: Text('Please enter a valid investment name and invested amount'), behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -158,7 +204,7 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Investment tracked successfully!'), backgroundColor: AppColors.income),
+      const SnackBar(content: Text('Investment saved successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
     );
   }
 }
