@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../../core/utils/category_icons.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -78,7 +79,7 @@ class CategoriesScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: AppDecorations.iconBadge(color),
-                child: Icon(LucideIcons.tag, color: color, size: 18),
+                child: Icon(iconForCategoryName(cat.icon), color: color, size: 18),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -92,18 +93,112 @@ class CategoriesScreen extends ConsumerWidget {
                 ),
               ),
               IconButton(
+                icon: const Icon(LucideIcons.pencil, color: AppColors.primary, size: 16),
+                onPressed: () => _showEditSheet(context, ref, cat),
+              ),
+              IconButton(
                 icon: const Icon(LucideIcons.trash2, color: AppColors.textMuted, size: 18),
-                onPressed: () {
-                  ref.read(financeNotifierProvider.notifier).deleteCategory(cat.id);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Category deleted'), behavior: SnackBarBehavior.floating),
-                  );
-                },
+                onPressed: () => _confirmDelete(context, ref, cat),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  void _showEditSheet(BuildContext context, WidgetRef ref, cat) {
+    final nameCtrl = TextEditingController(text: cat.name);
+    String selectedIcon = cat.icon;
+    String? error;
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Edit Category', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(labelText: 'Category Name', errorText: error),
+                ),
+                const SizedBox(height: 16),
+                const Text('Icon', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: categoryIconOptions.map((entry) {
+                    final isSelected = selectedIcon == entry.key;
+                    return GestureDetector(
+                      onTap: () => setSheetState(() => selectedIcon = entry.key),
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: isSelected ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surfaceLight,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border, width: isSelected ? 2 : 1),
+                        ),
+                        child: Icon(entry.value, size: 18, color: isSelected ? AppColors.primary : AppColors.textMuted),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(width: double.infinity, child: ElevatedButton(
+                  onPressed: () {
+                    final name = nameCtrl.text.trim();
+                    if (name.isEmpty) {
+                      setSheetState(() => error = 'Enter a category name');
+                      return;
+                    }
+                    final allCats = ref.read(financeNotifierProvider).categories;
+                    final duplicate = allCats.any((c) => c.id != cat.id && c.type == cat.type && c.name.toLowerCase() == name.toLowerCase());
+                    if (duplicate) {
+                      setSheetState(() => error = 'A category with this name already exists');
+                      return;
+                    }
+                    ref.read(financeNotifierProvider.notifier).updateCategory(cat.id, name: name, icon: selectedIcon);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save'),
+                )),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, cat) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Delete category?', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Delete "${cat.name}"? Existing transactions keep this category id but it will no longer be selectable.', style: const TextStyle(color: AppColors.textMuted)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              ref.read(financeNotifierProvider.notifier).deleteCategory(cat.id);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Category deleted'), behavior: SnackBarBehavior.floating),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.expense)),
+          ),
+        ],
+      ),
     );
   }
 }

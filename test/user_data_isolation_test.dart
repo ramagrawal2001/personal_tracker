@@ -1,12 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aspyric/core/database/finance_repository.dart';
+import 'test_helpers.dart';
 
 void main() {
   group('User Account Data Isolation Tests', () {
     late FinanceNotifier notifier;
 
     setUp(() {
-      notifier = FinanceNotifier();
+      notifier = createTestFinanceNotifier();
     });
 
     test('New account registration initializes clean state without pre-populated mock figures', () {

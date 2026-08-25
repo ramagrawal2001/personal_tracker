@@ -87,28 +87,69 @@ class AccountsScreen extends ConsumerWidget {
   void _showEditSheet(BuildContext context, WidgetRef ref, acc) {
     final nameCtrl = TextEditingController(text: acc.name);
     final bankCtrl = TextEditingController(text: acc.bank ?? '');
+    final last4Ctrl = TextEditingController(text: acc.accountNumberLast4 ?? '');
+    final openingCtrl = TextEditingController(text: acc.openingBalance.toStringAsFixed(0));
+    AccountType selectedType = acc.type;
+    String? error;
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-          padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Edit Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 20),
-            TextField(controller: nameCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Account Name', LucideIcons.wallet)),
-            const SizedBox(height: 12),
-            TextField(controller: bankCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Bank (optional)', LucideIcons.building2)),
-            const SizedBox(height: 24),
-            SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: () {
-                ref.read(financeNotifierProvider.notifier).updateAccount(acc.id, name: nameCtrl.text.trim(), bank: bankCtrl.text.trim().isEmpty ? null : bankCtrl.text.trim());
-                Navigator.pop(context);
-              },
-              child: const Text('Save Changes'),
-            )),
-          ]),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Edit Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 20),
+                TextField(controller: nameCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Account Name', LucideIcons.wallet)),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<AccountType>(
+                  value: selectedType,
+                  decoration: _dec('Account Type', LucideIcons.layers),
+                  dropdownColor: AppColors.surface,
+                  items: AccountType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.displayName))).toList(),
+                  onChanged: (v) => setSheetState(() => selectedType = v ?? selectedType),
+                ),
+                const SizedBox(height: 12),
+                TextField(controller: bankCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Bank (optional)', LucideIcons.building2)),
+                const SizedBox(height: 12),
+                TextField(controller: last4Ctrl, maxLength: 4, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Last 4 digits (optional)', LucideIcons.hash)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: openingCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: _dec('Opening Balance (₹)', LucideIcons.indianRupee).copyWith(errorText: error),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(width: double.infinity, child: ElevatedButton(
+                  onPressed: () {
+                    final opening = double.tryParse(openingCtrl.text);
+                    if (opening == null) {
+                      setSheetState(() => error = 'Enter a valid opening balance');
+                      return;
+                    }
+                    if (nameCtrl.text.trim().isEmpty) {
+                      setSheetState(() => error = 'Enter an account name');
+                      return;
+                    }
+                    ref.read(financeNotifierProvider.notifier).updateAccount(
+                      acc.id,
+                      name: nameCtrl.text.trim(),
+                      type: selectedType,
+                      bank: bankCtrl.text.trim().isEmpty ? null : bankCtrl.text.trim(),
+                      accountNumberLast4: last4Ctrl.text.trim().isEmpty ? null : last4Ctrl.text.trim(),
+                      openingBalance: opening,
+                    );
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save Changes'),
+                )),
+              ]),
+            ),
+          ),
         ),
       ),
     );

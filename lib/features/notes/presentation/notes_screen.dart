@@ -11,6 +11,27 @@ import 'note_editor_screen.dart';
 
 enum NotesView { all, pinned, archived }
 
+void _confirmDelete(BuildContext context, NotesNotifier notifier, String noteId) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      backgroundColor: AppColors.surface,
+      title: const Text('Delete note?', style: TextStyle(color: AppColors.textPrimary)),
+      content: const Text('This cannot be undone.', style: TextStyle(color: AppColors.textMuted)),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () {
+            notifier.deleteNote(noteId);
+            Navigator.pop(ctx);
+          },
+          child: const Text('Delete', style: TextStyle(color: AppColors.expense)),
+        ),
+      ],
+    ),
+  );
+}
+
 class NotesScreen extends ConsumerStatefulWidget {
   const NotesScreen({super.key});
 
@@ -206,7 +227,7 @@ class _NotesGrid extends StatelessWidget {
           onTap: () => onTap(note),
           onPin: () => notifier.togglePin(note.id),
           onArchive: () => notifier.toggleArchive(note.id),
-          onDelete: () => notifier.deleteNote(note.id),
+          onDelete: () => _confirmDelete(context, notifier, note.id),
         );
       },
     );

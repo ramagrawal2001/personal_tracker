@@ -63,9 +63,15 @@ class AdminScreen extends ConsumerWidget {
     final authState = ref.watch(authNotifierProvider);
     final analytics = ref.watch(adminAnalyticsProvider);
 
-    // Role check — only admins can access this screen
-    if (authState.user == null) {
-      return const Scaffold(body: Center(child: Text('Not authenticated')));
+    // Role check — only admins can access this screen. The router's
+    // `/admin` redirect already blocks non-admins from reaching this widget,
+    // but this stays as defense-in-depth in case the widget is ever reached
+    // another way (e.g. a future deep link that bypasses the redirect).
+    final userMeta = authState.user?.userMetadata;
+    final appMeta = authState.user?.appMetadata;
+    final isAdmin = userMeta?['app_role'] == 'admin' || appMeta?['app_role'] == 'admin';
+    if (authState.user == null || !isAdmin) {
+      return const Scaffold(body: Center(child: Text('Not authorized')));
     }
 
     return AppScaffold(

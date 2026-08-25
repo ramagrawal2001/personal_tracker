@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,7 +11,9 @@ const _kSessionUserEmail  = 'aspyric_session_user_email';
 const _kSessionUserName   = 'aspyric_session_user_name';
 
 /// ── Demo / test account bypass ───────────────────────────────────────────────
-/// These credentials work offline without Supabase.
+/// These credentials work offline without Supabase, but ONLY in debug builds
+/// (see the `kDebugMode` guard in `signIn`) — `flutter build` release/profile
+/// binaries never compile this bypass into a reachable code path.
 /// Password for all test accounts: Aspyric@123
 const Map<String, String> _demoAccounts = {
   'test@aspyric.app'  : 'Aspyric@123',
@@ -116,7 +119,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
           state = AuthState(isAuthenticated: false, isRestored: true);
         }
       });
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('AuthNotifier: failed to attach Supabase auth listener: $e');
+    }
   }
 
   Future<void> ensureSessionRestored() async {
@@ -191,7 +196,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (name != null) {
         await prefs.setString(_kSessionUserName, name);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('AuthNotifier: failed to persist session: $e');
+    }
   }
 
   Future<void> _clearPersistedSession() async {
@@ -201,7 +208,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await prefs.remove(_kSessionUserEmail);
       await prefs.remove(_kSessionUserId);
       await prefs.remove(_kSessionUserName);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('AuthNotifier: failed to clear persisted session: $e');
+    }
   }
 
   void clearError() => state = state.copyWith(errorMessage: null);
@@ -241,8 +250,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
     final normalised = email.trim().toLowerCase();
 
-    // ── Demo / test bypass ─────────────────────────────────────────────────
-    if (_demoAccounts[normalised] == password) {
+    // ── Demo / test bypass (debug builds only) ──────────────────────────────
+    if (kDebugMode && _demoAccounts[normalised] == password) {
       await Future.delayed(const Duration(milliseconds: 300));
       await activateSession(
         email: normalised,
@@ -321,7 +330,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (SupabaseService.isInitialized) {
         await SupabaseService.client.auth.signOut();
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('AuthNotifier: Supabase sign-out failed (clearing local session anyway): $e');
+    }
     await _clearPersistedSession();
     state = AuthState(isAuthenticated: false, isRestored: true);
   }

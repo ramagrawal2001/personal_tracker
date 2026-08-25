@@ -172,38 +172,70 @@ class InvestmentsScreen extends ConsumerWidget {
 
   void _showEditInvestmentSheet(BuildContext context, WidgetRef ref, inv) {
     final nameCtrl = TextEditingController(text: inv.name);
+    final investedCtrl = TextEditingController(text: inv.investedAmount.toStringAsFixed(0));
     final currentCtrl = TextEditingController(text: inv.currentValue.toStringAsFixed(0));
     final sipCtrl = TextEditingController(text: inv.monthlySipAmount > 0 ? inv.monthlySipAmount.toStringAsFixed(0) : '');
+    String? error;
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-          padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Update Investment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 20),
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Investment Name', prefixIcon: Icon(LucideIcons.trendingUp, size: 16))),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: TextField(controller: currentCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Current Value (₹)', prefixIcon: Icon(LucideIcons.indianRupee, size: 16)))),
-              const SizedBox(width: 12),
-              Expanded(child: TextField(controller: sipCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monthly SIP (₹)', prefixIcon: Icon(LucideIcons.repeat, size: 16)))),
-            ]),
-            const SizedBox(height: 24),
-            SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: () {
-                ref.read(financeNotifierProvider.notifier).updateInvestment(inv.id,
-                  name: nameCtrl.text.trim(),
-                  currentValue: double.tryParse(currentCtrl.text),
-                  monthlySipAmount: double.tryParse(sipCtrl.text) ?? 0,
-                );
-                Navigator.pop(context);
-              },
-              child: const Text('Save Changes'),
-            )),
-          ]),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Update Investment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 20),
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Investment Name', prefixIcon: Icon(LucideIcons.trendingUp, size: 16))),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: TextField(controller: investedCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Invested (₹)', prefixIcon: Icon(LucideIcons.indianRupee, size: 16)))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: currentCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Current Value (₹)', prefixIcon: Icon(LucideIcons.indianRupee, size: 16)))),
+                ]),
+                const SizedBox(height: 12),
+                TextField(controller: sipCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Monthly SIP (₹)', prefixIcon: Icon(LucideIcons.repeat, size: 16))),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(error!, style: const TextStyle(color: AppColors.expense, fontSize: 12)),
+                ],
+                const SizedBox(height: 24),
+                SizedBox(width: double.infinity, child: ElevatedButton(
+                  onPressed: () {
+                    final invested = double.tryParse(investedCtrl.text);
+                    final current = double.tryParse(currentCtrl.text);
+                    final sip = double.tryParse(sipCtrl.text) ?? 0;
+                    if (nameCtrl.text.trim().isEmpty) {
+                      setSheetState(() => error = 'Enter an investment name');
+                      return;
+                    }
+                    if (invested == null || invested < 0) {
+                      setSheetState(() => error = 'Enter a valid invested amount');
+                      return;
+                    }
+                    if (current == null || current < 0) {
+                      setSheetState(() => error = 'Enter a valid current value');
+                      return;
+                    }
+                    if (sip < 0) {
+                      setSheetState(() => error = 'Monthly SIP cannot be negative');
+                      return;
+                    }
+                    ref.read(financeNotifierProvider.notifier).updateInvestment(inv.id,
+                      name: nameCtrl.text.trim(),
+                      investedAmount: invested,
+                      currentValue: current,
+                      monthlySipAmount: sip,
+                    );
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save Changes'),
+                )),
+              ]),
+            ),
+          ),
         ),
       ),
     );

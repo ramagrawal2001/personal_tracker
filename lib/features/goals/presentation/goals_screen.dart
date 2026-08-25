@@ -144,14 +144,18 @@ class GoalsScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              IconButton(
-                icon: const Icon(LucideIcons.trash2, color: AppColors.textMuted, size: 18),
-                onPressed: () {
-                  ref.read(financeNotifierProvider.notifier).deleteGoal(goal.id);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Goal deleted'), behavior: SnackBarBehavior.floating),
-                  );
-                },
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.pencil, color: AppColors.primary, size: 16),
+                    onPressed: () => _showEditGoalSheet(context, ref, goal),
+                  ),
+                  IconButton(
+                    icon: const Icon(LucideIcons.trash2, color: AppColors.textMuted, size: 18),
+                    onPressed: () => _confirmDeleteGoal(context, ref, goal),
+                  ),
+                ],
               ),
             ],
           ),
@@ -237,6 +241,110 @@ class GoalsScreen extends ConsumerWidget {
               }
             },
             child: const Text('Deposit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditGoalSheet(BuildContext context, WidgetRef ref, GoalModel goal) {
+    final nameCtrl = TextEditingController(text: goal.name);
+    final targetCtrl = TextEditingController(text: goal.targetAmount.toStringAsFixed(0));
+    DateTime? targetDate = goal.targetDate;
+    String? error;
+
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Edit Goal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: nameCtrl,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: const InputDecoration(labelText: 'Goal Name'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: targetCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(labelText: 'Target Amount (₹)', errorText: error),
+                ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: targetDate ?? DateTime.now().add(const Duration(days: 180)),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                    );
+                    if (picked != null) setSheetState(() => targetDate = picked);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Target Date'),
+                    child: Text(
+                      targetDate != null ? '${targetDate!.day}/${targetDate!.month}/${targetDate!.year}' : 'No target date',
+                      style: const TextStyle(color: AppColors.textPrimary),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(width: double.infinity, child: ElevatedButton(
+                  onPressed: () {
+                    final name = nameCtrl.text.trim();
+                    final target = double.tryParse(targetCtrl.text);
+                    if (name.isEmpty) {
+                      setSheetState(() => error = 'Enter a goal name');
+                      return;
+                    }
+                    if (target == null || target <= 0) {
+                      setSheetState(() => error = 'Enter a target amount greater than 0');
+                      return;
+                    }
+                    ref.read(financeNotifierProvider.notifier).updateGoal(
+                      goal.id,
+                      name: name,
+                      targetAmount: target,
+                      targetDate: targetDate,
+                    );
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save Changes'),
+                )),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteGoal(BuildContext context, WidgetRef ref, GoalModel goal) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Delete goal?', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Delete "${goal.name}"? This cannot be undone.', style: const TextStyle(color: AppColors.textMuted)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              ref.read(financeNotifierProvider.notifier).deleteGoal(goal.id);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Goal deleted'), behavior: SnackBarBehavior.floating),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.expense)),
           ),
         ],
       ),

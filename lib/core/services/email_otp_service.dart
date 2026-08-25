@@ -1,12 +1,16 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/env_config.dart';
 
 /// ─── Test-account bypass map ────────────────────────────────────────────────
-/// These emails always accept the listed OTP without an actual email being sent.
+/// These emails always accept the listed OTP without an actual email being
+/// sent — but ONLY in debug builds (`kDebugMode`). Release/profile builds
+/// never treat these as special, so this can't be used to skip verification
+/// on a shipped app.
 const Map<String, String> _testOtps = {
   'test@aspyric.app'  : '123456',
   'test2@aspyric.app' : '123456',
@@ -17,14 +21,17 @@ const Map<String, String> _testOtps = {
 };
 
 const _otpTtlSecs   = 300; // 5 minutes
+const _maxAttempts  = 5;   // failed guesses allowed per issued OTP
+
+bool _isTestAccount(String normalisedEmail) => kDebugMode && _testOtps.containsKey(normalisedEmail);
 
 class EmailOtpService {
   // ── Generate & send OTP via Resend ───────────────────────────────────────
   static Future<bool> sendOtp(String email, {OtpPurpose purpose = OtpPurpose.verify}) async {
     final normalised = email.trim().toLowerCase();
 
-    // Test-account: skip real send, just store the known OTP
-    if (_testOtps.containsKey(normalised)) {
+    // Test-account (debug builds only): skip real send, just store the known OTP
+    if (_isTestAccount(normalised)) {
       await _storeOtp(normalised, _testOtps[normalised]!);
       return true;
     }
@@ -60,12 +67,16 @@ class EmailOtpService {
     }
   }
 
-  /// Retrieves the active OTP stored for this email
+  /// Retrieves the active OTP stored for this email. Only ever returns a
+  /// value for debug-build test accounts or straight from local storage on
+  /// the same device that requested it — it does not expose other users'
+  /// codes over the network.
   static Future<String?> getLatestOtpForTesting(String email) async {
     final normalised = email.trim().toLowerCase();
-    if (_testOtps.containsKey(normalised)) {
+    if (_isTestAccount(normalised)) {
       return _testOtps[normalised];
     }
+    if (!kDebugMode) return null;
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('otp_code_$normalised');
   }
@@ -76,14 +87,22 @@ class EmailOtpService {
     final prefs = await SharedPreferences.getInstance();
     final storedOtp    = prefs.getString('otp_code_$normalised');
     final storedExpiry = prefs.getInt('otp_expiry_$normalised') ?? 0;
+    final attemptsKey  = 'otp_attempts_$normalised';
+    final attempts     = prefs.getInt(attemptsKey) ?? 0;
 
     if (storedOtp == null) return OtpResult.notFound;
     if (DateTime.now().millisecondsSinceEpoch > storedExpiry) return OtpResult.expired;
-    if (storedOtp.trim() != enteredOtp.trim()) return OtpResult.wrong;
+    if (attempts >= _maxAttempts) return OtpResult.tooManyAttempts;
+
+    if (storedOtp.trim() != enteredOtp.trim()) {
+      await prefs.setInt(attemptsKey, attempts + 1);
+      return OtpResult.wrong;
+    }
 
     // Clear after successful verify
     await prefs.remove('otp_code_$normalised');
     await prefs.remove('otp_expiry_$normalised');
+    await prefs.remove(attemptsKey);
     return OtpResult.ok;
   }
 
@@ -98,6 +117,7 @@ class EmailOtpService {
     final expiry = DateTime.now().millisecondsSinceEpoch + (_otpTtlSecs * 1000);
     await prefs.setString('otp_code_$email', otp);
     await prefs.setInt('otp_expiry_$email', expiry);
+    await prefs.remove('otp_attempts_$email');
   }
 
   static String _buildEmailHtml(String otp, OtpPurpose purpose) {
@@ -132,14 +152,15 @@ class EmailOtpService {
 </html>''';
   }
 
-  /// Returns test OTP hint for development — empty string in prod
+  /// Returns test OTP hint for development — empty string outside debug builds
   static String testHint(String email) {
+    if (!kDebugMode) return '';
     final normalised = email.trim().toLowerCase();
     return _testOtps[normalised] != null ? '(Test OTP: ${_testOtps[normalised]})' : '';
   }
 
-  static bool isTestAccount(String email) => _testOtps.containsKey(email.trim().toLowerCase());
+  static bool isTestAccount(String email) => _isTestAccount(email.trim().toLowerCase());
 }
 
 enum OtpPurpose { verify, resetPassword }
-enum OtpResult  { ok, wrong, expired, notFound }
+enum OtpResult  { ok, wrong, expired, notFound, tooManyAttempts }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/widgets/biometric_gate.dart';
+import '../../features/auth/presentation/auth_repository.dart';
 import '../../features/navigation/main_shell.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/accounts/presentation/accounts_screen.dart';
@@ -37,9 +39,27 @@ import '../../features/auth/presentation/forgot_password_screen.dart';
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'shell');
 
-final appRouter = GoRouter(
+bool _isAdmin(AuthState authState) {
+  final user = authState.user;
+  if (user == null) return false;
+  return user.userMetadata?['app_role'] == 'admin' || user.appMetadata['app_role'] == 'admin';
+}
+
+/// Built via a provider (rather than as a bare top-level constant) so the
+/// `/admin` guard below can read live auth state through [ref] on every
+/// navigation attempt, instead of only hiding the entry point in the UI.
+final appRouterProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/splash',
+  redirect: (context, state) {
+    if (state.matchedLocation == '/admin') {
+      final authState = ref.read(authNotifierProvider);
+      if (!authState.isAuthenticated) return '/login';
+      if (!_isAdmin(authState)) return '/';
+    }
+    return null;
+  },
   routes: [
     // ── Public / full-page routes (no shell) ─────────────────────────────
     GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
@@ -82,9 +102,8 @@ final appRouter = GoRouter(
             return NoteEditorScreen(note: note);
           },
         ),
-        // AI Assistant (temporarily disabled)
-        // GoRoute(path: '/ai-assistant', builder: (_, __) => const AiAssistantScreen()),
       ],
     ),
   ],
-);
+  );
+});

@@ -3,13 +3,14 @@ import 'package:aspyric/core/constants/app_constants.dart';
 import 'package:aspyric/core/database/finance_repository.dart';
 import 'package:aspyric/core/services/merchant_categorizer.dart';
 import 'package:aspyric/domain/models/models.dart';
+import 'test_helpers.dart';
 
 void main() {
   group('Comprehensive Financial Engine Edge Cases Matrix', () {
     late FinanceNotifier notifier;
 
     setUp(() {
-      notifier = FinanceNotifier();
+      notifier = createTestFinanceNotifier();
       // Set up test accounts, credit cards, and loans fresh for each test
       notifier.addAccount(
         name: 'HDFC Test Account',

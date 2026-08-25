@@ -45,7 +45,6 @@ class _MainShellState extends State<MainShell> {
         location.startsWith('/analytics') ||
         location.startsWith('/settings') ||
         location.startsWith('/profile') ||
-        location.startsWith('/ai-assistant') ||
         location.startsWith('/more')) {
       return 4;
     }
@@ -260,8 +259,7 @@ class _MainShellState extends State<MainShell> {
     if (location == '/notes/editor') return null;
     if (location.startsWith('/settings') ||
         location.startsWith('/profile') ||
-        location.startsWith('/analytics') ||
-        location.startsWith('/ai-assistant')) {
+        location.startsWith('/analytics')) {
       return null;
     }
 

@@ -58,12 +58,31 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
     super.dispose();
   }
 
+  /// Parses `dd-MM-yyyy` (falls back to today only if the field can't be
+  /// parsed at all, so the original statement date isn't silently discarded).
+  DateTime? _parseDate(String raw) {
+    final parts = raw.trim().split('-');
+    if (parts.length != 3) return null;
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final year = int.tryParse(parts[2]);
+    if (day == null || month == null || year == null) return null;
+    try {
+      return DateTime(year, month, day);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  int _skippedRows = 0;
+
   void _parseCsv() {
     final text = _csvController.text.trim();
     if (text.isEmpty) return;
 
     final lines = text.split('\n');
     final List<ParsedCsvRow> parsed = [];
+    int skipped = 0;
 
     for (var line in lines) {
       final parts = line.split(',');
@@ -74,7 +93,10 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
 
       final desc = parts[1].trim();
       final amount = double.tryParse(parts[2].trim()) ?? 0.0;
-      if (amount <= 0) continue;
+      if (amount <= 0) {
+        skipped++;
+        continue;
+      }
 
       final mapping = MerchantCategorizer.categorize(desc);
       final merchant = mapping?.merchantName ?? desc;
@@ -82,7 +104,7 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
 
       parsed.add(
         ParsedCsvRow(
-          date: DateTime.now(),
+          date: _parseDate(parts[0]) ?? DateTime.now(),
           rawDescription: desc,
           merchantName: merchant,
           amount: amount,
@@ -94,6 +116,7 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
 
     setState(() {
       _previewRows = parsed;
+      _skippedRows = skipped;
     });
   }
 
@@ -221,6 +244,13 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
                 'Detected Transactions (${_previewRows.length})',
                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
+              if (_skippedRows > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '$_skippedRows row${_skippedRows > 1 ? 's' : ''} skipped (missing or non-positive amount)',
+                  style: const TextStyle(fontSize: 12, color: AppColors.warning),
+                ),
+              ],
               const SizedBox(height: 8),
               ListView.builder(
                 shrinkWrap: true,

@@ -1,5 +1,6 @@
 # Environment secrets
 .env
+dart_defines.json
 
 
 *.class

@@ -17,13 +17,18 @@ class BiometricService {
     }
   }
 
-  /// Trigger Face ID / Fingerprint prompt
+  /// Trigger Face ID / Fingerprint (or device PIN/pattern, via
+  /// `biometricOnly: false`) prompt. Fails **closed**: any error, or a
+  /// device with no authentication method configured at all, denies access
+  /// rather than silently unlocking. Callers that gate enabling the lock
+  /// (e.g. the Biometric Lock toggle) already require a successful
+  /// [authenticate] call first, so a device without hardware support simply
+  /// can't turn the lock on in the first place.
   static Future<bool> authenticate({String reason = 'Scan Face ID or Fingerprint to unlock Finance OS'}) async {
     try {
       final isSupported = await isBiometricSupported();
       if (!isSupported && !kIsWeb) {
-        // Fallback for non-biometric environments in test/demo mode
-        return true;
+        return false;
       }
 
       return await _auth.authenticate(
@@ -35,10 +40,10 @@ class BiometricService {
       );
     } on PlatformException catch (e) {
       debugPrint('Biometric auth platform error: $e');
-      return true; // Graceful fallback
+      return false;
     } catch (e) {
       debugPrint('Biometric auth error: $e');
-      return true;
+      return false;
     }
   }
 }

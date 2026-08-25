@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
@@ -10,6 +11,7 @@ import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../domain/models/models.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -93,6 +95,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     return AppScaffold(
       title: 'Financial Calendar',
       scrollable: true,
+      actions: [
+        IconButton(
+          icon: const Icon(LucideIcons.plus, color: AppColors.primary),
+          onPressed: () => _showRecurringSheet(context, ref, financeState),
+        ),
+      ],
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -227,7 +235,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 final item = scheduleItems[index];
                 final dueDate = item.nextDueDate;
                 final isOverdue = dueDate.isBefore(today) && !isCurrentMonth;
-                return Container(
+                return InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => _showRecurringSheet(context, ref, financeState, existing: item),
+                  onLongPress: () => _confirmDeleteRecurring(context, ref, item),
+                  child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
@@ -277,9 +289,169 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       ),
                     ],
                   ),
+                  ),
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+
+  void _showRecurringSheet(BuildContext context, WidgetRef ref, FinanceState financeState, {RecurringPaymentModel? existing}) {
+    final titleCtrl = TextEditingController(text: existing?.title ?? '');
+    final amountCtrl = TextEditingController(text: existing != null ? existing.amount.toStringAsFixed(0) : '');
+    PaymentFrequency frequency = existing?.frequency ?? PaymentFrequency.monthly;
+    DateTime dueDate = existing?.nextDueDate ?? DateTime.now().add(const Duration(days: 7));
+    bool isAutoPay = existing?.isAutoPay ?? false;
+    String? categoryId = existing?.categoryId;
+    String? accountId = existing?.accountId;
+    String? error;
+
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(existing == null ? 'New Recurring Payment' : 'Edit Recurring Payment', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(labelText: 'Title (e.g. Netflix, Rent)'),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: amountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(labelText: 'Amount (₹)', errorText: error, prefixIcon: const Icon(LucideIcons.indianRupee, size: 16)),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<PaymentFrequency>(
+                  value: frequency,
+                  decoration: const InputDecoration(labelText: 'Frequency'),
+                  dropdownColor: AppColors.surface,
+                  items: PaymentFrequency.values.map((f) => DropdownMenuItem(value: f, child: Text(f.displayName))).toList(),
+                  onChanged: (v) => setSheetState(() => frequency = v ?? frequency),
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: dueDate,
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                    );
+                    if (picked != null) setSheetState(() => dueDate = picked);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Next Due Date'),
+                    child: Text(DateFormatter.formatShort(dueDate), style: const TextStyle(color: AppColors.textPrimary)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (financeState.categories.isNotEmpty)
+                  DropdownButtonFormField<String?>(
+                    value: categoryId,
+                    decoration: const InputDecoration(labelText: 'Category (optional)'),
+                    dropdownColor: AppColors.surface,
+                    items: [
+                      const DropdownMenuItem<String?>(value: null, child: Text('None')),
+                      ...financeState.categories.map((c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name))),
+                    ],
+                    onChanged: (v) => setSheetState(() => categoryId = v),
+                  ),
+                const SizedBox(height: 16),
+                if (financeState.accounts.isNotEmpty)
+                  DropdownButtonFormField<String?>(
+                    value: accountId,
+                    decoration: const InputDecoration(labelText: 'Pay From Account (optional)'),
+                    dropdownColor: AppColors.surface,
+                    items: [
+                      const DropdownMenuItem<String?>(value: null, child: Text('None')),
+                      ...financeState.accounts.map((a) => DropdownMenuItem<String?>(value: a.id, child: Text(a.name))),
+                    ],
+                    onChanged: (v) => setSheetState(() => accountId = v),
+                  ),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Auto-Pay', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                  value: isAutoPay,
+                  activeColor: AppColors.primary,
+                  onChanged: (v) => setSheetState(() => isAutoPay = v),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (titleCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Enter a title'), backgroundColor: AppColors.expense));
+                        return;
+                      }
+                      final amount = double.tryParse(amountCtrl.text);
+                      if (amount == null || amount <= 0) {
+                        setSheetState(() => error = 'Enter an amount greater than 0');
+                        return;
+                      }
+                      final notifier = ref.read(financeNotifierProvider.notifier);
+                      if (existing == null) {
+                        notifier.addRecurringPayment(
+                          title: titleCtrl.text.trim(),
+                          amount: amount,
+                          frequency: frequency,
+                          nextDueDate: dueDate,
+                          categoryId: categoryId,
+                          accountId: accountId,
+                          isAutoPay: isAutoPay,
+                        );
+                      } else {
+                        notifier.updateRecurringPayment(
+                          existing.id,
+                          title: titleCtrl.text.trim(),
+                          amount: amount,
+                          frequency: frequency,
+                          nextDueDate: dueDate,
+                          categoryId: categoryId,
+                          accountId: accountId,
+                          isAutoPay: isAutoPay,
+                        );
+                      }
+                      Navigator.pop(context);
+                    },
+                    child: Text(existing == null ? 'Add Payment' : 'Save Changes'),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteRecurring(BuildContext context, WidgetRef ref, RecurringPaymentModel item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Delete recurring payment?', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Remove "${item.title}"? This cannot be undone.', style: const TextStyle(color: AppColors.textMuted)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              ref.read(financeNotifierProvider.notifier).deleteRecurringPayment(item.id);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.expense)),
+          ),
         ],
       ),
     );

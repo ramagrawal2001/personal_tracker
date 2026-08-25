@@ -417,7 +417,7 @@ class BudgetModel {
   final double spentAmount;
 
   double get remaining => monthlyLimit - spentAmount;
-  double get percentage => (spentAmount / monthlyLimit).clamp(0.0, 1.0);
+  double get percentage => monthlyLimit > 0 ? (spentAmount / monthlyLimit).clamp(0.0, 1.0) : 0.0;
 
   BudgetModel({
     required this.id,

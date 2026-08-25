@@ -101,17 +101,21 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _save();
+        Navigator.of(context).pop();
+      },
+      child: Scaffold(
       backgroundColor: _note.color.color,
       appBar: AppBar(
         backgroundColor: _note.color.color,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
-          onPressed: () {
-            _save();
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.of(context).maybePop(),
         ),
         actions: [
           IconButton(
@@ -242,6 +246,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               ),
           ],
         ),
+      ),
       ),
     );
   }

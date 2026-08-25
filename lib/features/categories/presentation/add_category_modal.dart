@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../../core/utils/category_icons.dart';
 
 class AddCategoryModal extends ConsumerStatefulWidget {
   const AddCategoryModal({super.key});
@@ -26,7 +27,8 @@ class AddCategoryModal extends ConsumerStatefulWidget {
 class _AddCategoryModalState extends ConsumerState<AddCategoryModal> {
   final TextEditingController _nameController = TextEditingController();
   String _type = 'expense';
-  final String _selectedIcon = 'tag';
+  String _selectedIcon = 'tag';
+  String? _error;
 
   @override
   void dispose() {
@@ -148,10 +150,34 @@ class _AddCategoryModalState extends ConsumerState<AddCategoryModal> {
 
             TextField(
               controller: _nameController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Category Name (e.g. Subscriptions, Groceries)',
-                prefixIcon: Icon(LucideIcons.tag, color: AppColors.primary, size: 18),
+                prefixIcon: const Icon(LucideIcons.tag, color: AppColors.primary, size: 18),
+                errorText: _error,
               ),
+            ),
+            const SizedBox(height: 18),
+            const Text('Icon', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: categoryIconOptions.map((entry) {
+                final isSelected = _selectedIcon == entry.key;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedIcon = entry.key),
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppColors.primary.withValues(alpha: 0.2) : AppColors.surfaceLight,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: isSelected ? AppColors.primary : AppColors.border, width: isSelected ? 2 : 1),
+                    ),
+                    child: Icon(entry.value, size: 18, color: isSelected ? AppColors.primary : AppColors.textMuted),
+                  ),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 24),
 
@@ -178,9 +204,14 @@ class _AddCategoryModalState extends ConsumerState<AddCategoryModal> {
   void _saveCategory() {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a category name'), behavior: SnackBarBehavior.floating),
-      );
+      setState(() => _error = 'Please enter a category name');
+      return;
+    }
+
+    final existing = ref.read(financeNotifierProvider).categories;
+    final duplicate = existing.any((c) => c.type == _type && c.name.toLowerCase() == name.toLowerCase());
+    if (duplicate) {
+      setState(() => _error = 'A category with this name already exists');
       return;
     }
 

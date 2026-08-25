@@ -133,10 +133,28 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         decoration: BoxDecoration(color: AppColors.expense, borderRadius: BorderRadius.circular(14)),
         child: const Icon(LucideIcons.trash2, color: Colors.white),
       ),
+      confirmDismiss: (_) async {
+        return await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                backgroundColor: AppColors.surface,
+                title: const Text('Delete transaction?', style: TextStyle(color: AppColors.textPrimary)),
+                content: const Text('This cannot be undone.', style: TextStyle(color: AppColors.textMuted)),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.expense))),
+                ],
+              ),
+            ) ??
+            false;
+      },
       onDismissed: (_) {
         ref.read(financeNotifierProvider.notifier).deleteTransaction(tx.id);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction deleted')));
       },
+      child: InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => QuickAddModal.show(context, existing: tx),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: AppDecorations.card(radius: 14),
@@ -170,6 +188,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

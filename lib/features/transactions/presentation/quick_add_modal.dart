@@ -5,11 +5,30 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/date_formatter.dart';
+import '../../../domain/models/models.dart';
 
 class QuickAddModal extends ConsumerStatefulWidget {
-  const QuickAddModal({super.key});
+  final TransactionModel? existing;
+  final TransactionType? initialType;
+  final String? initialCreditCardId;
+  final String? initialLoanId;
 
-  static void show(BuildContext context) {
+  const QuickAddModal({
+    super.key,
+    this.existing,
+    this.initialType,
+    this.initialCreditCardId,
+    this.initialLoanId,
+  });
+
+  static void show(
+    BuildContext context, {
+    TransactionModel? existing,
+    TransactionType? initialType,
+    String? initialCreditCardId,
+    String? initialLoanId,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -17,7 +36,12 @@ class QuickAddModal extends ConsumerStatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (_) => const QuickAddModal(),
+      builder: (_) => QuickAddModal(
+        existing: existing,
+        initialType: initialType,
+        initialCreditCardId: initialCreditCardId,
+        initialLoanId: initialLoanId,
+      ),
     );
   }
 
@@ -26,16 +50,37 @@ class QuickAddModal extends ConsumerStatefulWidget {
 }
 
 class _QuickAddModalState extends ConsumerState<QuickAddModal> {
-  TransactionType _selectedType = TransactionType.expense;
+  late TransactionType _selectedType;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _merchantController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  late DateTime _selectedDate;
 
   String? _selectedAccountId;
   String? _selectedToAccountId;
   String? _selectedCategoryId;
   String? _selectedCardId;
   String? _selectedLoanId;
+
+  bool get _isEditing => widget.existing != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    _selectedType = existing?.type ?? widget.initialType ?? TransactionType.expense;
+    _selectedDate = existing?.date ?? DateTime.now();
+    _selectedAccountId = existing?.accountId;
+    _selectedToAccountId = existing?.toAccountId;
+    _selectedCategoryId = existing?.categoryId;
+    _selectedCardId = existing?.creditCardId ?? widget.initialCreditCardId;
+    _selectedLoanId = existing?.loanId ?? widget.initialLoanId;
+    if (existing != null) {
+      _amountController.text = existing.amount.toStringAsFixed(existing.amount.truncateToDouble() == existing.amount ? 0 : 2);
+      _merchantController.text = existing.merchant ?? '';
+      _notesController.text = existing.description ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -100,9 +145,9 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Log Transaction',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                Text(
+                  _isEditing ? 'Edit Transaction' : 'Log Transaction',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 IconButton(
                   icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
@@ -112,7 +157,8 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             ),
             const SizedBox(height: 14),
 
-            // Type Selector Chips
+            // Type Selector Chips (locked while editing — changing type would
+            // require re-deriving balance/outstanding effects; delete + recreate instead)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -138,7 +184,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               child: TextField(
                 controller: _amountController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                autofocus: true,
+                autofocus: !_isEditing,
                 style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 decoration: const InputDecoration(
                   prefixText: '₹ ',
@@ -155,7 +201,40 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             ),
             const SizedBox(height: 16),
 
-            // Source Account Selector
+            // Date picker
+            const Text('Date', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            const SizedBox(height: 6),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                );
+                if (picked != null) setState(() => _selectedDate = picked);
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.calendar, size: 16, color: AppColors.textMuted),
+                    const SizedBox(width: 10),
+                    Text(DateFormatter.formatShort(_selectedDate), style: const TextStyle(color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Source Account Selector (locked while editing)
             const Text('From Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
@@ -174,7 +253,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                   child: Text('${acc.name} (${CurrencyFormatter.format(acc.calculatedBalance)})'),
                 );
               }).toList(),
-              onChanged: (val) => setState(() => _selectedAccountId = val),
+              onChanged: _isEditing ? null : (val) => setState(() => _selectedAccountId = val),
             ),
             const SizedBox(height: 14),
 
@@ -198,7 +277,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                     child: Text('${acc.name} (${CurrencyFormatter.format(acc.calculatedBalance)})'),
                   );
                 }).toList(),
-                onChanged: (val) => setState(() => _selectedToAccountId = val),
+                onChanged: _isEditing ? null : (val) => setState(() => _selectedToAccountId = val),
               ),
               const SizedBox(height: 14),
             ],
@@ -222,7 +301,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                     child: Text('${card.name} (Due: ${CurrencyFormatter.format(card.currentOutstanding)})'),
                   );
                 }).toList(),
-                onChanged: (val) => setState(() => _selectedCardId = val),
+                onChanged: _isEditing ? null : (val) => setState(() => _selectedCardId = val),
               ),
               const SizedBox(height: 14),
             ],
@@ -246,7 +325,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                     child: Text('${loan.name} (Outstanding: ${CurrencyFormatter.format(loan.outstandingAmount)})'),
                   );
                 }).toList(),
-                onChanged: (val) => setState(() => _selectedLoanId = val),
+                onChanged: _isEditing ? null : (val) => setState(() => _selectedLoanId = val),
               ),
               const SizedBox(height: 14),
             ],
@@ -302,7 +381,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 onPressed: _saveTransaction,
-                child: const Text('Save Transaction', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                child: Text(_isEditing ? 'Save Changes' : 'Save Transaction', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -327,9 +406,11 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           fontSize: 13,
         ),
-        onSelected: (val) {
-          if (val) setState(() => _selectedType = type);
-        },
+        onSelected: _isEditing
+            ? null
+            : (val) {
+                if (val) setState(() => _selectedType = type);
+              },
       ),
     );
   }
@@ -352,23 +433,54 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       return;
     }
 
-    ref.read(financeNotifierProvider.notifier).addTransaction(
-          accountId: _selectedAccountId!,
-          toAccountId: _selectedType == TransactionType.transfer ? _selectedToAccountId : null,
-          type: _selectedType,
-          amount: amount,
-          categoryId: _selectedCategoryId,
-          merchant: _merchantController.text.trim().isNotEmpty ? _merchantController.text.trim() : null,
-          date: DateTime.now(),
-          description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
-          creditCardId: _selectedType == TransactionType.creditCardPayment ? _selectedCardId : null,
-          loanId: _selectedType == TransactionType.loanPayment ? _selectedLoanId : null,
-        );
+    if (_selectedType == TransactionType.transfer && _selectedToAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a destination account'), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+    if (_selectedType == TransactionType.creditCardPayment && _selectedCardId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a credit card'), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+    if (_selectedType == TransactionType.loanPayment && _selectedLoanId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a loan'), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+
+    final notifier = ref.read(financeNotifierProvider.notifier);
+    if (_isEditing) {
+      notifier.updateTransaction(
+        widget.existing!.id,
+        amount: amount,
+        categoryId: _selectedCategoryId,
+        merchant: _merchantController.text.trim().isNotEmpty ? _merchantController.text.trim() : null,
+        date: _selectedDate,
+        description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+      );
+    } else {
+      notifier.addTransaction(
+        accountId: _selectedAccountId!,
+        toAccountId: _selectedType == TransactionType.transfer ? _selectedToAccountId : null,
+        type: _selectedType,
+        amount: amount,
+        categoryId: _selectedCategoryId,
+        merchant: _merchantController.text.trim().isNotEmpty ? _merchantController.text.trim() : null,
+        date: _selectedDate,
+        description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+        creditCardId: _selectedType == TransactionType.creditCardPayment ? _selectedCardId : null,
+        loanId: _selectedType == TransactionType.loanPayment ? _selectedLoanId : null,
+      );
+    }
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Transaction saved successfully!'),
+      SnackBar(
+        content: Text(_isEditing ? 'Transaction updated!' : 'Transaction saved successfully!'),
         backgroundColor: AppColors.income,
         behavior: SnackBarBehavior.floating,
       ),

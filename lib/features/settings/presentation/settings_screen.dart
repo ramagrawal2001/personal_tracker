@@ -8,10 +8,12 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../auth/presentation/auth_repository.dart';
+import '../../../core/services/biometric_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -194,7 +196,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   subtitle: Text(financeState.isBiometricEnabled ? 'Biometrics Active (Face ID / Fingerprint)' : 'Disabled — Tap to require biometric auth', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   value: financeState.isBiometricEnabled,
                   activeColor: AppColors.primary,
-                  onChanged: (val) => financeNotifier.toggleBiometric(val),
+                  onChanged: (val) async {
+                    if (val) {
+                      final ok = await BiometricService.authenticate(reason: 'Verify to enable Biometric Gate');
+                      if (ok) {
+                        financeNotifier.toggleBiometric(true);
+                      } else if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication failed — Biometric Gate not enabled'), backgroundColor: AppColors.expense));
+                      }
+                    } else {
+                      financeNotifier.toggleBiometric(false);
+                    }
+                  },
                 ),
                 const Divider(color: AppColors.border, height: 1),
                 SwitchListTile(
@@ -225,6 +238,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onChanged: (val) => financeNotifier.toggleAutoBackup(val),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // ── Budget & Safety ──────────────────────────────────────────
+          const SectionLabel(label: 'Budget & Safety'),
+          AppCard(
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: AppDecorations.iconBadge(AppColors.income),
+                child: const Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 18),
+              ),
+              title: const Text('Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+              subtitle: Text(
+                '${CurrencyFormatter.format(financeState.emergencyBuffer)} held back from Safe to Spend',
+                style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+              ),
+              trailing: const Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+              onTap: () => _showEmergencyBufferDialog(context, financeNotifier, financeState.emergencyBuffer),
             ),
           ),
           const SizedBox(height: 18),
@@ -306,6 +340,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     trailing: const Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
     onTap: onTap,
   );
+
+  void _showEmergencyBufferDialog(BuildContext context, FinanceNotifier notifier, double current) {
+    final ctrl = TextEditingController(text: current.toStringAsFixed(0));
+    String? error;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+          content: TextField(
+            controller: ctrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'Amount (₹)',
+              errorText: error,
+              prefixIcon: const Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 18),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
+            ElevatedButton(
+              onPressed: () {
+                final amount = double.tryParse(ctrl.text.trim());
+                if (amount == null || amount < 0) {
+                  setDialogState(() => error = 'Enter a valid, non-negative amount');
+                  return;
+                }
+                notifier.setEmergencyBuffer(amount);
+                Navigator.pop(ctx);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _ThemeChip extends StatelessWidget {

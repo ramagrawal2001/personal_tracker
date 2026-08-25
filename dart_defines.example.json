@@ -1,0 +1,6 @@
+{
+  "SUPABASE_URL": "https://your-project.supabase.co",
+  "SUPABASE_ANON_KEY": "your-supabase-anon-key",
+  "RESEND_API_KEY": "your-resend-api-key",
+  "RESEND_FROM_EMAIL": "Your App <noreply@yourdomain.com>"
+}

@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/services/backup_service.dart';
+import '../../../core/services/biometric_service.dart';
 import 'auth_repository.dart';
 
 
@@ -119,7 +120,18 @@ class ProfileModal extends ConsumerWidget {
                     subtitle: const Text('Require Face ID / Fingerprint on launch', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                     value: financeState.isBiometricEnabled,
                     activeColor: AppColors.primary,
-                    onChanged: (val) => notifier.toggleBiometric(val),
+                    onChanged: (val) async {
+                      if (val) {
+                        final ok = await BiometricService.authenticate(reason: 'Verify to enable Biometric Security Lock');
+                        if (ok) {
+                          notifier.toggleBiometric(true);
+                        } else if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication failed'), backgroundColor: AppColors.expense));
+                        }
+                      } else {
+                        notifier.toggleBiometric(false);
+                      }
+                    },
                   ),
                   SwitchListTile(
                     dense: true,
@@ -141,18 +153,20 @@ class ProfileModal extends ConsumerWidget {
                           style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10)),
                           icon: const Icon(LucideIcons.download, size: 16),
                           label: const Text('Export Vault', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          onPressed: () {
-                            final backupStr = BackupService.exportEncryptedBackup({
-                              'totalAssets': financeState.totalAssets,
-                              'netWorth': financeState.netWorth,
-                              'exportedAt': DateTime.now().toIso8601String(),
-                            });
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Encrypted Vault Exported (${backupStr.length} bytes)!'),
-                                backgroundColor: AppColors.income,
-                              ),
-                            );
+                          onPressed: () async {
+                            try {
+                              final snapshot = await ref.read(appDatabaseProvider).exportSnapshot();
+                              await BackupService.saveBackupToDisk(snapshot);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Encrypted Vault Exported!'), backgroundColor: AppColors.income),
+                              );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.expense),
+                              );
+                            }
                           },
                         ),
                       ),
@@ -162,13 +176,44 @@ class ProfileModal extends ConsumerWidget {
                           style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 10)),
                           icon: const Icon(LucideIcons.upload, size: 16),
                           label: const Text('Restore Vault', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Local Encrypted Vault restored successfully!'),
-                                backgroundColor: AppColors.income,
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                backgroundColor: AppColors.surface,
+                                title: const Text('Restore Vault?', style: TextStyle(color: AppColors.textPrimary)),
+                                content: const Text(
+                                  'This replaces all current data with the last exported snapshot. This cannot be undone.',
+                                  style: TextStyle(color: AppColors.textMuted),
+                                ),
+                                actions: [
+                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore', style: TextStyle(color: AppColors.expense))),
+                                ],
                               ),
                             );
+                            if (confirmed != true) return;
+                            try {
+                              final snapshot = await BackupService.loadBackupFromDisk();
+                              if (snapshot == null) {
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('No valid backup found on this device'), backgroundColor: AppColors.expense),
+                                );
+                                return;
+                              }
+                              await ref.read(appDatabaseProvider).importSnapshot(snapshot);
+                              await ref.read(financeNotifierProvider.notifier).reloadFromDb();
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Local Encrypted Vault restored successfully!'), backgroundColor: AppColors.income),
+                              );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Restore failed: $e'), backgroundColor: AppColors.expense),
+                              );
+                            }
                           },
                         ),
                       ),

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aspyric/core/constants/app_constants.dart';
 import 'package:aspyric/core/database/finance_repository.dart';
+import 'test_helpers.dart';
 
 void main() {
   group('FinanceEngine Tests', () {
@@ -10,7 +11,7 @@ void main() {
     late String cardId;
 
     setUp(() {
-      notifier = FinanceNotifier();
+      notifier = createTestFinanceNotifier();
       // Create test accounts
       notifier.addAccount(
         name: 'HDFC Test',

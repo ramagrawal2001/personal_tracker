@@ -19,6 +19,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _targetController = TextEditingController();
   final TextEditingController _savedController = TextEditingController();
+  DateTime? _targetDate;
 
   @override
   void dispose() {
@@ -101,6 +102,28 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 14),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _targetDate ?? DateTime.now().add(const Duration(days: 180)),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                    );
+                    if (picked != null) setState(() => _targetDate = picked);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Target Date (optional)',
+                      prefixIcon: Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
+                    ),
+                    child: Text(
+                      _targetDate != null ? '${_targetDate!.day}/${_targetDate!.month}/${_targetDate!.year}' : 'No target date set',
+                      style: const TextStyle(color: AppColors.textPrimary),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -141,7 +164,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
           name: name,
           targetAmount: target,
           currentSavedAmount: saved,
-          targetDate: DateTime.now().add(const Duration(days: 180)),
+          targetDate: _targetDate,
         );
 
     context.pop();

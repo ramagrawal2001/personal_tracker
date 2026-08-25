@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
@@ -190,7 +191,8 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
                 const SectionHeader(title: 'Your Cards'),
                 ...cards.map((c) => _CardListTile(
                   card: c,
-                  onPayBill: () => QuickAddModal.show(context),
+                  onPayBill: () => QuickAddModal.show(context, initialType: TransactionType.creditCardPayment, initialCreditCardId: c.id),
+                  onEdit: () => _showEditCardSheet(c),
                   onDelete: () => _confirmDelete(c),
                 )),
               ],
@@ -276,6 +278,100 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const _AddCardModal(),
+    );
+  }
+
+  void _showEditCardSheet(CardModel card) {
+    final nameCtrl = TextEditingController(text: card.name);
+    final bankCtrl = TextEditingController(text: card.bank);
+    final holderCtrl = TextEditingController(text: card.cardholderName);
+    final limitCtrl = TextEditingController(text: card.creditLimit.toStringAsFixed(0));
+    final statementDayCtrl = TextEditingController(text: '${card.statementDay}');
+    final dueDayCtrl = TextEditingController(text: '${card.dueDay}');
+    final isCredit = card.cardType == CardType.credit;
+    String? error;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Edit Card', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                const SizedBox(height: 20),
+                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Card Name')),
+                const SizedBox(height: 12),
+                TextField(controller: bankCtrl, decoration: const InputDecoration(labelText: 'Bank / Issuer')),
+                const SizedBox(height: 12),
+                TextField(controller: holderCtrl, decoration: const InputDecoration(labelText: 'Cardholder Name')),
+                if (isCredit) ...[
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: TextField(controller: limitCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Credit Limit (₹)'))),
+                    const SizedBox(width: 12),
+                    Expanded(child: TextField(controller: statementDayCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Statement Day'))),
+                  ]),
+                  const SizedBox(height: 12),
+                  TextField(controller: dueDayCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Due Day (1-31)')),
+                ],
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(error!, style: const TextStyle(color: AppColors.expense, fontSize: 12)),
+                ],
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (nameCtrl.text.trim().isEmpty || bankCtrl.text.trim().isEmpty) {
+                        setSheetState(() => error = 'Name and bank are required');
+                        return;
+                      }
+                      double? limit;
+                      int? statementDay;
+                      int? dueDay;
+                      if (isCredit) {
+                        limit = double.tryParse(limitCtrl.text);
+                        statementDay = int.tryParse(statementDayCtrl.text);
+                        dueDay = int.tryParse(dueDayCtrl.text);
+                        if (limit == null || limit < 0) {
+                          setSheetState(() => error = 'Enter a valid credit limit');
+                          return;
+                        }
+                        if (statementDay == null || statementDay < 1 || statementDay > 31) {
+                          setSheetState(() => error = 'Statement day must be between 1 and 31');
+                          return;
+                        }
+                        if (dueDay == null || dueDay < 1 || dueDay > 31) {
+                          setSheetState(() => error = 'Due day must be between 1 and 31');
+                          return;
+                        }
+                      }
+                      ref.read(financeNotifierProvider.notifier).updateCard(
+                        card.id,
+                        name: nameCtrl.text.trim(),
+                        bank: bankCtrl.text.trim(),
+                        cardholderName: holderCtrl.text.trim(),
+                        creditLimit: limit,
+                        statementDay: statementDay,
+                        dueDay: dueDay,
+                      );
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Save Changes'),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -539,8 +635,9 @@ class _NetworkBadge extends StatelessWidget {
 class _CardListTile extends StatelessWidget {
   final CardModel card;
   final VoidCallback onPayBill;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
-  const _CardListTile({required this.card, required this.onPayBill, required this.onDelete});
+  const _CardListTile({required this.card, required this.onPayBill, required this.onEdit, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -633,6 +730,16 @@ class _CardListTile extends StatelessWidget {
                       ),
                     ),
                   const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.pencil, size: 14, color: AppColors.primary),
+                        SizedBox(width: 8),
+                        Text('Edit', style: TextStyle(color: AppColors.textPrimary)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
                     value: 'delete',
                     child: Row(
                       children: [
@@ -646,6 +753,8 @@ class _CardListTile extends StatelessWidget {
                 onSelected: (v) {
                   if (v == 'pay') {
                     onPayBill();
+                  } else if (v == 'edit') {
+                    onEdit();
                   } else {
                     onDelete();
                   }
@@ -1280,6 +1389,20 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     if (_nameCtrl.text.trim().isEmpty || _bankCtrl.text.trim().isEmpty || _last4Ctrl.text.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill card name, bank, and last 4 digits'), backgroundColor: AppColors.expense),
+      );
+      return;
+    }
+    final limit = double.tryParse(_limitCtrl.text) ?? 0;
+    if (limit < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Credit limit cannot be negative'), backgroundColor: AppColors.expense),
+      );
+      return;
+    }
+    final balance = double.tryParse(_balanceCtrl.text);
+    if (balance != null && balance < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Balance cannot be negative'), backgroundColor: AppColors.expense),
       );
       return;
     }

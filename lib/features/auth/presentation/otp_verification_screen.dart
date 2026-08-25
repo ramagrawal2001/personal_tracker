@@ -90,7 +90,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             ? 'OTP has expired. Please request a new one.'
             : result == OtpResult.notFound
                 ? 'No OTP found. Please request a new one.'
-                : 'Incorrect OTP. Please try again.';
+                : result == OtpResult.tooManyAttempts
+                    ? 'Too many incorrect attempts. Please request a new OTP.'
+                    : 'Incorrect OTP. Please try again.';
         // Clear boxes on wrong
         for (final c in _ctrls) { c.clear(); }
         _foci[0].requestFocus();

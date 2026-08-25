@@ -91,6 +91,65 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (picked != null) setState(() => _dob = picked);
   }
 
+  Future<void> _exportVault() async {
+    try {
+      final db = ref.read(appDatabaseProvider);
+      final snapshot = await db.exportSnapshot();
+      await BackupService.saveBackupToDisk(snapshot);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vault exported ✓ (encrypted, on-device)'), backgroundColor: AppColors.income),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Export failed: $e'), backgroundColor: AppColors.expense),
+      );
+    }
+  }
+
+  Future<void> _restoreVault() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Restore Vault?', style: TextStyle(color: AppColors.textPrimary)),
+        content: const Text(
+          'This replaces all current accounts, transactions, cards, loans, budgets, investments and goals with the last exported snapshot. This cannot be undone.',
+          style: TextStyle(color: AppColors.textMuted),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore', style: TextStyle(color: AppColors.expense))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final snapshot = await BackupService.loadBackupFromDisk();
+      if (snapshot == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No valid backup found on this device'), backgroundColor: AppColors.expense),
+        );
+        return;
+      }
+      final db = ref.read(appDatabaseProvider);
+      await db.importSnapshot(snapshot);
+      await ref.read(financeNotifierProvider.notifier).reloadFromDb();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vault restored ✓'), backgroundColor: AppColors.income),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Restore failed: $e'), backgroundColor: AppColors.expense),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -267,10 +326,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: AppColors.primary)),
                           icon: const Icon(LucideIcons.download, size: 18, color: AppColors.primary),
                           label: const Text('Export', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
-                          onPressed: () {
-                            final backup = BackupService.exportEncryptedBackup({'netWorth': financeState.netWorth, 'exportedAt': DateTime.now().toIso8601String()});
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Vault exported (${backup.length} bytes)'), backgroundColor: AppColors.income));
-                          },
+                          onPressed: _exportVault,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -279,7 +335,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: AppColors.income)),
                           icon: const Icon(LucideIcons.upload, size: 18, color: AppColors.income),
                           label: const Text('Restore', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.income)),
-                          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vault restored ✓'), backgroundColor: AppColors.income)),
+                          onPressed: _restoreVault,
                         ),
                       ),
                     ],

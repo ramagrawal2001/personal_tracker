@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/env_config.dart';
 import '../database/finance_repository.dart';
@@ -15,6 +16,7 @@ class SupabaseService {
       _isInitialized = true;
     } catch (e) {
       // Fallback gracefully if offline or mock key environment
+      debugPrint('SupabaseService: initialize() failed, continuing offline: $e');
       _isInitialized = false;
     }
   }
@@ -66,6 +68,7 @@ class SupabaseService {
 
       return true;
     } catch (e) {
+      debugPrint('SupabaseService: syncLocalDataToCloud failed: $e');
       return false;
     }
   }

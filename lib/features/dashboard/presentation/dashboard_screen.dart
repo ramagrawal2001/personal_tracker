@@ -84,6 +84,7 @@ class DashboardScreen extends ConsumerWidget {
                 safeToSpend: financeState.safeToSpend,
                 liquidBalance: financeState.totalLiquidBalance,
                 upcomingPayments: financeState.upcomingPaymentsTotal,
+                emergencyBuffer: financeState.emergencyBuffer,
               ),
               const SizedBox(height: 14),
               MoneySummaryCard(

@@ -82,44 +82,49 @@ class NetWorthScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 8),
                       const Text(
-                        'Net Worth Trajectory (Lakhs ₹)',
+                        'Liquid Balance Trend — Last 6 Months (Lakhs ₹)',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(
-                  height: 180,
-                  child: LineChart(
-                    LineChartData(
-                      gridData: const FlGridData(show: false),
-                      titlesData: const FlTitlesData(show: false),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: const [
-                            FlSpot(1, 6.2),
-                            FlSpot(2, 6.5),
-                            FlSpot(3, 6.8),
-                            FlSpot(4, 7.1),
-                            FlSpot(5, 7.5),
-                            FlSpot(6, 7.8),
-                            FlSpot(7, 8.1),
-                            FlSpot(8, 8.42),
-                          ],
-                          isCurved: true,
-                          color: AppColors.income,
-                          barWidth: 3.5,
-                          dotData: const FlDotData(show: true),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: AppColors.income.withValues(alpha: 0.12),
+                if (financeState.transactions.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32),
+                    child: Center(
+                      child: Text(
+                        'Add transactions to see your balance trend over time.',
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(
+                    height: 180,
+                    child: LineChart(
+                      LineChartData(
+                        gridData: const FlGridData(show: false),
+                        titlesData: const FlTitlesData(show: false),
+                        borderData: FlBorderData(show: false),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: financeState.liquidBalanceTrend().asMap().entries.map((e) {
+                              return FlSpot(e.key.toDouble(), e.value / 100000);
+                            }).toList(),
+                            isCurved: true,
+                            color: AppColors.income,
+                            barWidth: 3.5,
+                            dotData: const FlDotData(show: true),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              color: AppColors.income.withValues(alpha: 0.12),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

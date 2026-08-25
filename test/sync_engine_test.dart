@@ -3,6 +3,7 @@ import 'package:aspyric/core/constants/app_constants.dart';
 import 'package:aspyric/core/database/finance_repository.dart';
 import 'package:aspyric/core/services/sync_engine.dart';
 import 'package:aspyric/domain/models/models.dart';
+import 'test_helpers.dart';
 
 void main() {
   group('Offline-First Sync Engine Tests', () {
@@ -11,7 +12,7 @@ void main() {
     late String testAccountId;
 
     setUp(() {
-      financeNotifier = FinanceNotifier();
+      financeNotifier = createTestFinanceNotifier();
       syncNotifier = SyncEngineNotifier();
       // Create a test account
       financeNotifier.addAccount(

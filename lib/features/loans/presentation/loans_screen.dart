@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
@@ -138,7 +139,7 @@ class LoansScreen extends ConsumerWidget {
                             ),
                             icon: const Icon(LucideIcons.checkCircle2, size: 14),
                             label: const Text('Pay EMI', style: TextStyle(fontSize: 12)),
-                            onPressed: () => QuickAddModal.show(context),
+                            onPressed: () => QuickAddModal.show(context, initialType: TransactionType.loanPayment, initialLoanId: loan.id),
                           ),
                         ],
                       ),
@@ -171,12 +172,14 @@ class LoansScreen extends ConsumerWidget {
     final rateCtrl = TextEditingController();
     final emiCtrl = TextEditingController();
     final tenureCtrl = TextEditingController();
-    const dueDay = 1;
+    final dueDayCtrl = TextEditingController(text: '1');
+    String? error;
 
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+      builder: (ctx) => StatefulBuilder(
+        builder: (sheetCtx, setSheetState) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
         child: Container(
           decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
           padding: const EdgeInsets.all(24),
@@ -199,17 +202,47 @@ class LoansScreen extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(child: TextField(controller: tenureCtrl, keyboardType: TextInputType.number, decoration: _dec('Tenure (months)', LucideIcons.clock))),
               ]),
+              const SizedBox(height: 12),
+              TextField(controller: dueDayCtrl, keyboardType: TextInputType.number, decoration: _dec('Due Day (1-31)', LucideIcons.calendarClock)),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(error!, style: const TextStyle(color: AppColors.expense, fontSize: 12)),
+              ],
               const SizedBox(height: 24),
               SizedBox(width: double.infinity, child: ElevatedButton(
                 onPressed: () {
-                  final p = double.tryParse(principalCtrl.text) ?? 0;
-                  final r = double.tryParse(rateCtrl.text) ?? 0;
-                  final e = double.tryParse(emiCtrl.text) ?? 0;
-                  final t = int.tryParse(tenureCtrl.text) ?? 12;
-                  if (nameCtrl.text.trim().isEmpty || p == 0) return;
+                  final p = double.tryParse(principalCtrl.text);
+                  final r = double.tryParse(rateCtrl.text);
+                  final e = double.tryParse(emiCtrl.text);
+                  final t = int.tryParse(tenureCtrl.text);
+                  final d = int.tryParse(dueDayCtrl.text);
+                  if (nameCtrl.text.trim().isEmpty) {
+                    setSheetState(() => error = 'Enter a loan name');
+                    return;
+                  }
+                  if (p == null || p <= 0) {
+                    setSheetState(() => error = 'Enter a principal amount greater than 0');
+                    return;
+                  }
+                  if (r == null || r < 0) {
+                    setSheetState(() => error = 'Enter a valid interest rate');
+                    return;
+                  }
+                  if (e == null || e < 0) {
+                    setSheetState(() => error = 'Enter a valid monthly EMI');
+                    return;
+                  }
+                  if (t == null || t <= 0) {
+                    setSheetState(() => error = 'Enter a valid tenure in months');
+                    return;
+                  }
+                  if (d == null || d < 1 || d > 31) {
+                    setSheetState(() => error = 'Due day must be between 1 and 31');
+                    return;
+                  }
                   ref.read(financeNotifierProvider.notifier).addLoan(
                     name: nameCtrl.text.trim(), provider: providerCtrl.text.trim(),
-                    principalAmount: p, interestRate: r, monthlyEmi: e, dueDay: dueDay, tenureMonths: t,
+                    principalAmount: p, interestRate: r, monthlyEmi: e, dueDay: d, tenureMonths: t,
                   );
                   Navigator.pop(ctx);
                 },
@@ -218,44 +251,81 @@ class LoansScreen extends ConsumerWidget {
             ]),
           ),
         ),
+        ),
       ),
     );
   }
 
   void _showEditLoanSheet(BuildContext context, WidgetRef ref, loan) {
     final nameCtrl = TextEditingController(text: loan.name);
+    final providerCtrl = TextEditingController(text: loan.provider);
     final outCtrl = TextEditingController(text: loan.outstandingAmount.toStringAsFixed(0));
     final emiCtrl = TextEditingController(text: loan.monthlyEmi.toStringAsFixed(0));
+    final dueDayCtrl = TextEditingController(text: '${loan.dueDay}');
+    String? error;
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: Container(
           decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
           padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Edit Loan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 20),
-            TextField(controller: nameCtrl, decoration: _dec('Loan Name', LucideIcons.landmark)),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: TextField(controller: outCtrl, keyboardType: TextInputType.number, decoration: _dec('Outstanding (₹)', LucideIcons.indianRupee))),
-              const SizedBox(width: 12),
-              Expanded(child: TextField(controller: emiCtrl, keyboardType: TextInputType.number, decoration: _dec('Monthly EMI (₹)', LucideIcons.calendarClock))),
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Edit Loan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 20),
+              TextField(controller: nameCtrl, decoration: _dec('Loan Name', LucideIcons.landmark)),
+              const SizedBox(height: 12),
+              TextField(controller: providerCtrl, decoration: _dec('Bank / Provider', LucideIcons.building2)),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: TextField(controller: outCtrl, keyboardType: TextInputType.number, decoration: _dec('Outstanding (₹)', LucideIcons.indianRupee))),
+                const SizedBox(width: 12),
+                Expanded(child: TextField(controller: emiCtrl, keyboardType: TextInputType.number, decoration: _dec('Monthly EMI (₹)', LucideIcons.calendarClock))),
+              ]),
+              const SizedBox(height: 12),
+              TextField(controller: dueDayCtrl, keyboardType: TextInputType.number, decoration: _dec('Due Day (1-31)', LucideIcons.calendarClock)),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(error!, style: const TextStyle(color: AppColors.expense, fontSize: 12)),
+              ],
+              const SizedBox(height: 24),
+              SizedBox(width: double.infinity, child: ElevatedButton(
+                onPressed: () {
+                  final outstanding = double.tryParse(outCtrl.text);
+                  final emi = double.tryParse(emiCtrl.text);
+                  final dueDay = int.tryParse(dueDayCtrl.text);
+                  if (nameCtrl.text.trim().isEmpty) {
+                    setSheetState(() => error = 'Enter a loan name');
+                    return;
+                  }
+                  if (outstanding == null || outstanding < 0) {
+                    setSheetState(() => error = 'Enter a valid outstanding amount');
+                    return;
+                  }
+                  if (emi == null || emi < 0) {
+                    setSheetState(() => error = 'Enter a valid monthly EMI');
+                    return;
+                  }
+                  if (dueDay == null || dueDay < 1 || dueDay > 31) {
+                    setSheetState(() => error = 'Due day must be between 1 and 31');
+                    return;
+                  }
+                  ref.read(financeNotifierProvider.notifier).updateLoan(loan.id,
+                    name: nameCtrl.text.trim(),
+                    provider: providerCtrl.text.trim(),
+                    outstandingAmount: outstanding,
+                    monthlyEmi: emi,
+                    dueDay: dueDay,
+                  );
+                  Navigator.pop(context);
+                },
+                child: const Text('Save Changes'),
+              )),
             ]),
-            const SizedBox(height: 24),
-            SizedBox(width: double.infinity, child: ElevatedButton(
-              onPressed: () {
-                ref.read(financeNotifierProvider.notifier).updateLoan(loan.id,
-                  name: nameCtrl.text.trim(),
-                  outstandingAmount: double.tryParse(outCtrl.text),
-                  monthlyEmi: double.tryParse(emiCtrl.text),
-                );
-                Navigator.pop(context);
-              },
-              child: const Text('Save Changes'),
-            )),
-          ]),
+          ),
+        ),
         ),
       ),
     );

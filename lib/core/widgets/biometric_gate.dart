@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../features/auth/presentation/auth_repository.dart';
 
 /// Wraps the app and shows a biometric prompt if biometric lock is enabled.
 /// Once authenticated, the gated child is displayed.
@@ -50,6 +52,17 @@ class _BiometricGateState extends ConsumerState<BiometricGate>
     if (state == AppLifecycleState.resumed && !_unlocked) {
       _check();
     }
+  }
+
+  /// Escape hatch for a fail-closed gate: if biometric auth can't succeed
+  /// (broken hardware, no enrolled credentials, plugin error), the user
+  /// would otherwise be permanently locked out of their own app. This turns
+  /// the lock off and signs out, dropping them back to the login screen
+  /// rather than stranding them on an unlockable screen forever.
+  Future<void> _signOutInstead() async {
+    ref.read(financeNotifierProvider.notifier).toggleBiometric(false);
+    await ref.read(authNotifierProvider.notifier).signOut();
+    if (mounted) context.go('/login');
   }
 
   Future<void> _check() async {
@@ -144,6 +157,13 @@ class _BiometricGateState extends ConsumerState<BiometricGate>
                           onPressed: _check,
                         ),
                       ),
+                      if (_failed) ...[
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: _signOutInstead,
+                          child: const Text('Sign out instead', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                        ),
+                      ],
                     ],
                   ),
               ],

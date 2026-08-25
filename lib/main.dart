@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/l10n/app_localizations.dart';
@@ -8,24 +11,43 @@ import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/notification_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await SupabaseService.initialize();
-  } catch (e) {
-    debugPrint('Supabase initialization fallback: $e');
-  }
-  try {
-    await NotificationService.init();
-  } catch (e) {
-    debugPrint('Notification initialization fallback: $e');
-  }
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(
-    const ProviderScope(
-      child: AspyricApp(),
-    ),
-  );
+    // Route Flutter framework errors (widget build/layout/paint errors)
+    // through the same reporting path instead of only the red-screen.
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      debugPrint('FlutterError: ${details.exceptionAsString()}');
+    };
+
+    // Catch errors from platform channels / native callbacks that don't flow
+    // through the Flutter framework's own error zone.
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint('PlatformDispatcher error: $error\n$stack');
+      return true;
+    };
+
+    try {
+      await SupabaseService.initialize();
+    } catch (e) {
+      debugPrint('Supabase initialization fallback: $e');
+    }
+    try {
+      await NotificationService.init();
+    } catch (e) {
+      debugPrint('Notification initialization fallback: $e');
+    }
+
+    runApp(
+      const ProviderScope(
+        child: AspyricApp(),
+      ),
+    );
+  }, (error, stack) {
+    debugPrint('Uncaught async error: $error\n$stack');
+  });
 }
 
 class AspyricApp extends ConsumerWidget {
@@ -35,6 +57,7 @@ class AspyricApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
     final locale = ref.watch(localeProvider);
+    final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
       title: 'Aspyric',
@@ -45,7 +68,7 @@ class AspyricApp extends ConsumerWidget {
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      routerConfig: appRouter,
+      routerConfig: router,
     );
   }
 }

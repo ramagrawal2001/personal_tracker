@@ -18,7 +18,7 @@ class BudgetsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final financeState = ref.watch(financeNotifierProvider);
-    final budgets = financeState.budgets;
+    final budgets = financeState.budgetsWithCalculatedSpend;
     final categories = financeState.categories;
     final monthLabel = DateFormat('MMMM yyyy').format(DateTime.now());
 
@@ -28,6 +28,12 @@ class BudgetsScreen extends ConsumerWidget {
     return AppScaffold(
       title: 'Monthly Budgets',
       scrollable: true,
+      actions: [
+        IconButton(
+          icon: const Icon(LucideIcons.plus, color: AppColors.primary),
+          onPressed: () => _showAddBudgetSheet(context, ref, budgets, categories),
+        ),
+      ],
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -152,37 +158,114 @@ class BudgetsScreen extends ConsumerWidget {
 
   void _showEditBudgetSheet(BuildContext context, WidgetRef ref, budget) {
     final limitCtrl = TextEditingController(text: budget.monthlyLimit.toStringAsFixed(0));
+    String? error;
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
-      builder: (_) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-          padding: const EdgeInsets.all(24),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Edit Budget Limit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: limitCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Monthly Limit (₹)',
-                prefixIcon: Icon(LucideIcons.indianRupee, size: 16),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Edit Budget Limit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: limitCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Monthly Limit (₹)',
+                  prefixIcon: const Icon(LucideIcons.indianRupee, size: 16),
+                  errorText: error,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  final limit = double.tryParse(limitCtrl.text);
-                  if (limit != null) ref.read(financeNotifierProvider.notifier).updateBudget(budget.id, limitAmount: limit);
-                  Navigator.pop(context);
-                },
-                child: const Text('Save'),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final limit = double.tryParse(limitCtrl.text);
+                    if (limit == null || limit <= 0) {
+                      setSheetState(() => error = 'Enter a limit greater than 0');
+                      return;
+                    }
+                    ref.read(financeNotifierProvider.notifier).updateBudget(budget.id, limitAmount: limit);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save'),
+                ),
               ),
-            ),
-          ]),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddBudgetSheet(BuildContext context, WidgetRef ref, List<BudgetModel> existingBudgets, List<CategoryModel> categories) {
+    final expenseCategories = categories.where((c) => c.type == 'expense').toList();
+    final now = DateTime.now();
+    final monthYear = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final budgetedCategoryIds = existingBudgets.where((b) => b.monthYear == monthYear).map((b) => b.categoryId).toSet();
+    final availableCategories = expenseCategories.where((c) => !budgetedCategoryIds.contains(c.id)).toList();
+
+    if (availableCategories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Every expense category already has a budget this month.'), backgroundColor: AppColors.warning),
+      );
+      return;
+    }
+
+    String selectedCategoryId = availableCategories.first.id;
+    final limitCtrl = TextEditingController();
+    String? error;
+
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('New Monthly Budget', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                value: selectedCategoryId,
+                decoration: const InputDecoration(labelText: 'Category'),
+                dropdownColor: AppColors.surface,
+                items: availableCategories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
+                onChanged: (v) => setSheetState(() => selectedCategoryId = v ?? selectedCategoryId),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: limitCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Monthly Limit (₹)',
+                  prefixIcon: const Icon(LucideIcons.indianRupee, size: 16),
+                  errorText: error,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final limit = double.tryParse(limitCtrl.text);
+                    if (limit == null || limit <= 0) {
+                      setSheetState(() => error = 'Enter a limit greater than 0');
+                      return;
+                    }
+                    ref.read(financeNotifierProvider.notifier).addBudget(categoryId: selectedCategoryId, monthlyLimit: limit, monthYear: monthYear);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Create Budget'),
+                ),
+              ),
+            ]),
+          ),
         ),
       ),
     );
