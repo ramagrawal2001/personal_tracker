@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../domain/models/models.dart';
 
 class QuickAddModal extends ConsumerStatefulWidget {
@@ -22,25 +23,24 @@ class QuickAddModal extends ConsumerStatefulWidget {
     this.initialLoanId,
   });
 
-  static void show(
+  static Future<void> show(
     BuildContext context, {
     TransactionModel? existing,
     TransactionType? initialType,
     String? initialCreditCardId,
     String? initialLoanId,
-  }) {
-    showModalBottomSheet(
+  }) async {
+    await AdaptiveModal.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
       builder: (_) => QuickAddModal(
         existing: existing,
         initialType: initialType,
         initialCreditCardId: initialCreditCardId,
         initialLoanId: initialLoanId,
+      ),
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
     );
   }

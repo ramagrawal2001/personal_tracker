@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/services/merchant_categorizer.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/responsive.dart';
 
 class ParsedCsvRow {
   final DateTime date;
@@ -28,15 +29,14 @@ class ParsedCsvRow {
 class CsvImportModal extends ConsumerStatefulWidget {
   const CsvImportModal({super.key});
 
-  static void show(BuildContext context) {
-    showModalBottomSheet(
+  static Future<void> show(BuildContext context) async {
+    await AdaptiveModal.show(
       context: context,
-      isScrollControlled: true,
+      builder: (_) => const CsvImportModal(),
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (_) => const CsvImportModal(),
     );
   }
 

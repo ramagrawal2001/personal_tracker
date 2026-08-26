@@ -7,19 +7,20 @@ import '../../../core/database/finance_repository.dart';
 import '../../../core/services/backup_service.dart';
 import '../../../core/services/biometric_service.dart';
 import 'auth_repository.dart';
+import '../../../core/utils/responsive.dart';
 
 
 class ProfileModal extends ConsumerWidget {
   const ProfileModal({super.key});
 
-  static void show(BuildContext context) {
-    showModalBottomSheet(
+  static Future<void> show(BuildContext context) async {
+    await AdaptiveModal.show(
       context: context,
+      builder: (_) => const ProfileModal(),
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (_) => const ProfileModal(),
     );
   }
 

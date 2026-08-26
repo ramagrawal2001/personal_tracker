@@ -4,19 +4,19 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/category_icons.dart';
+import '../../../core/utils/responsive.dart';
 
 class AddCategoryModal extends ConsumerStatefulWidget {
   const AddCategoryModal({super.key});
 
-  static void show(BuildContext context) {
-    showModalBottomSheet(
+  static Future<void> show(BuildContext context) async {
+    await AdaptiveModal.show(
       context: context,
-      isScrollControlled: true,
+      builder: (_) => const AddCategoryModal(),
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (_) => const AddCategoryModal(),
     );
   }
 

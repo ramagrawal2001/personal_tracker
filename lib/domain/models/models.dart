@@ -112,6 +112,7 @@ class TransactionModel {
   final String? attachmentPath;
   final String? creditCardId;
   final String? loanId;
+  final String? investmentId;
   final SyncStatus syncStatus;
   final DateTime createdAt;
 
@@ -131,6 +132,7 @@ class TransactionModel {
     this.attachmentPath,
     this.creditCardId,
     this.loanId,
+    this.investmentId,
     this.syncStatus = SyncStatus.synced,
     required this.createdAt,
   });
@@ -151,6 +153,7 @@ class TransactionModel {
     String? attachmentPath,
     String? creditCardId,
     String? loanId,
+    String? investmentId,
     SyncStatus? syncStatus,
     DateTime? createdAt,
   }) {
@@ -170,6 +173,7 @@ class TransactionModel {
       attachmentPath: attachmentPath ?? this.attachmentPath,
       creditCardId: creditCardId ?? this.creditCardId,
       loanId: loanId ?? this.loanId,
+      investmentId: investmentId ?? this.investmentId,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
     );

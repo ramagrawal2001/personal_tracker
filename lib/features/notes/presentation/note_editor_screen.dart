@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/notes_provider.dart';
 import '../../../domain/models/note_model.dart';
+import '../../../core/utils/responsive.dart';
 
 const _uuid = Uuid();
 
@@ -252,49 +253,47 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   }
 
   void _showColorPicker(BuildContext context) {
-    showModalBottomSheet(
+    AdaptiveModal.show(
       context: context,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Note Color', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                children: NoteColor.values.map((c) {
-                  return GestureDetector(
-                    onTap: () {
-                      _setColor(c);
-                      Navigator.pop(context);
-                    },
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: c.color,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: _note.color == c ? AppColors.primary : c.borderColor,
-                          width: _note.color == c ? 3 : 1.5,
-                        ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Note Color', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              children: NoteColor.values.map((c) {
+                return GestureDetector(
+                  onTap: () {
+                    _setColor(c);
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: c.color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _note.color == c ? AppColors.primary : c.borderColor,
+                        width: _note.color == c ? 3 : 1.5,
                       ),
-                      child: _note.color == c
-                          ? const Icon(LucideIcons.check, color: Colors.white, size: 18)
-                          : null,
                     ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        );
-      },
+                    child: _note.color == c
+                        ? const Icon(LucideIcons.check, color: Colors.white, size: 18)
+                        : null,
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

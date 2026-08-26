@@ -64,6 +64,17 @@ class FinanceState {
     return investments.fold(0.0, (sum, i) => sum + i.monthlySipAmount);
   }
 
+  /// Returns all descendant category IDs (including self) for a given category ID.
+  /// Used for budget rollup: if budget is on parent category, include child category spending.
+  List<String> _getCategoryAndDescendants(String categoryId) {
+    final result = <String>{categoryId};
+    final children = categories.where((c) => c.parentId == categoryId).map((c) => c.id).toList();
+    for (final child in children) {
+      result.addAll(_getCategoryAndDescendants(child));
+    }
+    return result.toList();
+  }
+
   /// Total Assets = Liquid Money + Investment Portfolio Value
   double get totalAssets {
     double liquid = totalLiquidBalance;
@@ -88,7 +99,8 @@ class FinanceState {
               tx.type == TransactionType.transfer ||
               tx.type == TransactionType.creditCardPayment ||
               tx.type == TransactionType.loanPayment ||
-              tx.type == TransactionType.investment) {
+              tx.type == TransactionType.investment ||
+              tx.type == TransactionType.adjustment) {
             calc -= tx.amount;
           }
         }
@@ -150,7 +162,8 @@ class FinanceState {
                 tx.type == TransactionType.transfer ||
                 tx.type == TransactionType.creditCardPayment ||
                 tx.type == TransactionType.loanPayment ||
-                tx.type == TransactionType.investment) {
+                tx.type == TransactionType.investment ||
+                tx.type == TransactionType.adjustment) {
               calc -= tx.amount;
             }
           }
@@ -186,7 +199,7 @@ class FinanceState {
   double get netWorth => totalAssets - totalLiabilities;
 
 
-  /// Monthly Income (Current Month)
+  /// Monthly Income (Current Month) - uses local time for consistency with transaction dates
   double get monthlyIncome {
     final now = DateTime.now();
     return transactions
@@ -194,7 +207,7 @@ class FinanceState {
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  /// Monthly Expenses (Current Month)
+  /// Monthly Expenses (Current Month) - uses local time for consistency with transaction dates
   double get monthlyExpenses {
     final now = DateTime.now();
     return transactions
@@ -208,12 +221,24 @@ class FinanceState {
   /// [accountsWithCalculatedBalances] is for account balances.
   List<BudgetModel> get budgetsWithCalculatedSpend {
     return budgets.map((b) {
-      final spent = transactions
-          .where((t) =>
-              t.categoryId == b.categoryId &&
-              t.type == TransactionType.expense &&
-              '${t.date.year}-${t.date.month.toString().padLeft(2, '0')}' == b.monthYear)
-          .fold(0.0, (sum, t) => sum + t.amount);
+      double spent = 0.0;
+      final categoryIds = _getCategoryAndDescendants(b.categoryId);
+      for (final t in transactions) {
+        if (t.type != TransactionType.expense) continue;
+        if ('${t.date.year}-${t.date.month.toString().padLeft(2, '0')}' != b.monthYear) continue;
+
+        if (t.splits.isNotEmpty) {
+          // Use splits for categorization - they represent the breakdown
+          for (final split in t.splits) {
+            if (categoryIds.contains(split.categoryId)) {
+              spent += split.amount;
+            }
+          }
+        } else if (categoryIds.contains(t.categoryId)) {
+          // No splits - use main transaction category (including subcategories)
+          spent += t.amount;
+        }
+      }
       return BudgetModel(
         id: b.id,
         categoryId: b.categoryId,
@@ -228,9 +253,35 @@ class FinanceState {
   double get upcomingPaymentsTotal {
     final now = DateTime.now();
     final cutoff = now.add(const Duration(days: 30));
-    return recurringPayments
-        .where((p) => !p.nextDueDate.isBefore(now) && p.nextDueDate.isBefore(cutoff))
-        .fold(0.0, (sum, p) => sum + p.amount);
+    double total = 0.0;
+    for (final p in recurringPayments) {
+      // Calculate all occurrences within the next 30 days
+      DateTime occurrence = p.nextDueDate;
+      while (!occurrence.isAfter(cutoff)) {
+        if (!occurrence.isBefore(now)) {
+          total += p.amount;
+        }
+        occurrence = _addFrequency(occurrence, p.frequency);
+        // Safety break to prevent infinite loop
+        if (occurrence.isAfter(cutoff.add(const Duration(days: 365)))) break;
+      }
+    }
+    return total;
+  }
+
+  DateTime _addFrequency(DateTime date, PaymentFrequency frequency) {
+    switch (frequency) {
+      case PaymentFrequency.daily:
+        return date.add(const Duration(days: 1));
+      case PaymentFrequency.weekly:
+        return date.add(const Duration(days: 7));
+      case PaymentFrequency.monthly:
+        return DateTime(date.year, date.month + 1, date.day);
+      case PaymentFrequency.quarterly:
+        return DateTime(date.year, date.month + 3, date.day);
+      case PaymentFrequency.yearly:
+        return DateTime(date.year + 1, date.month, date.day);
+    }
   }
 
   /// Safe To Spend = Liquid Balance - Upcoming Obligations - Dynamic Emergency Buffer
@@ -401,6 +452,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
     List<String> tags = const [],
     String? creditCardId,
     String? loanId,
+    String? investmentId,
     bool isOnline = true,
   }) {
     final newTx = TransactionModel(
@@ -417,31 +469,35 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       tags: tags,
       creditCardId: creditCardId,
       loanId: loanId,
+      investmentId: investmentId,
       syncStatus: isOnline ? SyncStatus.synced : SyncStatus.pending,
       createdAt: DateTime.now(),
     );
 
     // Credit card outstanding management
     List<CreditCardModel> updatedCards = List.from(state.creditCards);
-    if (creditCardId != null) {
-      final cardIdx = updatedCards.indexWhere((c) => c.id == creditCardId);
-      if (cardIdx != -1) {
-        final card = updatedCards[cardIdx];
-        double newOutstanding = card.currentOutstanding;
+if (creditCardId != null) {
+        final cardIdx = updatedCards.indexWhere((c) => c.id == creditCardId);
+        if (cardIdx != -1) {
+          final card = updatedCards[cardIdx];
+          double newOutstanding = card.currentOutstanding;
 
-        if (type == TransactionType.creditCardPayment) {
-          // Payment reduces outstanding; can't go below zero (overpayment).
-          newOutstanding = (card.currentOutstanding - amount).clamp(0.0, double.infinity);
-        } else if (type == TransactionType.expense) {
-          // Spending charges to card increases outstanding. Not capped at
-          // creditLimit — real cards can go over-limit; silently discarding
-          // the excess would understate actual debt owed.
-          newOutstanding = card.currentOutstanding + amount;
+          if (type == TransactionType.creditCardPayment) {
+            // Payment reduces outstanding; can't go below zero (overpayment).
+            newOutstanding = (card.currentOutstanding - amount).clamp(0.0, double.infinity);
+          } else if (type == TransactionType.expense) {
+            // Spending charges to card increases outstanding. Not capped at
+            // creditLimit — real cards can go over-limit; silently discarding
+            // the excess would understate actual debt owed.
+            newOutstanding = card.currentOutstanding + amount;
+          } else if (type == TransactionType.refund) {
+            // Refund reduces outstanding (money back to card).
+            newOutstanding = (card.currentOutstanding - amount).clamp(0.0, double.infinity);
+          }
+
+          updatedCards[cardIdx] = card.copyWith(currentOutstanding: newOutstanding);
         }
-
-        updatedCards[cardIdx] = card.copyWith(currentOutstanding: newOutstanding);
       }
-    }
 
 
     // If loan payment transfer
@@ -451,6 +507,12 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       if (loanIdx != -1) {
         final loan = updatedLoans[loanIdx];
         final newOutstanding = (loan.outstandingAmount - amount).clamp(0.0, loan.principalAmount);
+        // Only decrement tenure for scheduled EMI payments (amount matches monthlyEmi)
+        // Extra payments don't reduce tenure - they just reduce outstanding
+        final isScheduledEmi = (amount - loan.monthlyEmi).abs() < 0.01;
+        final newTenure = isScheduledEmi && loan.remainingTenureMonths > 0
+            ? loan.remainingTenureMonths - 1
+            : loan.remainingTenureMonths;
         updatedLoans[loanIdx] = LoanModel(
           id: loan.id,
           name: loan.name,
@@ -461,7 +523,25 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
           monthlyEmi: loan.monthlyEmi,
           dueDay: loan.dueDay,
           startDate: loan.startDate,
-          remainingTenureMonths: loan.remainingTenureMonths > 0 ? loan.remainingTenureMonths - 1 : 0,
+          remainingTenureMonths: newTenure,
+        );
+      }
+    }
+
+    // If investment transaction - update/create InvestmentModel
+    List<InvestmentModel> updatedInvestments = List.from(state.investments);
+    if (type == TransactionType.investment && investmentId != null) {
+      final invIdx = updatedInvestments.indexWhere((i) => i.id == investmentId);
+      if (invIdx != -1) {
+        final inv = updatedInvestments[invIdx];
+        updatedInvestments[invIdx] = InvestmentModel(
+          id: inv.id,
+          name: inv.name,
+          type: inv.type,
+          investedAmount: inv.investedAmount + amount,
+          currentValue: inv.currentValue + amount, // Assume current value increases by invested amount
+          monthlySipAmount: inv.monthlySipAmount,
+          sipDay: inv.sipDay,
         );
       }
     }
@@ -470,6 +550,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       transactions: [newTx, ...state.transactions],
       creditCards: updatedCards,
       loans: updatedLoans,
+      investments: updatedInvestments,
     );
 
     _fireAndForget(() => _db.into(_db.transactions).insertOnConflictUpdate(newTx.toCompanion()), 'transaction');
@@ -484,6 +565,12 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       final idx = updatedLoans.indexWhere((l) => l.id == loanId);
       if (idx != -1) {
         _fireAndForget(() => _db.into(_db.loans).insertOnConflictUpdate(updatedLoans[idx].toCompanion()), 'loan outstanding');
+      }
+    }
+    if (type == TransactionType.investment && investmentId != null) {
+      final idx = updatedInvestments.indexWhere((i) => i.id == investmentId);
+      if (idx != -1) {
+        _fireAndForget(() => _db.into(_db.investments).insertOnConflictUpdate(updatedInvestments[idx].toCompanion()), 'investment update');
       }
     }
   }
@@ -546,7 +633,12 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
       final cardIdx = state.creditCards.indexWhere((c) => c.id == original.creditCardId);
       if (cardIdx != -1) {
         final card = state.creditCards[cardIdx];
-        final sign = original.type == TransactionType.creditCardPayment ? -1 : 1;
+        int sign;
+        if (original.type == TransactionType.creditCardPayment || original.type == TransactionType.refund) {
+          sign = -1; // Payment or refund reduces outstanding
+        } else {
+          sign = 1; // Expense increases outstanding
+        }
         final newOutstanding = (card.currentOutstanding + (delta * sign)).clamp(0.0, double.infinity);
         adjustedCard = card.copyWith(currentOutstanding: newOutstanding);
         updatedCards = List.from(state.creditCards)..[cardIdx] = adjustedCard;

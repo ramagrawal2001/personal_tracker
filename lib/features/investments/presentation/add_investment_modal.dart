@@ -5,19 +5,19 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../../core/utils/responsive.dart';
 
 class AddInvestmentModal extends ConsumerStatefulWidget {
   const AddInvestmentModal({super.key});
 
-  static void show(BuildContext context) {
-    showModalBottomSheet(
+  static Future<void> show(BuildContext context) async {
+    await AdaptiveModal.show(
       context: context,
-      isScrollControlled: true,
+      builder: (_) => const AddInvestmentModal(),
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (_) => const AddInvestmentModal(),
     );
   }
 

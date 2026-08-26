@@ -62,16 +62,15 @@ class SyncEngineNotifier extends StateNotifier<SyncEngineState> {
         count++;
       } catch (e) {
         debugPrint('Sync failed for tx ${tx.id}: $e');
-        // Even in offline fallback mode, mark local state synced gracefully
-        markAsSynced(tx.id);
-        count++;
+        // Do NOT mark as synced on failure - keep in pending queue for retry
+        // count is not incremented for failed syncs
       }
     }
 
     state = state.copyWith(
       isSyncing: false,
-      pendingCount: 0,
-      lastSyncTime: 'Just now',
+      pendingCount: pendingList.length - count,
+      lastSyncTime: count > 0 ? 'Just now' : state.lastSyncTime,
     );
 
     return count;

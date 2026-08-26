@@ -6,6 +6,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import 'widgets/net_worth_card.dart';
 import 'widgets/safe_to_spend_card.dart';
@@ -69,43 +70,105 @@ class DashboardScreen extends ConsumerWidget {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              NetWorthCard(
-                netWorth: financeState.netWorth,
-                totalAssets: financeState.totalAssets,
-                totalLiabilities: financeState.totalLiabilities,
-                onTap: () => context.go('/net-worth'),
-              ),
-              const SizedBox(height: 14),
-              SafeToSpendCard(
-                safeToSpend: financeState.safeToSpend,
-                liquidBalance: financeState.totalLiquidBalance,
-                upcomingPayments: financeState.upcomingPaymentsTotal,
-                emergencyBuffer: financeState.emergencyBuffer,
-              ),
-              const SizedBox(height: 14),
-              MoneySummaryCard(
-                bankBalance: financeState.totalLiquidBalance,
-                creditCardDue: financeState.totalCreditCardDebt,
-                upcomingEmis: financeState.totalMonthlyEmi,
-                monthlyIncome: financeState.monthlyIncome,
-                monthlyExpenses: financeState.monthlyExpenses,
-              ),
-              const SizedBox(height: 20),
-              UpcomingPaymentsWidget(
-                upcomingPayments: financeState.recurringPayments,
-                onViewAll: () => context.go('/recurring'),
-              ),
-              const SizedBox(height: 20),
-              RecentTransactionsWidget(
-                transactions: financeState.transactions,
-                onViewAll: () => context.go('/transactions'),
-              ),
-              const SizedBox(height: 30),
-            ],
+          padding: EdgeInsets.symmetric(
+            horizontal: context.responsiveHorizontalPadding(),
+            vertical: 12,
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isTwoColumn = constraints.maxWidth >= 600;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Net Worth Card - Full width
+                  SizedBox(
+                    width: double.infinity,
+                    child: NetWorthCard(
+                      netWorth: financeState.netWorth,
+                      totalAssets: financeState.totalAssets,
+                      totalLiabilities: financeState.totalLiabilities,
+                      onTap: () => context.go('/net-worth'),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Safe to Spend & Money Summary - Side by side on tablet
+                  if (isTwoColumn) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: SafeToSpendCard(
+                            safeToSpend: financeState.safeToSpend,
+                            liquidBalance: financeState.totalLiquidBalance,
+                            upcomingPayments: financeState.upcomingPaymentsTotal,
+                            emergencyBuffer: financeState.emergencyBuffer,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: MoneySummaryCard(
+                            bankBalance: financeState.totalLiquidBalance,
+                            creditCardDue: financeState.totalCreditCardDebt,
+                            upcomingEmis: financeState.totalMonthlyEmi,
+                            monthlyIncome: financeState.monthlyIncome,
+                            monthlyExpenses: financeState.monthlyExpenses,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    SafeToSpendCard(
+                      safeToSpend: financeState.safeToSpend,
+                      liquidBalance: financeState.totalLiquidBalance,
+                      upcomingPayments: financeState.upcomingPaymentsTotal,
+                      emergencyBuffer: financeState.emergencyBuffer,
+                    ),
+                    const SizedBox(height: 14),
+                    MoneySummaryCard(
+                      bankBalance: financeState.totalLiquidBalance,
+                      creditCardDue: financeState.totalCreditCardDebt,
+                      upcomingEmis: financeState.totalMonthlyEmi,
+                      monthlyIncome: financeState.monthlyIncome,
+                      monthlyExpenses: financeState.monthlyExpenses,
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  // Upcoming Payments & Recent Transactions - Side by side on tablet
+                  if (isTwoColumn) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: UpcomingPaymentsWidget(
+                            upcomingPayments: financeState.recurringPayments,
+                            onViewAll: () => context.go('/recurring'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: RecentTransactionsWidget(
+                            transactions: financeState.transactions,
+                            onViewAll: () => context.go('/transactions'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    UpcomingPaymentsWidget(
+                      upcomingPayments: financeState.recurringPayments,
+                      onViewAll: () => context.go('/recurring'),
+                    ),
+                    const SizedBox(height: 20),
+                    RecentTransactionsWidget(
+                      transactions: financeState.transactions,
+                      onViewAll: () => context.go('/transactions'),
+                    ),
+                  ],
+                  const SizedBox(height: 30),
+                ],
+              );
+            },
           ),
         ),
       ),

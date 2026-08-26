@@ -12,6 +12,7 @@ import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/summary_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../transactions/presentation/quick_add_modal.dart';
+import '../../../core/utils/responsive.dart';
 
 class LoansScreen extends ConsumerWidget {
   const LoansScreen({super.key});
@@ -175,8 +176,11 @@ class LoansScreen extends ConsumerWidget {
     final dueDayCtrl = TextEditingController(text: '1');
     String? error;
 
-    showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+    AdaptiveModal.show(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
         builder: (sheetCtx, setSheetState) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
@@ -263,8 +267,11 @@ class LoansScreen extends ConsumerWidget {
     final emiCtrl = TextEditingController(text: loan.monthlyEmi.toStringAsFixed(0));
     final dueDayCtrl = TextEditingController(text: '${loan.dueDay}');
     String? error;
-    showModalBottomSheet(
-      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+    AdaptiveModal.show(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),

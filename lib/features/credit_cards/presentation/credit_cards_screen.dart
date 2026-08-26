@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../domain/models/models.dart';
@@ -23,7 +24,6 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _carouselIndex = 0;
-  final _pageController = PageController(viewportFraction: 0.88);
 
   static const _tabs = [
     ('All', null),
@@ -43,7 +43,6 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    _pageController.dispose();
     super.dispose();
   }
 
@@ -133,27 +132,13 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
       );
     }
 
-    return SingleChildScrollView(
+return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
-
-          // ── Swipeable Card Carousel ──
-          SizedBox(
-            height: 210,
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: cards.length,
-              onPageChanged: (i) => setState(() => _carouselIndex = i),
-              itemBuilder: (_, i) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: _GlassCard(card: cards[i]),
-              ),
-            ),
-          ),
-
+          _ResponsiveCardCarousel(cards: cards, onPageChanged: (i) => setState(() => _carouselIndex = i)),
           // ── Carousel dots ──
           if (cards.length > 1) ...[
             const SizedBox(height: 14),
@@ -174,17 +159,13 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
               }),
             ),
           ],
-
           const SizedBox(height: 24),
-
           // ── Summary banner ──
           _buildSummaryBanner(cards),
-
           const SizedBox(height: 24),
-
           // ── Card list ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: context.responsiveHorizontalPadding()),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -273,7 +254,7 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
   }
 
   void _showAddCardModal(BuildContext ctx) {
-    showModalBottomSheet(
+    AdaptiveModal.show(
       context: ctx,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -291,10 +272,11 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
     final isCredit = card.cardType == CardType.credit;
     String? error;
 
-    showModalBottomSheet(
+    AdaptiveModal.show(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
@@ -407,6 +389,72 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
             child: const Text('Remove'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ResponsiveCardCarousel extends StatefulWidget {
+  final List<CardModel> cards;
+  final ValueChanged<int> onPageChanged;
+
+  const _ResponsiveCardCarousel({
+    required this.cards,
+    required this.onPageChanged,
+  });
+
+  @override
+  State<_ResponsiveCardCarousel> createState() => _ResponsiveCardCarouselState();
+}
+
+class _ResponsiveCardCarouselState extends State<_ResponsiveCardCarousel> {
+  late PageController _pageController;
+  late double _viewportFraction;
+  late double _carouselHeight;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateController();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ResponsiveCardCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final isTablet = context.isTablet;
+    final newViewportFraction = isTablet ? 0.48 : 0.88;
+    final newCarouselHeight = isTablet ? 200.0 : 210.0;
+    if (newViewportFraction != _viewportFraction || newCarouselHeight != _carouselHeight) {
+      _updateController();
+    }
+  }
+
+  void _updateController() {
+    final isTablet = context.isTablet;
+    _viewportFraction = isTablet ? 0.48 : 0.88;
+    _carouselHeight = isTablet ? 200.0 : 210.0;
+    _pageController = PageController(viewportFraction: _viewportFraction);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isTablet = context.isTablet;
+    return SizedBox(
+      height: _carouselHeight,
+      child: PageView.builder(
+        controller: _pageController,
+        itemCount: widget.cards.length,
+        onPageChanged: widget.onPageChanged,
+        itemBuilder: (_, i) => Padding(
+          padding: EdgeInsets.symmetric(horizontal: isTablet ? 8 : 6),
+          child: _GlassCard(card: widget.cards[i]),
+        ),
       ),
     );
   }
