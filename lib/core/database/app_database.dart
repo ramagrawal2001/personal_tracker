@@ -28,8 +28,24 @@ class AppDatabase extends _$AppDatabase {
   /// instead of a real on-disk file.
   AppDatabase.forTesting(super.executor);
 
+  /// v2 added the `Notes` table (notes used to be in-memory only). Bumping
+  /// this without a matching [migration] would leave existing installs
+  /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
+  /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (Migrator m) async {
+          await m.createAll();
+        },
+        onUpgrade: (Migrator m, int from, int to) async {
+          if (from < 2) {
+            await m.createTable(notes);
+          }
+        },
+      );
 
   Future<void> wipeAllData() async {
     await transaction(() async {
