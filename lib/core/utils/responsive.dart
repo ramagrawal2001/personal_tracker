@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import '../theme/app_colors.dart';
 
 /// Breakpoints for responsive design
 class AppBreakpoints {
@@ -94,7 +95,7 @@ class AdaptiveModal {
     Color? backgroundColor,
     ShapeBorder? shape,
   }) {
-    final usePopoverModal = usePopover ?? context.shouldUsePopover;
+    final usePopoverModal = usePopover ?? _shouldUsePopover(context);
     final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
 
     if (usePopoverModal && isIOS) {
@@ -103,13 +104,13 @@ class AdaptiveModal {
         useRootNavigator: useRootNavigator,
         barrierColor: barrierColor ?? Colors.black54,
         builder: (ctx) => Dialog(
-          insetPadding: const EdgeInsets.all(24),
+          insetPadding: EdgeInsets.all(context.responsivePadding(mobile: 16, tablet: 24, desktop: 32)),
           clipBehavior: Clip.antiAlias,
           shape: shape ?? RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.9,
-              maxHeight: MediaQuery.of(context).size.height * 0.9,
+              maxWidth: MediaQuery.of(context).size.width * (context.isMobile ? 0.95 : 0.9),
+              maxHeight: MediaQuery.of(context).size.height * (context.isCompact ? 0.7 : 0.9),
             ),
             child: builder(ctx),
           ),
@@ -125,6 +126,14 @@ class AdaptiveModal {
       shape: shape,
       builder: builder,
     );
+  }
+
+  static bool _shouldUsePopover(BuildContext context) {
+    final isLargeScreen = context.isLargeScreen;
+    final isCompact = context.isCompact;
+    // Don't use popover on compact/landscape mobile screens
+    if (isCompact) return false;
+    return isLargeScreen;
   }
 }
 
@@ -172,7 +181,7 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
 
     if (isLargeScreen) {
       return Scaffold(
-        backgroundColor: widget.backgroundColor,
+        backgroundColor: widget.backgroundColor ?? AppColors.background,
         appBar: widget.appBar,
         drawer: widget.drawer,
         endDrawer: widget.endDrawer,
@@ -189,14 +198,14 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
               destinations: widget.railDestinations,
               extended: context.screenWidth >= AppBreakpoints.desktop,
               minExtendedWidth: 200,
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              indicatorColor: Theme.of(context).colorScheme.primaryContainer,
-              selectedIconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
-              unselectedIconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurfaceVariant),
-              selectedLabelTextStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
-              unselectedLabelTextStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              backgroundColor: AppColors.surface,
+              indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+              selectedIconTheme: const IconThemeData(color: AppColors.primary),
+              unselectedIconTheme: const IconThemeData(color: AppColors.textMuted),
+              selectedLabelTextStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+              unselectedLabelTextStyle: const TextStyle(color: AppColors.textMuted),
             ),
-            const VerticalDivider(thickness: 1, width: 1),
+            const VerticalDivider(thickness: 1, width: 1, color: AppColors.border),
             Expanded(child: widget.body),
           ],
         ),
@@ -204,7 +213,7 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
     }
 
     return Scaffold(
-      backgroundColor: widget.backgroundColor,
+      backgroundColor: widget.backgroundColor ?? AppColors.background,
       appBar: widget.appBar,
       drawer: widget.drawer,
       endDrawer: widget.endDrawer,
@@ -219,6 +228,9 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
         type: BottomNavigationBarType.fixed,
         showSelectedLabels: true,
         showUnselectedLabels: true,
+        backgroundColor: AppColors.surface,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textMuted,
       ),
       body: widget.body,
     );

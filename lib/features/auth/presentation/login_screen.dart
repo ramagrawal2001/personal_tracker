@@ -160,10 +160,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       body: Stack(
         children: [
           // Background glow orbs
-          Positioned(top: -100, left: -50,
-            child: Container(width: 300, height: 300, decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.primary.withValues(alpha: 0.15)))),
-          Positioned(bottom: -50, right: -50,
-            child: Container(width: 250, height: 250, decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.income.withValues(alpha: 0.10)))),
+          Semantics(
+            excludeSemantics: true,
+            child: Positioned(
+              top: -100,
+              left: -50,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withValues(alpha: 0.15),
+                ),
+              ),
+            ),
+          ),
+          Semantics(
+            excludeSemantics: true,
+            child: Positioned(
+              bottom: -50,
+              right: -50,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.income.withValues(alpha: 0.10),
+                ),
+              ),
+            ),
+          ),
 
           Center(
             child: SingleChildScrollView(

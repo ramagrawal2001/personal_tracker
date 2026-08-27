@@ -230,13 +230,16 @@ class _MainShellState extends State<MainShell> {
         label: Text(AppLocalizations.of(context).transactions),
       ),
       NavigationRailDestination(
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
+        icon: Semantics(
+          label: 'Add new transaction',
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(LucideIcons.plus, color: Colors.white, size: 18),
           ),
-          child: const Icon(LucideIcons.plus, color: Colors.white, size: 18),
         ),
         label: const Text('Quick Add'),
       ),
@@ -291,6 +294,7 @@ class _MainShellState extends State<MainShell> {
                     selected: !isNotes,
                     onTap: () => _switchModule(AppModule.finance),
                     showLabel: false,
+                    semanticLabel: 'Switch to Finance module',
                   ),
                   const SizedBox(height: 8),
                   _ModuleSwitcherTab(
@@ -299,6 +303,7 @@ class _MainShellState extends State<MainShell> {
                     selected: isNotes,
                     onTap: () => _switchModule(AppModule.notes),
                     showLabel: false,
+                    semanticLabel: 'Switch to Notes module',
                   ),
                 ],
               ),
@@ -362,6 +367,7 @@ class _MainShellState extends State<MainShell> {
                       selected: !isNotes,
                       onTap: () => _switchModule(AppModule.finance),
                       showLabel: true,
+                      semanticLabel: 'Switch to Finance module',
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -372,6 +378,7 @@ class _MainShellState extends State<MainShell> {
                       selected: isNotes,
                       onTap: () => _switchModule(AppModule.notes),
                       showLabel: true,
+                      semanticLabel: 'Switch to Notes module',
                     ),
                   ),
                 ],
@@ -430,39 +437,47 @@ class _MainShellState extends State<MainShell> {
             icon: const Icon(LucideIcons.layoutDashboard),
             activeIcon: const Icon(LucideIcons.layoutDashboard, color: AppColors.primary),
             label: AppLocalizations.of(context).home,
+            tooltip: AppLocalizations.of(context).home,
           ),
           BottomNavigationBarItem(
             icon: const Icon(LucideIcons.receipt),
             activeIcon: const Icon(LucideIcons.receipt, color: AppColors.primary),
             label: AppLocalizations.of(context).transactions,
+            tooltip: AppLocalizations.of(context).transactions,
           ),
           BottomNavigationBarItem(
-            icon: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+            icon: Semantics(
+              label: 'Add new transaction',
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(LucideIcons.plus, color: Colors.white, size: 22),
               ),
-              child: const Icon(LucideIcons.plus, color: Colors.white, size: 22),
             ),
             label: '',
+            tooltip: 'Quick add transaction',
           ),
           BottomNavigationBarItem(
             icon: const Icon(LucideIcons.wallet),
             activeIcon: const Icon(LucideIcons.wallet, color: AppColors.primary),
             label: AppLocalizations.of(context).accounts,
+            tooltip: AppLocalizations.of(context).accounts,
           ),
           BottomNavigationBarItem(
             icon: const Icon(LucideIcons.grid),
             activeIcon: const Icon(LucideIcons.grid, color: AppColors.primary),
             label: AppLocalizations.of(context).more,
+            tooltip: AppLocalizations.of(context).more,
           ),
         ],
       ),
@@ -476,6 +491,7 @@ class _ModuleSwitcherTab extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final bool showLabel;
+  final String? semanticLabel;
 
   const _ModuleSwitcherTab({
     required this.label,
@@ -483,41 +499,55 @@ class _ModuleSwitcherTab extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.showLabel = true,
+    this.semanticLabel,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: showLabel ? const EdgeInsets.symmetric(vertical: 7.5, horizontal: 8) : const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary.withValues(alpha: 0.15) : AppColors.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? AppColors.primary.withValues(alpha: 0.45) : AppColors.border,
-            width: selected ? 1.2 : 1.0,
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semanticLabel ?? label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          padding: showLabel ? const EdgeInsets.symmetric(vertical: 7.5, horizontal: 8) : const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary.withValues(alpha: 0.15) : AppColors.surface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: selected ? AppColors.primary.withValues(alpha: 0.45) : AppColors.border,
+              width: selected ? 1.2 : 1.0,
+            ),
           ),
-        ),
-        child: showLabel
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, size: 15, color: selected ? AppColors.primary : AppColors.textMuted),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected ? AppColors.primary : AppColors.textMuted,
+          child: showLabel
+              ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Semantics(
+                      excludeSemantics: true,
+                      child: Icon(icon, size: 15, color: selected ? AppColors.primary : AppColors.textMuted),
                     ),
-                  ),
-                ],
-              )
-            : Icon(icon, size: 22, color: selected ? AppColors.primary : AppColors.textMuted),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                        color: selected ? AppColors.primary : AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                )
+              : Semantics(
+                  excludeSemantics: true,
+                  child: Icon(icon, size: 22, color: selected ? AppColors.primary : AppColors.textMuted),
+                ),
+        ),
       ),
     );
   }

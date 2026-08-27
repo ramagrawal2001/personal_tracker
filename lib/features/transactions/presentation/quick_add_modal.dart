@@ -119,18 +119,24 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       _selectedLoanId = loans.isNotEmpty ? loans.first.id : null;
     }
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        left: 20,
-        right: 20,
-        top: 12,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    final horizontalPadding = context.responsiveHorizontalPadding(mobile: 16, tablet: 24, desktop: 32);
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return MediaQuery.removePadding(
+      context: context,
+      removeTop: true,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: bottomInset + context.responsivePadding(mobile: 24, tablet: 32, desktop: 40),
+          left: horizontalPadding,
+          right: horizontalPadding,
+          top: 12,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Center(
               child: Container(
                 width: 40,
@@ -387,6 +393,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -406,6 +413,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           fontSize: 13,
         ),
+        tooltip: 'Select transaction type: $label',
         onSelected: _isEditing
             ? null
             : (val) {

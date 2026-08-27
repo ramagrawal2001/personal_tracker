@@ -110,40 +110,44 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         Navigator.of(context).pop();
       },
       child: Scaffold(
-      backgroundColor: _note.color.color,
-      appBar: AppBar(
+        resizeToAvoidBottomInset: true,
         backgroundColor: _note.color.color,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
-          onPressed: () => Navigator.of(context).maybePop(),
+        appBar: AppBar(
+          backgroundColor: _note.color.color,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(_note.isPinned ? LucideIcons.pinOff : LucideIcons.pin, color: AppColors.textPrimary),
+              onPressed: () {
+                setState(() {
+                  _note = _note.copyWith(isPinned: !_note.isPinned);
+                });
+              },
+            ),
+            IconButton(
+              icon: const Icon(LucideIcons.palette, color: AppColors.textPrimary),
+              onPressed: () => _showColorPicker(context),
+            ),
+            IconButton(
+              icon: Icon(_note.isChecklist ? LucideIcons.fileText : LucideIcons.checkSquare, color: AppColors.textPrimary),
+              onPressed: _toggleChecklist,
+              tooltip: _note.isChecklist ? 'Switch to Note' : 'Switch to Checklist',
+            ),
+          ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(_note.isPinned ? LucideIcons.pinOff : LucideIcons.pin, color: AppColors.textPrimary),
-            onPressed: () {
-              setState(() {
-                _note = _note.copyWith(isPinned: !_note.isPinned);
-                
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(LucideIcons.palette, color: AppColors.textPrimary),
-            onPressed: () => _showColorPicker(context),
-          ),
-          IconButton(
-            icon: Icon(_note.isChecklist ? LucideIcons.fileText : LucideIcons.checkSquare, color: AppColors.textPrimary),
-            onPressed: _toggleChecklist,
-            tooltip: _note.isChecklist ? 'Switch to Note' : 'Switch to Checklist',
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
             TextField(
               controller: _titleCtrl,
               onChanged: (_) {},
@@ -248,11 +252,16 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           ],
         ),
       ),
+    ),
+    ],
+  ),
+),
       ),
     );
   }
 
   void _showColorPicker(BuildContext context) {
+    final navigator = Navigator.of(context);
     AdaptiveModal.show(
       context: context,
       backgroundColor: AppColors.surface,
@@ -271,7 +280,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 return GestureDetector(
                   onTap: () {
                     _setColor(c);
-                    Navigator.pop(context);
+                    navigator.pop();
                   },
                   child: Container(
                     width: 44,

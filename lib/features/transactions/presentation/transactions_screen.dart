@@ -212,6 +212,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           fontSize: 13,
         ),
+        tooltip: 'Filter by: $label',
       ),
     );
   }

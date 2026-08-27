@@ -9,6 +9,7 @@ class AppCard extends StatelessWidget {
   final Color? color;
   final bool elevated;
   final double radius;
+  final String? semanticLabel;
 
   const AppCard({
     super.key,
@@ -18,6 +19,7 @@ class AppCard extends StatelessWidget {
     this.color,
     this.elevated = false,
     this.radius = AppDecorations.radiusMd,
+    this.semanticLabel,
   });
 
   @override
@@ -26,8 +28,11 @@ class AppCard extends StatelessWidget {
         ? AppDecorations.cardElevated(color: color, radius: radius)
         : AppDecorations.card(color: color, radius: radius);
 
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    final duration = disableAnimations ? Duration.zero : const Duration(milliseconds: 200);
+
     final card = AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+      duration: duration,
       padding: padding,
       decoration: decoration,
       child: child,
@@ -37,10 +42,14 @@ class AppCard extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
-        child: card,
+      child: Semantics(
+        label: semanticLabel,
+        button: true,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(radius),
+          child: card,
+        ),
       ),
     );
   }

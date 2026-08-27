@@ -146,8 +146,9 @@ return SingleChildScrollView(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(cards.length, (i) {
                 final active = i == _carouselIndex;
+                final disableAnimations = MediaQuery.of(context).disableAnimations;
                 return AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
+                  duration: disableAnimations ? Duration.zero : const Duration(milliseconds: 250),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   width: active ? 20 : 6,
                   height: 6,
@@ -1274,7 +1275,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
           return GestureDetector(
             onTap: () => setState(() => _selectedType = type),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+              duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
@@ -1312,7 +1313,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
           return GestureDetector(
             onTap: () => setState(() => _selectedNetwork = net),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
+              duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(

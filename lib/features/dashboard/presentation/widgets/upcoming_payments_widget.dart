@@ -27,6 +27,7 @@ class UpcomingPaymentsWidget extends StatelessWidget {
           title: 'Upcoming Obligations',
           actionLabel: onViewAll != null ? 'Calendar' : null,
           onAction: onViewAll,
+          actionSemanticLabel: 'View all upcoming payments',
         ),
         if (upcomingPayments.isEmpty)
           const AppCard(
@@ -48,12 +49,16 @@ class UpcomingPaymentsWidget extends StatelessWidget {
               final payment = upcomingPayments[index];
               return AppCard(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                semanticLabel: 'Payment: ${payment.title}, amount ${CurrencyFormatter.format(payment.amount)}, due ${DateFormatter.formatRelative(payment.nextDueDate)}',
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: AppDecorations.iconBadge(AppColors.accent),
-                      child: const Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
+                    Semantics(
+                      excludeSemantics: true,
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: AppDecorations.iconBadge(AppColors.accent),
+                        child: const Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(

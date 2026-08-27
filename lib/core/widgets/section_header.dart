@@ -5,12 +5,14 @@ class SectionHeader extends StatelessWidget {
   final String title;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? actionSemanticLabel;
 
   const SectionHeader({
     super.key,
     required this.title,
     this.actionLabel,
     this.onAction,
+    this.actionSemanticLabel,
   });
 
   @override
@@ -29,8 +31,13 @@ class SectionHeader extends StatelessWidget {
             ),
           ),
           if (actionLabel != null && onAction != null)
-            GestureDetector(
-              onTap: onAction,
+            TextButton(
+              onPressed: onAction,
+              style: TextButton.styleFrom(
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               child: Text(
                 actionLabel!,
                 style: const TextStyle(
