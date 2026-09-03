@@ -1075,10 +1075,108 @@ if (creditCardId != null) {
   }
 
   void deleteTransaction(String id) {
+    // Account balances are always recomputed from transaction history, so
+    // removing the row is enough for them. Credit-card / loan / investment
+    // outstanding are *stored* fields that addTransaction/updateTransaction
+    // mutate directly — deleting must reverse those same side effects, or a
+    // deleted card charge / EMI payment / SIP silently corrupts the balance.
+    final tx = state.transactions.where((t) => t.id == id).toList();
+    final original = tx.isNotEmpty ? tx.first : null;
+
+    List<CreditCardModel> updatedCards = state.creditCards;
+    List<LoanModel> updatedLoans = state.loans;
+    List<InvestmentModel> updatedInvestments = state.investments;
+    CreditCardModel? adjustedCard;
+    LoanModel? adjustedLoan;
+    InvestmentModel? adjustedInvestment;
+
+    if (original != null && original.creditCardId != null) {
+      final i = state.creditCards.indexWhere((c) => c.id == original.creditCardId);
+      if (i != -1) {
+        final card = state.creditCards[i];
+        double outstanding = card.currentOutstanding;
+        if (original.type == TransactionType.expense) {
+          outstanding = (card.currentOutstanding - original.amount).clamp(0.0, double.infinity);
+        } else if (original.type == TransactionType.creditCardPayment ||
+            original.type == TransactionType.refund) {
+          outstanding = card.currentOutstanding + original.amount;
+        }
+        adjustedCard = card.copyWith(currentOutstanding: outstanding);
+        updatedCards = List.from(state.creditCards)..[i] = adjustedCard;
+      }
+    }
+
+    if (original != null &&
+        original.type == TransactionType.loanPayment &&
+        original.loanId != null) {
+      final i = state.loans.indexWhere((l) => l.id == original.loanId);
+      if (i != -1) {
+        final loan = state.loans[i];
+        final isScheduledEmi = (original.amount - loan.monthlyEmi).abs() < 0.01;
+        adjustedLoan = LoanModel(
+          id: loan.id,
+          name: loan.name,
+          provider: loan.provider,
+          principalAmount: loan.principalAmount,
+          outstandingAmount:
+              (loan.outstandingAmount + original.amount).clamp(0.0, loan.principalAmount),
+          interestRate: loan.interestRate,
+          monthlyEmi: loan.monthlyEmi,
+          dueDay: loan.dueDay,
+          startDate: loan.startDate,
+          remainingTenureMonths: isScheduledEmi
+              ? loan.remainingTenureMonths + 1
+              : loan.remainingTenureMonths,
+        );
+        updatedLoans = List.from(state.loans)..[i] = adjustedLoan;
+      }
+    }
+
+    if (original != null &&
+        original.type == TransactionType.investment &&
+        original.investmentId != null) {
+      final i = state.investments.indexWhere((v) => v.id == original.investmentId);
+      if (i != -1) {
+        final inv = state.investments[i];
+        adjustedInvestment = InvestmentModel(
+          id: inv.id,
+          name: inv.name,
+          type: inv.type,
+          investedAmount: (inv.investedAmount - original.amount).clamp(0.0, double.infinity),
+          currentValue: (inv.currentValue - original.amount).clamp(0.0, double.infinity),
+          monthlySipAmount: inv.monthlySipAmount,
+          sipDay: inv.sipDay,
+        );
+        updatedInvestments = List.from(state.investments)..[i] = adjustedInvestment;
+      }
+    }
+
     state = state.copyWith(
       transactions: state.transactions.where((t) => t.id != id).toList(),
+      creditCards: updatedCards,
+      loans: updatedLoans,
+      investments: updatedInvestments,
     );
+
     _fireAndForget(() => deleteThrough('transactions', id, () => (_db.update(_db.transactions)..where((t) => t.id.equals(id))).write(TransactionsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'transaction deletion');
+    if (adjustedCard != null) {
+      _fireAndForget(
+          () => writeThrough('credit_cards', adjustedCard!.id,
+              () => _db.into(_db.creditCards).insertOnConflictUpdate(adjustedCard!.toCompanion())),
+          'credit card outstanding after tx delete');
+    }
+    if (adjustedLoan != null) {
+      _fireAndForget(
+          () => writeThrough('loans', adjustedLoan!.id,
+              () => _db.into(_db.loans).insertOnConflictUpdate(adjustedLoan!.toCompanion())),
+          'loan outstanding after tx delete');
+    }
+    if (adjustedInvestment != null) {
+      _fireAndForget(
+          () => writeThrough('investments', adjustedInvestment!.id,
+              () => _db.into(_db.investments).insertOnConflictUpdate(adjustedInvestment!.toCompanion())),
+          'investment after tx delete');
+    }
   }
 
   // ── Accounts ───────────────────────────────────────────────────────────────
