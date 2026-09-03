@@ -36,6 +36,10 @@ class EmailOtpService {
       return true;
     }
 
+    // No email provider configured for this build — don't issue an OTP that
+    // can never be delivered.
+    if (!EnvConfig.isEmailConfigured) return false;
+
     final otp = _generateOtp();
     await _storeOtp(normalised, otp);
 

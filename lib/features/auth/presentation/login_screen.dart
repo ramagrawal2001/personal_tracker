@@ -159,12 +159,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Background glow orbs
-          Semantics(
-            excludeSemantics: true,
-            child: Positioned(
-              top: -100,
-              left: -50,
+          // Background glow orbs (purely decorative — kept out of the
+          // semantics tree, but Positioned must remain a direct child of the
+          // Stack so ExcludeSemantics wraps the Container, not the Positioned).
+          Positioned(
+            top: -100,
+            left: -50,
+            child: ExcludeSemantics(
               child: Container(
                 width: 300,
                 height: 300,
@@ -175,11 +176,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             ),
           ),
-          Semantics(
-            excludeSemantics: true,
-            child: Positioned(
-              bottom: -50,
-              right: -50,
+          Positioned(
+            bottom: -50,
+            right: -50,
+            child: ExcludeSemantics(
               child: Container(
                 width: 250,
                 height: 250,

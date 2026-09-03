@@ -37,7 +37,12 @@ void main() {
       expect(addedTx.syncStatus, equals(SyncStatus.pending));
     });
 
-    test('Network restoration automatically flushes pending offline transactions', () async {
+    test('Network restoration flushes pending transactions the server confirms', () async {
+      // Stub the cloud push: confirm every id it is handed.
+      syncNotifier = SyncEngineNotifier(
+        pushPending: (pending) async => pending.map((t) => t.id).toSet(),
+      );
+
       financeNotifier.addTransaction(
         accountId: testAccountId,
         type: TransactionType.expense,
@@ -65,6 +70,73 @@ void main() {
           .where((t) => t.syncStatus == SyncStatus.pending)
           .toList();
       expect(remainingPending, isEmpty);
+    });
+
+    test('A failed cloud push leaves every transaction queued for retry', () async {
+      // Stub the cloud push as failing: it confirms nothing.
+      syncNotifier = SyncEngineNotifier(pushPending: (_) async => const {});
+
+      financeNotifier.addTransaction(
+        accountId: testAccountId,
+        type: TransactionType.expense,
+        amount: 1499.0,
+        merchant: 'Server-Down Store',
+        date: DateTime.now(),
+        isOnline: false,
+      );
+
+      final pendingList = financeNotifier.state.transactions
+          .where((t) => t.syncStatus == SyncStatus.pending)
+          .toList();
+      expect(pendingList, isNotEmpty);
+
+      syncNotifier.toggleNetwork(true);
+
+      final count = await syncNotifier.flushPendingQueue(
+        pendingList,
+        (id) => financeNotifier.markTransactionSynced(id),
+      );
+
+      // Nothing was confirmed, so nothing is marked synced.
+      expect(count, equals(0));
+      final stillPending = financeNotifier.state.transactions
+          .where((t) => t.syncStatus == SyncStatus.pending)
+          .toList();
+      expect(stillPending.length, equals(pendingList.length));
+      expect(syncNotifier.state.pendingCount, equals(pendingList.length));
+    });
+
+    test('An exception thrown by the cloud push is swallowed and the queue kept', () async {
+      syncNotifier = SyncEngineNotifier(
+        pushPending: (_) async => throw Exception('network reset'),
+      );
+
+      financeNotifier.addTransaction(
+        accountId: testAccountId,
+        type: TransactionType.expense,
+        amount: 99.0,
+        merchant: 'Flaky Network Cafe',
+        date: DateTime.now(),
+        isOnline: false,
+      );
+
+      final pendingList = financeNotifier.state.transactions
+          .where((t) => t.syncStatus == SyncStatus.pending)
+          .toList();
+
+      syncNotifier.toggleNetwork(true);
+
+      final count = await syncNotifier.flushPendingQueue(
+        pendingList,
+        (id) => financeNotifier.markTransactionSynced(id),
+      );
+
+      expect(count, equals(0));
+      expect(syncNotifier.state.isSyncing, isFalse);
+      final stillPending = financeNotifier.state.transactions
+          .where((t) => t.syncStatus == SyncStatus.pending)
+          .toList();
+      expect(stillPending.length, equals(pendingList.length));
     });
   });
 }

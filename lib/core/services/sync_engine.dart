@@ -33,47 +33,57 @@ class SyncEngineState {
 }
 
 class SyncEngineNotifier extends StateNotifier<SyncEngineState> {
-  SyncEngineNotifier() : super(SyncEngineState());
+  /// Pushes pending transactions to the cloud and returns the set of ids the
+  /// server confirmed. Injectable so tests can exercise the queue without a
+  /// live backend; defaults to the real edge-function call.
+  final Future<Set<String>> Function(List<TransactionModel>) _pushPending;
+
+  SyncEngineNotifier({
+    Future<Set<String>> Function(List<TransactionModel>)? pushPending,
+  })  : _pushPending = pushPending ?? EdgeFunctionService.pushPendingTransactions,
+        super(SyncEngineState());
 
   void toggleNetwork(bool online) {
     state = state.copyWith(isOnline: online);
     debugPrint('🌐 Network status changed: ${online ? "ONLINE" : "OFFLINE"}');
   }
 
-  /// Automatically flushes pending offline transactions when network is available
-  Future<int> flushPendingQueue(List<TransactionModel> pendingList, Function(String id) markAsSynced) async {
+  /// Flushes pending offline transactions when the network is available.
+  ///
+  /// A transaction is marked synced **only** once the server confirms it was
+  /// persisted. If the push fails (offline, auth error, server error) nothing
+  /// is marked and the items stay queued for the next retry — previously the
+  /// queue drained itself even when the edge function returned an error.
+  Future<int> flushPendingQueue(
+    List<TransactionModel> pendingList,
+    void Function(String id) markAsSynced,
+  ) async {
     if (!state.isOnline || pendingList.isEmpty) {
       state = state.copyWith(pendingCount: pendingList.length);
       return 0;
     }
 
     state = state.copyWith(isSyncing: true);
-    int count = 0;
 
-    for (var tx in pendingList) {
-      try {
-        // Invoke production edge function sync
-        await EdgeFunctionService.syncLedgerItem(
-          transactionId: tx.id,
-          amount: tx.amount,
-          type: tx.type.name,
-        );
-        markAsSynced(tx.id);
-        count++;
-      } catch (e) {
-        debugPrint('Sync failed for tx ${tx.id}: $e');
-        // Do NOT mark as synced on failure - keep in pending queue for retry
-        // count is not incremented for failed syncs
-      }
+    Set<String> syncedIds;
+    try {
+      syncedIds = await _pushPending(pendingList);
+    } catch (e) {
+      debugPrint('flushPendingQueue: sync failed, keeping queue: $e');
+      syncedIds = const {};
+    }
+
+    for (final id in syncedIds) {
+      markAsSynced(id);
     }
 
     state = state.copyWith(
       isSyncing: false,
-      pendingCount: pendingList.length - count,
-      lastSyncTime: count > 0 ? 'Just now' : state.lastSyncTime,
+      pendingCount: pendingList.length - syncedIds.length,
+      lastSyncTime: syncedIds.isNotEmpty ? 'Just now' : state.lastSyncTime,
     );
 
-    return count;
+    return syncedIds.length;
   }
 }
 
