@@ -205,18 +205,29 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         ],
         const SizedBox(height: 36),
 
-        // OTP boxes
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(6, (i) => _OtpBox(
-            controller: _ctrls[i],
-            focusNode: _foci[i],
-            onChanged: (val) {
-              if (val.isNotEmpty && i < 5) _foci[i + 1].requestFocus();
-              if (val.isEmpty && i > 0) _foci[i - 1].requestFocus();
-              if (_enteredOtp.length == 6) _verify();
-            },
-          )),
+        // OTP boxes — the 6 fixed-width boxes overflow the row on narrow
+        // (<340dp) screens; FittedBox scales the whole strip down instead of
+        // throwing a RenderFlex overflow, and Center keeps it laid out like the
+        // old spaceBetween row on normal widths.
+        Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(6, (i) => Padding(
+                padding: EdgeInsets.only(right: i == 5 ? 0 : 10),
+                child: _OtpBox(
+                  controller: _ctrls[i],
+                  focusNode: _foci[i],
+                  onChanged: (val) {
+                    if (val.isNotEmpty && i < 5) _foci[i + 1].requestFocus();
+                    if (val.isEmpty && i > 0) _foci[i - 1].requestFocus();
+                    if (_enteredOtp.length == 6) _verify();
+                  },
+                ),
+              )),
+            ),
+          ),
         ),
 
         // Error

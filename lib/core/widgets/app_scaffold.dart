@@ -58,6 +58,10 @@ class AppScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      // This per-screen Scaffold is the single owner of keyboard avoidance —
+      // the navigation shell above it deliberately does not resize, so this one
+      // must, to keep form fields scrollable above the on-screen keyboard.
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         primary: false,
         toolbarHeight: 50,

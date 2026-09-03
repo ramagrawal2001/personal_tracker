@@ -92,6 +92,7 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<InvestmentType>(
+              isExpanded: true,
               value: _selectedType,
               dropdownColor: AppColors.surface,
               decoration: const InputDecoration(

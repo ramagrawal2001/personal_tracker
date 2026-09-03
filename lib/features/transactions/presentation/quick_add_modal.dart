@@ -244,6 +244,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             Text('From Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               value: _selectedAccountId,
               dropdownColor: AppColors.surface,
               decoration: InputDecoration(
@@ -268,6 +269,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               Text('To Destination Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedToAccountId,
                 dropdownColor: AppColors.surface,
                 decoration: InputDecoration(
@@ -292,6 +294,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               Text('Target Credit Card', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedCardId,
                 dropdownColor: AppColors.surface,
                 decoration: InputDecoration(
@@ -316,6 +319,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               Text('Target Loan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedLoanId,
                 dropdownColor: AppColors.surface,
                 decoration: InputDecoration(
@@ -340,6 +344,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: _selectedCategoryId,
                 dropdownColor: AppColors.surface,
                 decoration: InputDecoration(

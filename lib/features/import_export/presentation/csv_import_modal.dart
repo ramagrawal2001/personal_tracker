@@ -194,6 +194,7 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
             Text('Destination Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               value: _selectedAccountId,
               dropdownColor: AppColors.surface,
               decoration: InputDecoration(
@@ -269,14 +270,17 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(row.merchantName, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 13)),
-                            const SizedBox(height: 2),
-                            Text('Auto Category: ${row.categoryId}', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                          ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(row.merchantName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 13)),
+                              const SizedBox(height: 2),
+                              Text('Auto Category: ${row.categoryId}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 10),
                         Text(
                           '- ${CurrencyFormatter.format(row.amount)}',
                           style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.expense, fontSize: 14),

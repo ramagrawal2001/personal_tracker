@@ -336,6 +336,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<PaymentFrequency>(
+                  isExpanded: true,
                   value: frequency,
                   decoration: const InputDecoration(labelText: 'Frequency'),
                   dropdownColor: AppColors.surface,
@@ -361,6 +362,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 const SizedBox(height: 16),
                 if (financeState.categories.isNotEmpty)
                   DropdownButtonFormField<String?>(
+                    isExpanded: true,
                     value: categoryId,
                     decoration: const InputDecoration(labelText: 'Category (optional)'),
                     dropdownColor: AppColors.surface,
@@ -373,6 +375,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 const SizedBox(height: 16),
                 if (financeState.accounts.isNotEmpty)
                   DropdownButtonFormField<String?>(
+                    isExpanded: true,
                     value: accountId,
                     decoration: const InputDecoration(labelText: 'Pay From Account (optional)'),
                     dropdownColor: AppColors.surface,

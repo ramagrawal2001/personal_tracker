@@ -106,6 +106,7 @@ class AccountsScreen extends ConsumerWidget {
                 TextField(controller: nameCtrl, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Account Name', LucideIcons.wallet)),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<AccountType>(
+                  isExpanded: true,
                   value: selectedType,
                   decoration: _dec('Account Type', LucideIcons.layers),
                   dropdownColor: AppColors.surface,

@@ -90,6 +90,7 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<AccountType>(
+              isExpanded: true,
               value: _selectedType,
               dropdownColor: AppColors.surface,
               decoration: const InputDecoration(

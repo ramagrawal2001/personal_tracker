@@ -30,8 +30,14 @@ class ProfileModal extends ConsumerWidget {
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
 
-    return Container(
-      padding: const EdgeInsets.all(24),
+    // Bottom sheet content: scrollable + keyboard-/safe-area-aware so it can
+    // never overflow vertically (e.g. landscape) or hide behind the keyboard.
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        24, 24, 24, 24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,6 +273,7 @@ class ProfileModal extends ConsumerWidget {
             ),
 
         ],
+      ),
       ),
     );
   }

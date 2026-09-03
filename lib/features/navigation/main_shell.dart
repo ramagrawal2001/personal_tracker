@@ -311,6 +311,14 @@ class _MainShellState extends State<MainShell> {
     if (isLargeScreen) {
       return _guardBack(context, location, Scaffold(
         backgroundColor: AppColors.background,
+        // The shell must NOT resize for the keyboard. Every routed screen is
+        // itself wrapped in a Scaffold (AppScaffold / raw) that already insets
+        // its body by MediaQuery.viewInsets.bottom. If the shell resized too,
+        // the keyboard height would be subtracted twice and a form's content
+        // region would collapse to near-zero — the "blank space behind the
+        // keyboard" bug. Bottom sheets pushed on the shell navigator still see
+        // the real viewInsets, so they keep rising above the keyboard.
+        resizeToAvoidBottomInset: false,
         body: Row(
           children: [
             // Module switcher for large screens
@@ -387,6 +395,11 @@ class _MainShellState extends State<MainShell> {
 
     return _guardBack(context, location, Scaffold(
       backgroundColor: AppColors.background,
+      // See the large-screen branch above: the shell deliberately does not
+      // resize for the keyboard so the inner per-screen Scaffold is the only
+      // widget that insets by viewInsets.bottom. Resizing here as well counts
+      // the keyboard twice and makes form content vanish behind it.
+      resizeToAvoidBottomInset: false,
       body: Column(
         children: [
           SafeArea(

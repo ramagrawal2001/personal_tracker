@@ -171,7 +171,8 @@ class BudgetsScreen extends ConsumerWidget {
           child: Container(
             decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('Edit Budget Limit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 20),
               TextField(
@@ -200,6 +201,7 @@ class BudgetsScreen extends ConsumerWidget {
                 ),
               ),
             ]),
+            ),
           ),
         ),
       ),
@@ -235,10 +237,12 @@ class BudgetsScreen extends ConsumerWidget {
           child: Container(
             decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('New Monthly Budget', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 value: selectedCategoryId,
                 decoration: const InputDecoration(labelText: 'Category'),
                 dropdownColor: AppColors.surface,
@@ -272,6 +276,7 @@ class BudgetsScreen extends ConsumerWidget {
                 ),
               ),
             ]),
+            ),
           ),
         ),
       ),
