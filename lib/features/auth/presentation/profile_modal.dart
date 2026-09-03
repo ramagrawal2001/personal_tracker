@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../../core/sync/sync_service.dart';
 import '../../../core/services/backup_service.dart';
 import '../../../core/services/biometric_service.dart';
 import 'auth_repository.dart';
@@ -205,6 +206,7 @@ class ProfileModal extends ConsumerWidget {
                               }
                               await ref.read(appDatabaseProvider).importSnapshot(snapshot);
                               await ref.read(financeNotifierProvider.notifier).reloadFromDb();
+                              await ref.read(syncServiceProvider).reseedFromLocal();
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Local Encrypted Vault restored successfully!'), backgroundColor: AppColors.income),
