@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../config/env_config.dart';
+import 'supabase_service.dart';
 
 /// ─── Test-account bypass map ────────────────────────────────────────────────
 /// These emails always accept the listed OTP without an actual email being
@@ -36,37 +34,32 @@ class EmailOtpService {
       return true;
     }
 
-    // No email provider configured for this build — don't issue an OTP that
-    // can never be delivered.
-    if (!EnvConfig.isEmailConfigured) return false;
+    // Delivery goes through the `send-otp` Supabase Edge Function, which holds
+    // the Resend key as a server secret — nothing email-related ships in the
+    // app binary. The code is still generated / stored / verified on-device.
+    if (!SupabaseService.isInitialized) return false;
 
     final otp = _generateOtp();
     await _storeOtp(normalised, otp);
 
     try {
-      final subject = purpose == OtpPurpose.verify
-          ? 'Aspyric — Verify your email'
-          : 'Aspyric — Reset your password';
-      final body = _buildEmailHtml(otp, purpose);
-
-      final resp = await http.post(
-        Uri.parse('https://api.resend.com/emails'),
-        headers: {
-          'Authorization': 'Bearer ${EnvConfig.resendApiKey}',
-          'Content-Type' : 'application/json',
+      final res = await SupabaseService.client.functions.invoke(
+        'send-otp',
+        body: {
+          'email': normalised,
+          'code': otp,
+          'purpose': purpose == OtpPurpose.resetPassword ? 'resetPassword' : 'verify',
         },
-        body: jsonEncode({
-          'from'   : EnvConfig.resendFromEmail,
-          'to'     : [email],
-          'subject': subject,
-          'html'   : body,
-        }),
       );
-      if (resp.statusCode == 200 || resp.statusCode == 201) {
-        return true;
+      final data = res.data;
+      final ok = res.status == 200 && (data is! Map || data['ok'] == true);
+      if (!ok) {
+        // Roll back the stored code so a stale one can't be "verified" offline.
+        await _clearOtp(normalised);
       }
-      return false;
+      return ok;
     } catch (_) {
+      await _clearOtp(normalised);
       return false;
     }
   }
@@ -124,36 +117,11 @@ class EmailOtpService {
     await prefs.remove('otp_attempts_$email');
   }
 
-  static String _buildEmailHtml(String otp, OtpPurpose purpose) {
-    final purposeText = purpose == OtpPurpose.verify
-        ? 'verify your email address'
-        : 'reset your password';
-    return '''
-<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family:Inter,sans-serif;background:#0F1324;color:#E8EAFB;margin:0;padding:40px 0;">
-  <div style="max-width:480px;margin:0 auto;background:#1A1F3A;border-radius:20px;border:1px solid #2D3561;padding:40px;">
-    <div style="text-align:center;margin-bottom:28px;">
-      <h1 style="color:#6C63FF;font-size:28px;margin:0;letter-spacing:-0.5px;">Aspyric</h1>
-      <p style="color:#8B92B8;margin:8px 0 0;font-size:14px;">Your Complete Financial Dashboard</p>
-    </div>
-    <h2 style="color:#E8EAFB;font-size:20px;margin:0 0 12px;">Your Verification Code</h2>
-    <p style="color:#8B92B8;font-size:14px;line-height:1.6;margin:0 0 28px;">
-      Use the code below to $purposeText on Aspyric. This code expires in <strong style="color:#E8EAFB;">5 minutes</strong>.
-    </p>
-    <div style="background:#0F1324;border-radius:16px;border:2px solid #6C63FF;padding:24px;text-align:center;margin-bottom:28px;">
-      <span style="font-size:42px;font-weight:bold;letter-spacing:14px;color:#6C63FF;font-family:monospace;">$otp</span>
-    </div>
-    <p style="color:#5A6180;font-size:12px;line-height:1.6;margin:0;">
-      If you did not request this, you can safely ignore this email.<br>
-      Never share this code with anyone.
-    </p>
-    <hr style="border:none;border-top:1px solid #2D3561;margin:24px 0;">
-    <p style="color:#5A6180;font-size:11px;text-align:center;margin:0;">© 2026 Aspyric · support@aspyric.app</p>
-  </div>
-</body>
-</html>''';
+  static Future<void> _clearOtp(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('otp_code_$email');
+    await prefs.remove('otp_expiry_$email');
+    await prefs.remove('otp_attempts_$email');
   }
 
   /// Returns test OTP hint for development — empty string outside debug builds
