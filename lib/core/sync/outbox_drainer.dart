@@ -32,10 +32,15 @@ class OutboxDrainer {
   final CloudGateway gateway;
   final Random _rng = Random();
 
+  /// Invoked after every successful [CloudGateway.upsertRow] with the
+  /// server-authoritative `updated_at`. [SyncService] uses this to populate its
+  /// realtime echo-suppression map.
+  final void Function(String table, String entityId, DateTime serverTs)? onPushed;
+
   static const int _batchSize = 50;
   static const int _maxAttempts = 8;
 
-  OutboxDrainer({required this.db, required this.gateway});
+  OutboxDrainer({required this.db, required this.gateway, this.onPushed});
 
   Future<OutboxDrainResult> drainOnce() async {
     final now = DateTime.now();
@@ -59,7 +64,12 @@ class OutboxDrainer {
           pushed++;
           continue;
         }
-        await gateway.upsertRow(row.entityTable, cloudRow);
+        final serverTs = await gateway.upsertRow(row.entityTable, cloudRow);
+        try {
+          onPushed?.call(row.entityTable, row.entityId, serverTs);
+        } catch (e) {
+          debugPrint('OutboxDrainer.onPushed callback failed: $e');
+        }
         // Only remove the row if no newer edit re-stamped its seq mid-push.
         await _deleteRow(row.id, row.seq);
         pushed++;
