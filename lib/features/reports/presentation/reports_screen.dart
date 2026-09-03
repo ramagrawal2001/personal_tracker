@@ -12,6 +12,28 @@ import '../../../core/widgets/summary_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/empty_state.dart';
 
+/// One of the three stats in the Reports hero-card footer. Wrapped in
+/// [Expanded] with a scale-down value so long currency amounts (e.g. lakhs)
+/// never overflow the row on narrow screens.
+Widget _reportStat(String label, String value, Color color, CrossAxisAlignment align) {
+  return Expanded(
+    child: Column(
+      crossAxisAlignment: align,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
 
@@ -71,47 +93,18 @@ class ReportsScreen extends ConsumerWidget {
             badge: '${savingsRate.toStringAsFixed(1)}% Savings Rate',
             badgeColor: savingsRate >= 20 ? AppColors.income : AppColors.warning,
             footer: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Total Income', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                    const SizedBox(height: 2),
-                    Text(
-                      CurrencyFormatter.format(income),
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.income),
-                    ),
-                  ],
-                ),
+                _reportStat('Total Income', CurrencyFormatter.format(income),
+                    AppColors.income, CrossAxisAlignment.start),
                 Container(height: 30, width: 1, color: AppColors.border),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Total Expenses', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                    const SizedBox(height: 2),
-                    Text(
-                      CurrencyFormatter.format(expenses),
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.expense),
-                    ),
-                  ],
-                ),
+                _reportStat('Total Expenses', CurrencyFormatter.format(expenses),
+                    AppColors.expense, CrossAxisAlignment.center),
                 Container(height: 30, width: 1, color: AppColors.border),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Text('Net Savings', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                    const SizedBox(height: 2),
-                    Text(
-                      CurrencyFormatter.format(savings),
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: savings >= 0 ? AppColors.primary : AppColors.expense,
-                      ),
-                    ),
-                  ],
-                ),
+                _reportStat(
+                    'Net Savings',
+                    CurrencyFormatter.format(savings),
+                    savings >= 0 ? AppColors.primary : AppColors.expense,
+                    CrossAxisAlignment.end),
               ],
             ),
           ),

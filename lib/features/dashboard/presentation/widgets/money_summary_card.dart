@@ -66,7 +66,7 @@ class MoneySummaryCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('MONTHLY FLOW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textMuted)),
+                    const Text('MONTHLY FLOW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textSecondary)),
                     Text(
                       'Savings: ${CurrencyFormatter.format(remainingIncome > 0 ? remainingIncome : 0.0)}',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.income),

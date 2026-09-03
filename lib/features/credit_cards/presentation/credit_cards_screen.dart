@@ -416,25 +416,38 @@ class _ResponsiveCardCarouselState extends State<_ResponsiveCardCarousel> {
   @override
   void initState() {
     super.initState();
-    _updateController();
+    // Safe defaults — the responsive metrics depend on MediaQuery, which is
+    // not available until didChangeDependencies.
+    _viewportFraction = 0.88;
+    _carouselHeight = 210.0;
+    _pageController = PageController(viewportFraction: _viewportFraction);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _applyResponsiveMetrics();
   }
 
   @override
   void didUpdateWidget(covariant _ResponsiveCardCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _applyResponsiveMetrics();
+  }
+
+  void _applyResponsiveMetrics() {
     final isTablet = context.isTablet;
     final newViewportFraction = isTablet ? 0.48 : 0.88;
     final newCarouselHeight = isTablet ? 200.0 : 210.0;
-    if (newViewportFraction != _viewportFraction || newCarouselHeight != _carouselHeight) {
-      _updateController();
+    if (newViewportFraction == _viewportFraction &&
+        newCarouselHeight == _carouselHeight) {
+      return;
     }
-  }
-
-  void _updateController() {
-    final isTablet = context.isTablet;
-    _viewportFraction = isTablet ? 0.48 : 0.88;
-    _carouselHeight = isTablet ? 200.0 : 210.0;
+    _viewportFraction = newViewportFraction;
+    _carouselHeight = newCarouselHeight;
+    final previous = _pageController;
     _pageController = PageController(viewportFraction: _viewportFraction);
+    previous.dispose();
   }
 
   @override

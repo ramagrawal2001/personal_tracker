@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
-import '../../../core/theme/theme_provider.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/services/notification_service.dart';
@@ -70,7 +69,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final financeState = ref.watch(financeNotifierProvider);
     final financeNotifier = ref.read(financeNotifierProvider.notifier);
-    final themeMode = ref.watch(themeProvider);
     final locale = ref.watch(localeProvider);
 
     return AppScaffold(
@@ -105,20 +103,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // ── Appearance ───────────────────────────────────────────────
           const SectionLabel(label: 'Appearance & Theme'),
           AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                const Text('Theme Mode', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _ThemeChip('System', ThemeMode.system, themeMode, (m) => ref.read(themeProvider.notifier).setTheme(m)),
-                    const SizedBox(width: 8),
-                    _ThemeChip('Light', ThemeMode.light, themeMode, (m) => ref.read(themeProvider.notifier).setTheme(m)),
-                    const SizedBox(width: 8),
-                    _ThemeChip('Dark', ThemeMode.dark, themeMode, (m) => ref.read(themeProvider.notifier).setTheme(m)),
-                  ],
+                const Icon(LucideIcons.moon, color: AppColors.primary, size: 18),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text('Dark theme', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
                 ),
+                Text('Always on', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
               ],
             ),
           ),
@@ -434,30 +426,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ThemeChip extends StatelessWidget {
-  final String label;
-  final ThemeMode mode;
-  final ThemeMode current;
-  final void Function(ThemeMode) onSelect;
-
-  const _ThemeChip(this.label, this.mode, this.current, this.onSelect);
-
-  @override
-  Widget build(BuildContext context) {
-    final selected = current == mode;
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      showCheckmark: false,
-      selectedColor: AppColors.primary.withValues(alpha: 0.2),
-      backgroundColor: AppColors.surfaceLight,
-      side: BorderSide(color: selected ? AppColors.primary : AppColors.border),
-      labelStyle: TextStyle(color: selected ? AppColors.primary : AppColors.textSecondary, fontWeight: selected ? FontWeight.bold : FontWeight.normal, fontSize: 13),
-      onSelected: (_) => onSelect(mode),
     );
   }
 }
