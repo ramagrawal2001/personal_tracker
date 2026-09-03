@@ -86,31 +86,31 @@ class AdminScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(6),
               border: Border.all(color: AppColors.expense.withValues(alpha: 0.3)),
             ),
-            child: const Text('SUPER ADMIN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.expense, letterSpacing: 0.8)),
+            child: Text('SUPER ADMIN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.expense, letterSpacing: 0.8)),
           ),
           const SizedBox(width: 10),
-          const Text('Control Panel', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          Text('Control Panel', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         ],
       ),
       actions: [
         IconButton(
-          icon: const Icon(LucideIcons.refreshCw, color: AppColors.textSecondary, size: 18),
+          icon: Icon(LucideIcons.refreshCw, color: AppColors.textSecondary, size: 18),
           onPressed: () => ref.refresh(adminAnalyticsProvider),
         ),
       ],
       body: analytics.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppColors.primary)),
         error: (err, _) => Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(LucideIcons.alertTriangle, color: AppColors.expense, size: 48),
+              Icon(LucideIcons.alertTriangle, color: AppColors.expense, size: 48),
               const SizedBox(height: 16),
-              const Text('Failed to load analytics', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+              Text('Failed to load analytics', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text('$err', style: const TextStyle(color: AppColors.textMuted, fontSize: 12), textAlign: TextAlign.center),
+              Text('$err', style: TextStyle(color: AppColors.textMuted, fontSize: 12), textAlign: TextAlign.center),
               const SizedBox(height: 20),
-              TextButton(onPressed: () => ref.refresh(adminAnalyticsProvider), child: const Text('Retry', style: TextStyle(color: AppColors.primary))),
+              TextButton(onPressed: () => ref.refresh(adminAnalyticsProvider), child: Text('Retry', style: TextStyle(color: AppColors.primary))),
             ],
           ),
         ),
@@ -170,7 +170,7 @@ class AdminScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: AppDecorations.alertBanner(AppColors.warning),
-                child: const Row(
+                child: Row(
                   children: [
                     Icon(LucideIcons.info, color: AppColors.warning, size: 18),
                     SizedBox(width: 10),
@@ -225,7 +225,7 @@ class _StatCard extends StatelessWidget {
             children: [
               Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
-              Text(title, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+              Text(title, style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
             ],
           ),
         ],
@@ -251,7 +251,7 @@ class _BreakdownRow extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
+            Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
             Text('$count', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
           ],
         ),
@@ -266,7 +266,7 @@ class _BreakdownRow extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        Text('${(pct * 100).toStringAsFixed(1)}%', style: const TextStyle(color: AppColors.textMuted, fontSize: 10)),
+        Text('${(pct * 100).toStringAsFixed(1)}%', style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
       ],
     );
   }

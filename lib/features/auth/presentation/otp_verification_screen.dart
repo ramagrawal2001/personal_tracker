@@ -135,7 +135,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               // Manual back row (standalone mode)
               GestureDetector(
                 onTap: () => Navigator.pop(context),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary, size: 20),
@@ -175,15 +175,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         const SizedBox(height: 20),
         Text(
           isReset ? 'Check Your Email' : 'Verify Your Email',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
         ),
         const SizedBox(height: 8),
         RichText(
           text: TextSpan(
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.5),
+            style: TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.5),
             children: [
               const TextSpan(text: 'We sent a 6-digit code to\n'),
-              TextSpan(text: widget.email, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+              TextSpan(text: widget.email, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -197,9 +197,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
             ),
             child: Row(children: [
-              const Icon(LucideIcons.beaker, color: AppColors.warning, size: 14),
+              Icon(LucideIcons.beaker, color: AppColors.warning, size: 14),
               const SizedBox(width: 8),
-              Text('Verification code: $displayHint', style: const TextStyle(color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('Verification code: $displayHint', style: TextStyle(color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w600)),
             ]),
           ),
         ],
@@ -230,9 +230,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               border: Border.all(color: AppColors.expense.withValues(alpha: 0.3)),
             ),
             child: Row(children: [
-              const Icon(LucideIcons.alertCircle, color: AppColors.expense, size: 16),
+              Icon(LucideIcons.alertCircle, color: AppColors.expense, size: 16),
               const SizedBox(width: 8),
-              Expanded(child: Text(_error!, style: const TextStyle(color: AppColors.expense, fontSize: 13))),
+              Expanded(child: Text(_error!, style: TextStyle(color: AppColors.expense, fontSize: 13))),
             ]),
           ),
         ],
@@ -258,11 +258,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         // Resend
         Center(
           child: _resendSeconds > 0
-              ? Text('Resend OTP in $_resendSeconds seconds', style: const TextStyle(color: AppColors.textMuted, fontSize: 13))
+              ? Text('Resend OTP in $_resendSeconds seconds', style: TextStyle(color: AppColors.textMuted, fontSize: 13))
               : TextButton.icon(
                   onPressed: _loading ? null : _resend,
-                  icon: const Icon(LucideIcons.refreshCw, size: 16, color: AppColors.primary),
-                  label: const Text('Resend OTP', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                  icon: Icon(LucideIcons.refreshCw, size: 16, color: AppColors.primary),
+                  label: Text('Resend OTP', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
                 ),
         ),
       ],
@@ -289,7 +289,7 @@ class _OtpBox extends StatelessWidget {
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         maxLength: 1,
-        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         decoration: InputDecoration(
           counterText: '',
@@ -297,11 +297,11 @@ class _OtpBox extends StatelessWidget {
           fillColor: AppColors.surface,
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.border, width: 1.5),
+            borderSide: BorderSide(color: AppColors.border, width: 1.5),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            borderSide: BorderSide(color: AppColors.primary, width: 2),
           ),
           contentPadding: EdgeInsets.zero,
         ),

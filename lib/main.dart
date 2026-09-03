@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/l10n/app_localizations.dart';
+import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
@@ -55,22 +57,39 @@ class AspyricApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(localeProvider);
+    final themeMode = ref.watch(themeProvider);
     final router = ref.watch(appRouterProvider);
 
-    // The app ships dark-only: every screen paints from the fixed dark
-    // `AppColors` palette rather than `Theme.of(context)`, so a light
-    // `ThemeData` would leave hard-coded dark surfaces with light-theme text
-    // (invisible). Until the palette is routed through the theme, force dark.
+    // Resolve the effective brightness (System -> platform) and push it into
+    // the ambient `AppColors` palette BEFORE the widget tree under
+    // `MaterialApp` builds, so every screen's `AppColors.*` token follows the
+    // light/dark switch. `MaterialApp` also rebuilds the whole subtree when
+    // `themeMode` changes, so the tokens stay in sync on every toggle.
+    final platformBrightness =
+        MediaQuery.maybeOf(context)?.platformBrightness ??
+            WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    AppColors.brightness = switch (themeMode) {
+      ThemeMode.light => Brightness.light,
+      ThemeMode.dark => Brightness.dark,
+      ThemeMode.system => platformBrightness,
+    };
+
     return MaterialApp.router(
       title: 'Aspyric',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+      themeMode: themeMode,
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       routerConfig: router,
+      builder: (context, child) {
+        // Belt-and-braces: if System brightness changes while the app is
+        // open, MediaQuery here updates and re-syncs the palette.
+        AppColors.brightness = Theme.of(context).brightness;
+        return child ?? const SizedBox.shrink();
+      },
     );
   }
 }

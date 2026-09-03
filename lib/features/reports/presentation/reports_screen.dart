@@ -20,7 +20,7 @@ Widget _reportStat(String label, String value, Color color, CrossAxisAlignment a
     child: Column(
       crossAxisAlignment: align,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+        Text(label, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
         const SizedBox(height: 2),
         FittedBox(
           fit: BoxFit.scaleDown,
@@ -180,17 +180,17 @@ class ReportsScreen extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           catName,
-                          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
+                          style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
                         ),
                       ),
                       Text(
                         '$pct%',
-                        style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                        style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                       ),
                       const SizedBox(width: 12),
                       Text(
                         CurrencyFormatter.format(e.value),
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
                       ),
                     ],
                   ),

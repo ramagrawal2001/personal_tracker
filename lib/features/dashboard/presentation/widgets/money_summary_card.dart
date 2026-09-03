@@ -66,10 +66,10 @@ class MoneySummaryCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('MONTHLY FLOW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textSecondary)),
+                    Text('MONTHLY FLOW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textSecondary)),
                     Text(
                       'Savings: ${CurrencyFormatter.format(remainingIncome > 0 ? remainingIncome : 0.0)}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.income),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.income),
                     ),
                   ],
                 ),
@@ -79,16 +79,16 @@ class MoneySummaryCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        const Icon(LucideIcons.arrowDownLeft, color: AppColors.income, size: 15),
+                        Icon(LucideIcons.arrowDownLeft, color: AppColors.income, size: 15),
                         const SizedBox(width: 4),
-                        Text('In: ${CurrencyFormatter.format(monthlyIncome)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                        Text('In: ${CurrencyFormatter.format(monthlyIncome)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                       ],
                     ),
                     Row(
                       children: [
-                        const Icon(LucideIcons.arrowUpRight, color: AppColors.expense, size: 15),
+                        Icon(LucideIcons.arrowUpRight, color: AppColors.expense, size: 15),
                         const SizedBox(width: 4),
-                        Text('Out: ${CurrencyFormatter.format(monthlyExpenses)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                        Text('Out: ${CurrencyFormatter.format(monthlyExpenses)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                       ],
                     ),
                   ],
@@ -119,7 +119,7 @@ class MoneySummaryCard extends StatelessWidget {
               child: Icon(icon, color: color, size: 14),
             ),
             const SizedBox(height: 8),
-            Text(title, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(title, style: TextStyle(fontSize: 10, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: 2),
             Text(amount, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: color), maxLines: 1, overflow: TextOverflow.ellipsis),
           ],

@@ -126,7 +126,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             if (mounted) {
               Navigator.pop(context); // pop OTP screen
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
+                SnackBar(
                   content: Text('Email verified successfully! Welcome to Aspyric.'),
                   backgroundColor: AppColors.income,
                   behavior: SnackBarBehavior.floating,
@@ -210,9 +210,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Aspyric', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary, letterSpacing: -0.5)),
+                  Text('Aspyric', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary, letterSpacing: -0.5)),
                   const SizedBox(height: 4),
-                  const Text('Your Complete Life Dashboard & Vault', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                  Text('Your Complete Life Dashboard & Vault', style: TextStyle(fontSize: 13, color: AppColors.textMuted)),
                   const SizedBox(height: 32),
 
                   // ── Form card ─────────────────────────────────────────────
@@ -229,11 +229,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         Text(
                           _isSignUp ? 'Create Your Account' : 'Sign In to Aspyric',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                         ),
                         if (_isSignUp) ...[
                           const SizedBox(height: 6),
-                          const Text('An email verification code will be sent after signup.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                          Text('An email verification code will be sent after signup.', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                         ],
                         const SizedBox(height: 18),
 
@@ -280,7 +280,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: TextButton(
                               style: TextButton.styleFrom(minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4)),
                               onPressed: _openForgotPassword,
-                              child: const Text('Forgot Password?', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+                              child: Text('Forgot Password?', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
                             ),
                           ),
                         ],
@@ -319,7 +319,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           children: [
                             Text(
                               _isSignUp ? 'Already registered?' : 'Need a new account?',
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
                             ),
                             TextButton(
                               onPressed: () {
@@ -329,7 +329,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               },
                               child: Text(
                                 _isSignUp ? 'Sign In' : 'Register',
-                                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
+                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13),
                               ),
                             ),
                           ],
@@ -343,13 +343,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             TextButton(
                               onPressed: () => context.push('/privacy-policy'),
                               style: TextButton.styleFrom(minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
-                              child: const Text('Privacy Policy', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                              child: Text('Privacy Policy', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                             ),
-                            const Text('·', style: TextStyle(color: AppColors.textMuted)),
+                            Text('·', style: TextStyle(color: AppColors.textMuted)),
                             TextButton(
                               onPressed: () => context.push('/terms'),
                               style: TextButton.styleFrom(minimumSize: Size.zero, padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
-                              child: const Text('Terms & Conditions', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                              child: Text('Terms & Conditions', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                             ),
                           ],
                         ),

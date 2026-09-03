@@ -159,11 +159,11 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Total Spent', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                      Text('Total Spent', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                       const SizedBox(height: 2),
                       Text(
                         CurrencyFormatter.format(total),
-                        style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -192,12 +192,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                           children: [
                             Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
                             const SizedBox(width: 10),
-                            Text(catName, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                            Text(catName, style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
                           ],
                         ),
                         Text(
                           CurrencyFormatter.format(cats[i].value),
-                          style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                       ],
                     ),
@@ -214,7 +214,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                     const SizedBox(height: 4),
                     Text(
                       '${(pct * 100).toStringAsFixed(1)}% of monthly spend',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                     ),
                   ],
                 ),
@@ -270,7 +270,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                             reservedSize: 44,
                             getTitlesWidget: (v, _) => Text(
                               _shortFmt(v),
-                              style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                              style: TextStyle(fontSize: 10, color: AppColors.textMuted),
                             ),
                           ),
                         ),
@@ -282,7 +282,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                               if (i >= 0 && i < bars.length) {
                                 return Padding(
                                   padding: const EdgeInsets.only(top: 6),
-                                  child: Text(bars[i].label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
+                                  child: Text(bars[i].label, style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
                                 );
                               }
                               return const Text('');
@@ -295,7 +295,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                       gridData: FlGridData(
                         show: true,
                         drawVerticalLine: false,
-                        getDrawingHorizontalLine: (_) => const FlLine(color: AppColors.border, strokeWidth: 0.5),
+                        getDrawingHorizontalLine: (_) => FlLine(color: AppColors.border, strokeWidth: 0.5),
                       ),
                       borderData: FlBorderData(show: false),
                       barGroups: List.generate(
@@ -342,13 +342,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(b.label, style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text(b.label, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text('+${CurrencyFormatter.format(b.income)}', style: const TextStyle(color: AppColors.income, fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text('+${CurrencyFormatter.format(b.income)}', style: TextStyle(color: AppColors.income, fontSize: 13, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 2),
-                      Text('-${CurrencyFormatter.format(b.expenses)}', style: const TextStyle(color: AppColors.expense, fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text('-${CurrencyFormatter.format(b.expenses)}', style: TextStyle(color: AppColors.expense, fontSize: 13, fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ],
@@ -409,14 +409,14 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                             const SizedBox(width: 10),
                             Text(
                               merchants[i].key,
-                              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                         Text(
                           CurrencyFormatter.format(merchants[i].value),
-                          style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                       ],
                     ),
@@ -444,7 +444,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     children: [
       Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
       const SizedBox(width: 6),
-      Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500)),
+      Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w500)),
     ],
   );
 

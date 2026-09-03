@@ -63,12 +63,12 @@ class AccountsScreen extends ConsumerWidget {
                   trailing: CurrencyFormatter.format(acc.calculatedBalance),
                   trailingColor: AppColors.income,
                   menuButton: PopupMenuButton<String>(
-                    icon: const Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
+                    icon: Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
                     color: AppColors.surface,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     itemBuilder: (_) => [
-                      const PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Edit', style: TextStyle(color: AppColors.textPrimary))])),
-                      const PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.expense))])),
+                      PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Edit', style: TextStyle(color: AppColors.textPrimary))])),
+                      PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.expense))])),
                     ],
                     onSelected: (v) {
                       if (v == 'edit') _showEditSheet(context, ref, acc);
@@ -97,13 +97,13 @@ class AccountsScreen extends ConsumerWidget {
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Edit Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text('Edit Account', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 20),
-                TextField(controller: nameCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Account Name', LucideIcons.wallet)),
+                TextField(controller: nameCtrl, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Account Name', LucideIcons.wallet)),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<AccountType>(
                   value: selectedType,
@@ -113,14 +113,14 @@ class AccountsScreen extends ConsumerWidget {
                   onChanged: (v) => setSheetState(() => selectedType = v ?? selectedType),
                 ),
                 const SizedBox(height: 12),
-                TextField(controller: bankCtrl, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Bank (optional)', LucideIcons.building2)),
+                TextField(controller: bankCtrl, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Bank (optional)', LucideIcons.building2)),
                 const SizedBox(height: 12),
-                TextField(controller: last4Ctrl, maxLength: 4, keyboardType: TextInputType.number, style: const TextStyle(color: AppColors.textPrimary), decoration: _dec('Last 4 digits (optional)', LucideIcons.hash)),
+                TextField(controller: last4Ctrl, maxLength: 4, keyboardType: TextInputType.number, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Last 4 digits (optional)', LucideIcons.hash)),
                 const SizedBox(height: 12),
                 TextField(
                   controller: openingCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: AppColors.textPrimary),
                   decoration: _dec('Opening Balance (${CurrencyFormatter.symbol})', LucideIcons.indianRupee).copyWith(errorText: error),
                 ),
                 const SizedBox(height: 24),

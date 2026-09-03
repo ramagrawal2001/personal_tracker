@@ -70,12 +70,12 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Add New Account',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 IconButton(
-                  icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                  icon: Icon(LucideIcons.x, color: AppColors.textMuted),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -184,7 +184,7 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Account created successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
+      SnackBar(content: Text('Account created successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
     );
   }
 }

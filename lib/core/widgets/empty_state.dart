@@ -40,7 +40,7 @@ class EmptyState extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
@@ -50,7 +50,7 @@ class EmptyState extends StatelessWidget {
           Text(
             description,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.4),
+            style: TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.4),
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 24),

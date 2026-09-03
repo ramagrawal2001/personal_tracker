@@ -72,7 +72,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() { _saving = false; _editing = false; });
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile saved ✓'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
+        SnackBar(content: Text('Profile saved ✓'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
       );
     }
   }
@@ -84,7 +84,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       firstDate: DateTime(1940),
       lastDate: DateTime.now().subtract(const Duration(days: 365 * 13)),
       builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(colorScheme: const ColorScheme.dark(primary: AppColors.primary)),
+        data: Theme.of(ctx).copyWith(colorScheme: ColorScheme.dark(primary: AppColors.primary)),
         child: child!,
       ),
     );
@@ -98,7 +98,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await BackupService.saveBackupToDisk(snapshot);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vault exported ✓ (encrypted, on-device)'), backgroundColor: AppColors.income),
+        SnackBar(content: Text('Vault exported ✓ (encrypted, on-device)'), backgroundColor: AppColors.income),
       );
     } catch (e) {
       if (!mounted) return;
@@ -113,14 +113,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Restore Vault?', style: TextStyle(color: AppColors.textPrimary)),
-        content: const Text(
+        title: Text('Restore Vault?', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(
           'This replaces all current accounts, transactions, cards, loans, budgets, investments and goals with the last exported snapshot. This cannot be undone.',
           style: TextStyle(color: AppColors.textMuted),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore', style: TextStyle(color: AppColors.expense))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Restore', style: TextStyle(color: AppColors.expense))),
         ],
       ),
     );
@@ -131,7 +131,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (snapshot == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No valid backup found on this device'), backgroundColor: AppColors.expense),
+          SnackBar(content: Text('No valid backup found on this device'), backgroundColor: AppColors.expense),
         );
         return;
       }
@@ -140,7 +140,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await ref.read(financeNotifierProvider.notifier).reloadFromDb();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vault restored ✓'), backgroundColor: AppColors.income),
+        SnackBar(content: Text('Vault restored ✓'), backgroundColor: AppColors.income),
       );
     } catch (e) {
       if (!mounted) return;
@@ -175,7 +175,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       actions: [
         TextButton(
           onPressed: () => setState(() => _editing = !_editing),
-          child: Text(_editing ? 'Cancel' : 'Edit', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          child: Text(_editing ? 'Cancel' : 'Edit', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
         ),
       ],
       body: Column(
@@ -201,7 +201,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               : null,
                         ),
                         child: avatarBytes == null
-                            ? Center(child: Text(initials, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary)))
+                            ? Center(child: Text(initials, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primary)))
                             : null,
                       ),
                       if (_editing)
@@ -210,7 +210,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           right: 0,
                           child: Container(
                             padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                             child: const Icon(LucideIcons.camera, size: 14, color: Colors.white),
                           ),
                         ),
@@ -220,15 +220,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 12),
                 Text(
                   profile?.displayName.isNotEmpty == true ? profile!.displayName : (user?.email ?? 'Aspyric User'),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 4),
-                Text(user?.email ?? '', style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                Text(user?.email ?? '', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(color: AppColors.income.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                  child: const Text('Verified Account', style: TextStyle(color: AppColors.income, fontSize: 11, fontWeight: FontWeight.bold)),
+                  child: Text('Verified Account', style: TextStyle(color: AppColors.income, fontSize: 11, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -241,25 +241,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Column(
               children: [
                 _field('Full Name', LucideIcons.user, _nameCtrl, enabled: _editing, hint: 'Enter your full name'),
-                const Divider(color: AppColors.border, height: 1),
+                Divider(color: AppColors.border, height: 1),
                 _field('Mobile Number', LucideIcons.phone, _mobileCtrl, enabled: _editing, hint: '+91 00000 00000', keyboardType: TextInputType.phone),
-                const Divider(color: AppColors.border, height: 1),
+                Divider(color: AppColors.border, height: 1),
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: const Icon(LucideIcons.calendar, color: AppColors.textMuted, size: 20),
-                  title: const Text('Date of Birth', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  leading: Icon(LucideIcons.calendar, color: AppColors.textMuted, size: 20),
+                  title: Text('Date of Birth', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                   subtitle: Text(
                     _dob != null ? '${_dob!.day}/${_dob!.month}/${_dob!.year}' : 'Not set',
                     style: TextStyle(color: _dob != null ? AppColors.textPrimary : AppColors.textMuted, fontWeight: FontWeight.w600, fontSize: 15),
                   ),
-                  trailing: _editing ? IconButton(icon: const Icon(LucideIcons.pencil, size: 16, color: AppColors.primary), onPressed: _pickDob) : null,
+                  trailing: _editing ? IconButton(icon: Icon(LucideIcons.pencil, size: 16, color: AppColors.primary), onPressed: _pickDob) : null,
                 ),
-                const Divider(color: AppColors.border, height: 1),
+                Divider(color: AppColors.border, height: 1),
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: const Icon(LucideIcons.mail, color: AppColors.textMuted, size: 20),
-                  title: const Text('Email Address', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
-                  subtitle: Text(user?.email ?? '', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
+                  leading: Icon(LucideIcons.mail, color: AppColors.textMuted, size: 20),
+                  title: Text('Email Address', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                  subtitle: Text(user?.email ?? '', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
                 ),
               ],
             ),
@@ -285,9 +285,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           AppCard(
             child: SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              secondary: const Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 22),
-              title: const Text('Biometric Lock', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-              subtitle: Text(financeState.isBiometricEnabled ? 'Face ID / Fingerprint enabled' : 'OFF — tap to enable', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              secondary: Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 22),
+              title: Text('Biometric Lock', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+              subtitle: Text(financeState.isBiometricEnabled ? 'Face ID / Fingerprint enabled' : 'OFF — tap to enable', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
               value: financeState.isBiometricEnabled,
               activeColor: AppColors.primary,
               onChanged: (val) async {
@@ -295,9 +295,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   final ok = await BiometricService.authenticate(reason: 'Verify to enable Biometric Lock');
                   if (ok) {
                     notifier.toggleBiometric(true);
-                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Biometric Lock enabled ✓'), backgroundColor: AppColors.income));
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Biometric Lock enabled ✓'), backgroundColor: AppColors.income));
                   } else {
-                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication failed'), backgroundColor: AppColors.expense));
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Authentication failed'), backgroundColor: AppColors.expense));
                   }
                 } else {
                   notifier.toggleBiometric(false);
@@ -313,7 +313,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: Text('100% AES-256 encrypted local vault snapshot.', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
                 ),
@@ -323,18 +323,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: AppColors.primary)),
-                          icon: const Icon(LucideIcons.download, size: 18, color: AppColors.primary),
-                          label: const Text('Export', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: BorderSide(color: AppColors.primary)),
+                          icon: Icon(LucideIcons.download, size: 18, color: AppColors.primary),
+                          label: Text('Export', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
                           onPressed: _exportVault,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: const BorderSide(color: AppColors.income)),
-                          icon: const Icon(LucideIcons.upload, size: 18, color: AppColors.income),
-                          label: const Text('Restore', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.income)),
+                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), side: BorderSide(color: AppColors.income)),
+                          icon: Icon(LucideIcons.upload, size: 18, color: AppColors.income),
+                          label: Text('Restore', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.income)),
                           onPressed: _restoreVault,
                         ),
                       ),
@@ -358,8 +358,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 side: BorderSide(color: AppColors.expense.withValues(alpha: 0.4)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              icon: const Icon(LucideIcons.logOut, size: 18, color: AppColors.expense),
-              label: const Text('Sign Out', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.expense)),
+              icon: Icon(LucideIcons.logOut, size: 18, color: AppColors.expense),
+              label: Text('Sign Out', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.expense)),
               onPressed: () async {
                 await ref.read(authNotifierProvider.notifier).signOut();
                 if (context.mounted) context.go('/login');
@@ -376,15 +376,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       leading: Icon(icon, color: AppColors.textMuted, size: 20),
-      title: Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+      title: Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
       subtitle: enabled
           ? TextField(
               controller: ctrl,
               keyboardType: keyboardType,
-              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15),
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 15),
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: const TextStyle(color: AppColors.textMuted),
+                hintStyle: TextStyle(color: AppColors.textMuted),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 isDense: true,

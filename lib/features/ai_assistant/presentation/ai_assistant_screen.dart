@@ -100,10 +100,10 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: AppDecorations.iconBadge(AppColors.primary, circle: true),
-            child: const Icon(LucideIcons.bot, color: AppColors.primary, size: 18),
+            child: Icon(LucideIcons.bot, color: AppColors.primary, size: 18),
           ),
           const SizedBox(width: 10),
-          const Text(
+          Text(
             'AI Financial Assistant',
             style: TextStyle(
               fontSize: 17,
@@ -149,7 +149,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
           // Input Bar
           Container(
             padding: EdgeInsets.fromLTRB(16, 10, 16, MediaQuery.of(context).viewInsets.bottom + 12),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.surface,
               border: Border(top: BorderSide(color: AppColors.border)),
             ),
@@ -161,13 +161,13 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
                     onSubmitted: _handlePrompt,
                     decoration: InputDecoration(
                       hintText: 'Ask financial assistant…',
-                      prefixIcon: const Icon(LucideIcons.sparkles, color: AppColors.primary, size: 18),
+                      prefixIcon: Icon(LucideIcons.sparkles, color: AppColors.primary, size: 18),
                       filled: true,
                       fillColor: AppColors.surfaceLight,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.border)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.border)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.border)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: AppColors.primary, width: 1.5)),
                     ),
                   ),
                 ),
@@ -239,13 +239,13 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: AppDecorations.iconBadge(AppColors.primary, circle: true),
-              child: const Icon(LucideIcons.bot, color: AppColors.primary, size: 16),
+              child: Icon(LucideIcons.bot, color: AppColors.primary, size: 16),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 msg.text,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.textPrimary,
                   fontSize: 14,
                   height: 1.45,
@@ -264,10 +264,10 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
       child: ActionChip(
         label: Text(
           prompt,
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
         ),
         backgroundColor: AppColors.surface,
-        side: const BorderSide(color: AppColors.border),
+        side: BorderSide(color: AppColors.border),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         onPressed: () => _handlePrompt(prompt),
       ),

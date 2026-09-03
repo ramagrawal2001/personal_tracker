@@ -38,12 +38,12 @@ class ProfileModal extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'User Profile & Account',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
               IconButton(
-                icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                icon: Icon(LucideIcons.x, color: AppColors.textMuted),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -66,7 +66,7 @@ class ProfileModal extends ConsumerWidget {
                     color: AppColors.primary.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(LucideIcons.user, color: AppColors.primary, size: 28),
+                  child: Icon(LucideIcons.user, color: AppColors.primary, size: 28),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -75,7 +75,7 @@ class ProfileModal extends ConsumerWidget {
                     children: [
                       Text(
                         user != null ? user.email ?? 'Authenticated Account' : 'Finance OS Account',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16),
+                        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 16),
                       ),
                       const SizedBox(height: 4),
                       Container(
@@ -84,7 +84,7 @@ class ProfileModal extends ConsumerWidget {
                           color: AppColors.income.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Encrypted Sync Active',
                           style: TextStyle(
                             color: AppColors.income,
@@ -103,7 +103,7 @@ class ProfileModal extends ConsumerWidget {
 
 
           // Feature Toggles & Preferences Section
-          const Text('Security & Vault Preferences', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+          Text('Security & Vault Preferences', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
           const SizedBox(height: 10),
 
           Consumer(
@@ -116,9 +116,9 @@ class ProfileModal extends ConsumerWidget {
                   SwitchListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    secondary: const Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 20),
-                    title: const Text('Biometric Security Lock', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Require Face ID / Fingerprint on launch', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                    secondary: Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 20),
+                    title: Text('Biometric Security Lock', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                    subtitle: Text('Require Face ID / Fingerprint on launch', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                     value: financeState.isBiometricEnabled,
                     activeColor: AppColors.primary,
                     onChanged: (val) async {
@@ -127,7 +127,7 @@ class ProfileModal extends ConsumerWidget {
                         if (ok) {
                           notifier.toggleBiometric(true);
                         } else if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication failed'), backgroundColor: AppColors.expense));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Authentication failed'), backgroundColor: AppColors.expense));
                         }
                       } else {
                         notifier.toggleBiometric(false);
@@ -137,9 +137,9 @@ class ProfileModal extends ConsumerWidget {
                   SwitchListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    secondary: const Icon(LucideIcons.coins, color: AppColors.income, size: 20),
-                    title: const Text('Spare-Change Round-Ups', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Auto round-up expenses & transfer to Savings Goal', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                    secondary: Icon(LucideIcons.coins, color: AppColors.income, size: 20),
+                    title: Text('Spare-Change Round-Ups', style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                    subtitle: Text('Auto round-up expenses & transfer to Savings Goal', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                     value: financeState.isRoundUpEnabled,
                     activeColor: AppColors.income,
                     onChanged: (val) => notifier.toggleRoundUp(val),
@@ -160,7 +160,7 @@ class ProfileModal extends ConsumerWidget {
                               await BackupService.saveBackupToDisk(snapshot);
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Encrypted Vault Exported!'), backgroundColor: AppColors.income),
+                                SnackBar(content: Text('Encrypted Vault Exported!'), backgroundColor: AppColors.income),
                               );
                             } catch (e) {
                               if (!context.mounted) return;
@@ -182,14 +182,14 @@ class ProfileModal extends ConsumerWidget {
                               context: context,
                               builder: (ctx) => AlertDialog(
                                 backgroundColor: AppColors.surface,
-                                title: const Text('Restore Vault?', style: TextStyle(color: AppColors.textPrimary)),
-                                content: const Text(
+                                title: Text('Restore Vault?', style: TextStyle(color: AppColors.textPrimary)),
+                                content: Text(
                                   'This replaces all current data with the last exported snapshot. This cannot be undone.',
                                   style: TextStyle(color: AppColors.textMuted),
                                 ),
                                 actions: [
                                   TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore', style: TextStyle(color: AppColors.expense))),
+                                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Restore', style: TextStyle(color: AppColors.expense))),
                                 ],
                               ),
                             );
@@ -199,7 +199,7 @@ class ProfileModal extends ConsumerWidget {
                               if (snapshot == null) {
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('No valid backup found on this device'), backgroundColor: AppColors.expense),
+                                  SnackBar(content: Text('No valid backup found on this device'), backgroundColor: AppColors.expense),
                                 );
                                 return;
                               }
@@ -207,7 +207,7 @@ class ProfileModal extends ConsumerWidget {
                               await ref.read(financeNotifierProvider.notifier).reloadFromDb();
                               if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Local Encrypted Vault restored successfully!'), backgroundColor: AppColors.income),
+                                SnackBar(content: Text('Local Encrypted Vault restored successfully!'), backgroundColor: AppColors.income),
                               );
                             } catch (e) {
                               if (!context.mounted) return;

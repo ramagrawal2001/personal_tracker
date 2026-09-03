@@ -116,7 +116,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           backgroundColor: _note.color.color,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+            icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
             onPressed: () => Navigator.of(context).maybePop(),
           ),
           actions: [
@@ -129,7 +129,22 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
               },
             ),
             IconButton(
-              icon: const Icon(LucideIcons.palette, color: AppColors.textPrimary),
+              icon: Icon(
+                _note.isArchived ? LucideIcons.archiveRestore : LucideIcons.archive,
+                color: AppColors.textPrimary,
+              ),
+              tooltip: _note.isArchived ? 'Unarchive' : 'Archive',
+              onPressed: () {
+                setState(() {
+                  _note = _note.copyWith(
+                    isArchived: !_note.isArchived,
+                    isPinned: _note.isArchived ? _note.isPinned : false,
+                  );
+                });
+              },
+            ),
+            IconButton(
+              icon: Icon(LucideIcons.palette, color: AppColors.textPrimary),
               onPressed: () => _showColorPicker(context),
             ),
             IconButton(
@@ -272,7 +287,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Note Color', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            Text('Note Color', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             const SizedBox(height: 16),
             Wrap(
               spacing: 12,

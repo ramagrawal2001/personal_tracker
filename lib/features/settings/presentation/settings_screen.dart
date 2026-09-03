@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/services/notification_service.dart';
@@ -44,7 +45,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final granted = await NotificationService.requestPermission();
       if (!granted && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notification permission denied'), backgroundColor: AppColors.expense, behavior: SnackBarBehavior.floating),
+          SnackBar(content: Text('Notification permission denied'), backgroundColor: AppColors.expense, behavior: SnackBarBehavior.floating),
         );
         return;
       }
@@ -70,6 +71,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final financeState = ref.watch(financeNotifierProvider);
     final financeNotifier = ref.read(financeNotifierProvider.notifier);
     final locale = ref.watch(localeProvider);
+    final themeMode = ref.watch(themeProvider);
 
     return AppScaffold(
       title: 'Settings & Preferences',
@@ -89,11 +91,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: AppDecorations.iconBadge(AppColors.primary, circle: true),
-                  child: const Icon(LucideIcons.user, color: AppColors.primary, size: 20),
+                  child: Icon(LucideIcons.user, color: AppColors.primary, size: 20),
                 ),
-                title: Text(user?.email ?? 'Not signed in', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-                subtitle: const Text('Local Encrypted & Cloud Synced', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                trailing: const Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                title: Text(user?.email ?? 'Not signed in', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                subtitle: Text('Local Encrypted & Cloud Synced', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
                 onTap: () => context.go('/profile'),
               ),
             );
@@ -103,14 +105,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // ── Appearance ───────────────────────────────────────────────
           const SectionLabel(label: 'Appearance & Theme'),
           AppCard(
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(LucideIcons.moon, color: AppColors.primary, size: 18),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text('Dark theme', style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                Text('Theme Mode', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _ThemeChip('System', ThemeMode.system, themeMode, (m) => ref.read(themeProvider.notifier).setTheme(m)),
+                    const SizedBox(width: 8),
+                    _ThemeChip('Light', ThemeMode.light, themeMode, (m) => ref.read(themeProvider.notifier).setTheme(m)),
+                    const SizedBox(width: 8),
+                    _ThemeChip('Dark', ThemeMode.dark, themeMode, (m) => ref.read(themeProvider.notifier).setTheme(m)),
+                  ],
                 ),
-                Text('Always on', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
               ],
             ),
           ),
@@ -122,7 +130,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Application Language', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text('Application Language', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
@@ -143,7 +151,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Currency Symbol', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text('Currency Symbol', style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 8,
@@ -177,12 +185,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(LucideIcons.eye, color: AppColors.textMuted, size: 14),
+                      Icon(LucideIcons.eye, color: AppColors.textMuted, size: 14),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Preview: ${CurrencyFormatter.format(100000)} • ${CurrencyFormatter.format(25499.50, showDecimals: true)}',
-                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontFamily: 'monospace'),
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontFamily: 'monospace'),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -204,23 +212,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   secondary: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: AppDecorations.iconBadge(AppColors.warning),
-                    child: const Icon(LucideIcons.bell, color: AppColors.warning, size: 18),
+                    child: Icon(LucideIcons.bell, color: AppColors.warning, size: 18),
                   ),
-                  title: const Text('Daily Expense Reminder', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                  subtitle: Text('Remind at ${_notifHour.toString().padLeft(2,'0')}:${_notifMinute.toString().padLeft(2,'0')} to log transactions', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  title: Text('Daily Expense Reminder', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text('Remind at ${_notifHour.toString().padLeft(2,'0')}:${_notifMinute.toString().padLeft(2,'0')} to log transactions', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   value: _notifEnabled,
                   activeColor: AppColors.primary,
                   onChanged: _toggleNotifications,
                 ),
                 if (_notifEnabled) ...[
-                  const Divider(color: AppColors.border, height: 1),
+                  Divider(color: AppColors.border, height: 1),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(LucideIcons.clock, color: AppColors.textMuted, size: 18),
-                    title: const Text('Reminder Time', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                    leading: Icon(LucideIcons.clock, color: AppColors.textMuted, size: 18),
+                    title: Text('Reminder Time', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
                     trailing: TextButton(
                       onPressed: _pickTime,
-                      child: Text('${_notifHour.toString().padLeft(2,'0')}:${_notifMinute.toString().padLeft(2,'0')}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
+                      child: Text('${_notifHour.toString().padLeft(2,'0')}:${_notifMinute.toString().padLeft(2,'0')}', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 14)),
                     ),
                   ),
                 ],
@@ -239,10 +247,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   secondary: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: AppDecorations.iconBadge(AppColors.primary),
-                    child: const Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 18),
+                    child: Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 18),
                   ),
-                  title: const Text('Biometric Gate', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                  subtitle: Text(financeState.isBiometricEnabled ? 'Biometrics Active (Face ID / Fingerprint)' : 'Disabled — Tap to require biometric auth', style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  title: Text('Biometric Gate', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text(financeState.isBiometricEnabled ? 'Biometrics Active (Face ID / Fingerprint)' : 'Disabled — Tap to require biometric auth', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   value: financeState.isBiometricEnabled,
                   activeColor: AppColors.primary,
                   onChanged: (val) async {
@@ -251,37 +259,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (ok) {
                         financeNotifier.toggleBiometric(true);
                       } else if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication failed — Biometric Gate not enabled'), backgroundColor: AppColors.expense));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Authentication failed — Biometric Gate not enabled'), backgroundColor: AppColors.expense));
                       }
                     } else {
                       financeNotifier.toggleBiometric(false);
                     }
                   },
                 ),
-                const Divider(color: AppColors.border, height: 1),
+                Divider(color: AppColors.border, height: 1),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   secondary: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: AppDecorations.iconBadge(AppColors.income),
-                    child: const Icon(LucideIcons.coins, color: AppColors.income, size: 18),
+                    child: Icon(LucideIcons.coins, color: AppColors.income, size: 18),
                   ),
-                  title: const Text('Spare-Change Round-Ups', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                  subtitle: const Text('Automatically round-up expenses to Savings Goal', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  title: Text('Spare-Change Round-Ups', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text('Automatically round-up expenses to Savings Goal', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   value: financeState.isRoundUpEnabled,
                   activeColor: AppColors.income,
                   onChanged: (val) => financeNotifier.toggleRoundUp(val),
                 ),
-                const Divider(color: AppColors.border, height: 1),
+                Divider(color: AppColors.border, height: 1),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   secondary: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: AppDecorations.iconBadge(AppColors.warning),
-                    child: const Icon(LucideIcons.cloud, color: AppColors.warning, size: 18),
+                    child: Icon(LucideIcons.cloud, color: AppColors.warning, size: 18),
                   ),
-                  title: const Text('Auto Encrypted Backup', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                  subtitle: const Text('Daily AES-256 local snapshot', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  title: Text('Auto Encrypted Backup', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text('Daily AES-256 local snapshot', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   value: financeState.isAutoBackupEnabled,
                   activeColor: AppColors.warning,
                   onChanged: (val) => financeNotifier.toggleAutoBackup(val),
@@ -299,14 +307,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: AppDecorations.iconBadge(AppColors.income),
-                child: const Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 18),
+                child: Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 18),
               ),
-              title: const Text('Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+              title: Text('Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
               subtitle: Text(
                 '${CurrencyFormatter.format(financeState.emergencyBuffer)} held back from Safe to Spend',
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
               ),
-              trailing: const Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+              trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
               onTap: () => _showEmergencyBufferDialog(context, financeNotifier, financeState.emergencyBuffer),
             ),
           ),
@@ -318,9 +326,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               children: [
                 _legalTile('Privacy Policy', LucideIcons.shield, () => context.go('/privacy-policy')),
-                const Divider(color: AppColors.border, height: 1),
+                Divider(color: AppColors.border, height: 1),
                 _legalTile('Terms & Conditions', LucideIcons.fileText, () => context.go('/terms')),
-                const Divider(color: AppColors.border, height: 1),
+                Divider(color: AppColors.border, height: 1),
                 _legalTile('Financial Analytics', LucideIcons.lineChart, () => context.go('/analytics')),
               ],
             ),
@@ -343,11 +351,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: AppDecorations.iconBadge(AppColors.expense),
-                      child: const Icon(LucideIcons.shieldAlert, color: AppColors.expense, size: 18),
+                      child: Icon(LucideIcons.shieldAlert, color: AppColors.expense, size: 18),
                     ),
-                    title: const Text('Super Admin Panel', style: TextStyle(color: AppColors.expense, fontWeight: FontWeight.bold, fontSize: 14)),
-                    subtitle: const Text('Platform telemetry & user overview', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                    trailing: const Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                    title: Text('Super Admin Panel', style: TextStyle(color: AppColors.expense, fontWeight: FontWeight.bold, fontSize: 14)),
+                    subtitle: Text('Platform telemetry & user overview', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
                     onTap: () => context.go('/admin'),
                   ),
                 ),
@@ -368,8 +376,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 side: BorderSide(color: AppColors.expense.withValues(alpha: 0.4)),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              icon: const Icon(LucideIcons.logOut, size: 18, color: AppColors.expense),
-              label: const Text('Sign Out', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.expense)),
+              icon: Icon(LucideIcons.logOut, size: 18, color: AppColors.expense),
+              label: Text('Sign Out', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.expense)),
               onPressed: () async {
                 await ref.read(authNotifierProvider.notifier).signOut();
                 if (context.mounted) context.go('/login');
@@ -385,8 +393,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _legalTile(String title, IconData icon, VoidCallback onTap) => ListTile(
     contentPadding: EdgeInsets.zero,
     leading: Icon(icon, color: AppColors.textSecondary, size: 18),
-    title: Text(title, style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-    trailing: const Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+    title: Text(title, style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+    trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
     onTap: onTap,
   );
 
@@ -398,7 +406,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (dialogCtx, setDialogState) => AlertDialog(
           backgroundColor: AppColors.surface,
-          title: const Text('Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+          title: Text('Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
           content: TextField(
             controller: ctrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -406,11 +414,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             decoration: InputDecoration(
               labelText: 'Amount (${CurrencyFormatter.symbol})',
               errorText: error,
-              prefixIcon: const Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 18),
+              prefixIcon: Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 18),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
             ElevatedButton(
               onPressed: () {
                 final amount = double.tryParse(ctrl.text.trim());
@@ -426,6 +434,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ThemeChip extends StatelessWidget {
+  final String label;
+  final ThemeMode mode;
+  final ThemeMode current;
+  final void Function(ThemeMode) onSelect;
+
+  const _ThemeChip(this.label, this.mode, this.current, this.onSelect);
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = current == mode;
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      selectedColor: AppColors.primary.withValues(alpha: 0.2),
+      backgroundColor: AppColors.surfaceLight,
+      side: BorderSide(color: selected ? AppColors.primary : AppColors.border),
+      labelStyle: TextStyle(
+        color: selected ? AppColors.primary : AppColors.textSecondary,
+        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+        fontSize: 13,
+      ),
+      onSelected: (_) => onSelect(mode),
     );
   }
 }

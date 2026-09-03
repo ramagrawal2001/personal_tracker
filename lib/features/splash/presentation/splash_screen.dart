@@ -128,7 +128,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                         ),
                         const SizedBox(height: 28),
 
-                        const Text(
+                        Text(
                           'Aspyric',
                           style: TextStyle(
                             fontSize: 30,
@@ -138,7 +138,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Your Complete Financial Dashboard & Vault',
                           style: TextStyle(
                             fontSize: 14,
@@ -148,7 +148,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                         ),
                         const SizedBox(height: 48),
 
-                        const SizedBox(
+                        SizedBox(
                           width: 28,
                           height: 28,
                           child: CircularProgressIndicator(

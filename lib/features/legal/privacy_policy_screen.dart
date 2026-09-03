@@ -12,10 +12,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+          icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Privacy Policy', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        title: Text('Privacy Policy', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -50,13 +50,13 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
   Widget _header(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
-    child: Text(text, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+    child: Text(text, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
   );
 
   Widget _section(String text) => Padding(
     padding: const EdgeInsets.only(top: 20, bottom: 8),
-    child: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
+    child: Text(text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
   );
 
-  Widget _para(String text) => Text(text, style: const TextStyle(color: AppColors.textSecondary, height: 1.6, fontSize: 14));
+  Widget _para(String text) => Text(text, style: TextStyle(color: AppColors.textSecondary, height: 1.6, fontSize: 14));
 }

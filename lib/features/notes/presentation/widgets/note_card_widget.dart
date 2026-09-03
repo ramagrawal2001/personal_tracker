@@ -106,7 +106,7 @@ class NoteCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 _ActionBtn(icon: note.isPinned ? LucideIcons.pinOff : LucideIcons.pin, onTap: onPin, color: textColor),
-                _ActionBtn(icon: LucideIcons.archive, onTap: onArchive, color: textColor),
+                _ActionBtn(icon: note.isArchived ? LucideIcons.archiveRestore : LucideIcons.archive, onTap: onArchive, color: textColor),
                 _ActionBtn(icon: LucideIcons.trash2, onTap: onDelete, color: AppColors.expense),
               ],
             ),
@@ -120,9 +120,12 @@ class NoteCard extends StatelessWidget {
 class _ActionBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  final Color color;
+  final Color? _color;
+  Color get color => _color ?? AppColors.textMuted;
 
-  const _ActionBtn({required this.icon, required this.onTap, this.color = AppColors.textMuted});
+  // Not const: the default colour resolves from the (mutable) AppColors palette.
+  // ignore: prefer_const_constructors_in_immutables
+  _ActionBtn({required this.icon, required this.onTap, Color? color}) : _color = color;
 
   @override
   Widget build(BuildContext context) {

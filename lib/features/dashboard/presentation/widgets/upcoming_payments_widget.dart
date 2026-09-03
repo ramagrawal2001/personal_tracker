@@ -30,7 +30,7 @@ class UpcomingPaymentsWidget extends StatelessWidget {
           actionSemanticLabel: 'View all upcoming payments',
         ),
         if (upcomingPayments.isEmpty)
-          const AppCard(
+          AppCard(
             padding: EdgeInsets.all(24),
             child: Center(
               child: Text(
@@ -57,7 +57,7 @@ class UpcomingPaymentsWidget extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: AppDecorations.iconBadge(AppColors.accent),
-                        child: const Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
+                        child: Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -67,19 +67,19 @@ class UpcomingPaymentsWidget extends StatelessWidget {
                         children: [
                           Text(
                             payment.title,
-                            style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
+                            style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Due ${DateFormatter.formatRelative(payment.nextDueDate)}',
-                            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                           ),
                         ],
                       ),
                     ),
                     Text(
                       CurrencyFormatter.format(payment.amount),
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
                     ),
                   ],
                 ),

@@ -69,9 +69,9 @@ class LoansScreen extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(loan.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                                Text(loan.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                                 const SizedBox(height: 2),
-                                Text(loan.provider, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                                Text(loan.provider, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                               ],
                             ),
                           ),
@@ -81,15 +81,15 @@ class LoansScreen extends ConsumerWidget {
                               color: AppColors.loan.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text('${loan.interestRate}% p.a.', style: const TextStyle(color: AppColors.loan, fontSize: 12, fontWeight: FontWeight.w600)),
+                            child: Text('${loan.interestRate}% p.a.', style: TextStyle(color: AppColors.loan, fontSize: 12, fontWeight: FontWeight.w600)),
                           ),
                           PopupMenuButton<String>(
-                            icon: const Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
+                            icon: Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
                             color: AppColors.surface,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             itemBuilder: (_) => [
-                              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Edit')])),
-                              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.expense))])),
+                              PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Edit')])),
+                              PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.expense))])),
                             ],
                             onSelected: (v) {
                               if (v == 'edit') _showEditLoanSheet(context, ref, loan);
@@ -120,8 +120,8 @@ class LoansScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('${(progress * 100).toStringAsFixed(1)}% paid', style: const TextStyle(fontSize: 11, color: AppColors.income, fontWeight: FontWeight.w600)),
-                          Text('${loan.remainingTenureMonths} months left', style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                          Text('${(progress * 100).toStringAsFixed(1)}% paid', style: TextStyle(fontSize: 11, color: AppColors.income, fontWeight: FontWeight.w600)),
+                          Text('${loan.remainingTenureMonths} months left', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -130,7 +130,7 @@ class LoansScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Due: ${loan.dueDay}th monthly', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          Text('Due: ${loan.dueDay}th monthly', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.loan,
@@ -159,7 +159,7 @@ class LoansScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: align,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
         const SizedBox(height: 2),
         Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color ?? AppColors.textPrimary)),
       ],
@@ -185,11 +185,11 @@ class LoansScreen extends ConsumerWidget {
         builder: (sheetCtx, setSheetState) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(sheetCtx).viewInsets.bottom),
         child: Container(
-          decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
           padding: const EdgeInsets.all(24),
           child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Add Loan / EMI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text('Add Loan / EMI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 20),
               TextField(controller: nameCtrl, decoration: _dec('Loan Name', LucideIcons.landmark)),
               const SizedBox(height: 12),
@@ -210,7 +210,7 @@ class LoansScreen extends ConsumerWidget {
               TextField(controller: dueDayCtrl, keyboardType: TextInputType.number, decoration: _dec('Due Day (1-31)', LucideIcons.calendarClock)),
               if (error != null) ...[
                 const SizedBox(height: 8),
-                Text(error!, style: const TextStyle(color: AppColors.expense, fontSize: 12)),
+                Text(error!, style: TextStyle(color: AppColors.expense, fontSize: 12)),
               ],
               const SizedBox(height: 24),
               SizedBox(width: double.infinity, child: ElevatedButton(
@@ -276,11 +276,11 @@ class LoansScreen extends ConsumerWidget {
         builder: (ctx, setSheetState) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: Container(
-          decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
           padding: const EdgeInsets.all(24),
           child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Edit Loan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text('Edit Loan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 20),
               TextField(controller: nameCtrl, decoration: _dec('Loan Name', LucideIcons.landmark)),
               const SizedBox(height: 12),
@@ -295,7 +295,7 @@ class LoansScreen extends ConsumerWidget {
               TextField(controller: dueDayCtrl, keyboardType: TextInputType.number, decoration: _dec('Due Day (1-31)', LucideIcons.calendarClock)),
               if (error != null) ...[
                 const SizedBox(height: 8),
-                Text(error!, style: const TextStyle(color: AppColors.expense, fontSize: 12)),
+                Text(error!, style: TextStyle(color: AppColors.expense, fontSize: 12)),
               ],
               const SizedBox(height: 24),
               SizedBox(width: double.infinity, child: ElevatedButton(

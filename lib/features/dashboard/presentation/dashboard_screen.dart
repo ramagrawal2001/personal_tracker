@@ -38,13 +38,13 @@ class DashboardScreen extends ConsumerWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Dashboard',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
               ),
               Text(
                 DateFormat('MMMM yyyy').format(DateTime.now()),
-                style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
               ),
             ],
           ),
@@ -59,7 +59,7 @@ class DashboardScreen extends ConsumerWidget {
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.border),
             ),
-            child: const Icon(LucideIcons.user, color: AppColors.textPrimary, size: 18),
+            child: Icon(LucideIcons.user, color: AppColors.textPrimary, size: 18),
           ),
           onPressed: () => context.push('/profile'),
         ),

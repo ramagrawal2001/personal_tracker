@@ -82,10 +82,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+          icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Forgot Password', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 17)),
+        title: Text('Forgot Password', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 17)),
       ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 280),
@@ -122,12 +122,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.1), shape: BoxShape.circle),
-          child: const Icon(LucideIcons.keyRound, color: AppColors.warning, size: 32),
+          child: Icon(LucideIcons.keyRound, color: AppColors.warning, size: 32),
         ),
         const SizedBox(height: 20),
-        const Text('Reset Password', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        Text('Reset Password', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         const SizedBox(height: 8),
-        const Text("Enter your registered email. We'll send a verification code to reset your password.", style: TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.5)),
+        Text("Enter your registered email. We'll send a verification code to reset your password.", style: TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.5)),
         const SizedBox(height: 32),
         TextField(
           controller: _emailCtrl,
@@ -166,12 +166,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: AppColors.income.withValues(alpha: 0.1), shape: BoxShape.circle),
-          child: const Icon(LucideIcons.lock, color: AppColors.income, size: 32),
+          child: Icon(LucideIcons.lock, color: AppColors.income, size: 32),
         ),
         const SizedBox(height: 20),
-        const Text('Set New Password', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+        Text('Set New Password', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
         const SizedBox(height: 8),
-        const Text('Create a strong password for your Aspyric account.', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
+        Text('Create a strong password for your Aspyric account.', style: TextStyle(color: AppColors.textMuted, fontSize: 14)),
         const SizedBox(height: 32),
         TextField(
           controller: _newPassCtrl,
@@ -220,12 +220,12 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(color: AppColors.income.withValues(alpha: 0.1), shape: BoxShape.circle),
-            child: const Icon(LucideIcons.checkCircle, color: AppColors.income, size: 56),
+            child: Icon(LucideIcons.checkCircle, color: AppColors.income, size: 56),
           ),
           const SizedBox(height: 24),
-          const Text('Password Updated!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          Text('Password Updated!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
           const SizedBox(height: 12),
-          const Text('Your password has been reset successfully. Sign in with your new password.', style: TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.5), textAlign: TextAlign.center),
+          Text('Your password has been reset successfully. Sign in with your new password.', style: TextStyle(color: AppColors.textMuted, fontSize: 14, height: 1.5), textAlign: TextAlign.center),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
@@ -244,9 +244,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     decoration: BoxDecoration(color: AppColors.expense.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.expense.withValues(alpha: 0.3))),
     child: Row(children: [
-      const Icon(LucideIcons.alertCircle, color: AppColors.expense, size: 16),
+      Icon(LucideIcons.alertCircle, color: AppColors.expense, size: 16),
       const SizedBox(width: 8),
-      Expanded(child: Text(msg, style: const TextStyle(color: AppColors.expense, fontSize: 13))),
+      Expanded(child: Text(msg, style: TextStyle(color: AppColors.expense, fontSize: 13))),
     ]),
   );
 }

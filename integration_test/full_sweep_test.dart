@@ -1,7 +1,7 @@
-// Full-app sweep: visits every route (dark theme — the app is dark-only),
-// asserts nothing throws / overflows, runs a WCAG contrast audit on every
-// rendered Text, and exercises the create/edit/delete buttons on the core
-// modules.
+// Full-app sweep: visits every route in BOTH light and dark, asserts nothing
+// throws / overflows, runs a WCAG contrast audit on every rendered Text, and
+// exercises the create / edit / delete buttons, dropdowns, and pickers on the
+// core modules.
 //
 // Run:  flutter test integration_test/full_sweep_test.dart -d <device>
 
@@ -16,7 +16,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 
 import 'package:aspyric/main.dart';
 import 'package:aspyric/core/router/app_router.dart';
-import 'package:aspyric/core/theme/app_theme.dart';
+import 'package:aspyric/core/theme/app_colors.dart';
+import 'package:aspyric/core/theme/theme_provider.dart';
 import 'package:aspyric/core/database/app_database.dart';
 import 'package:aspyric/core/database/finance_repository.dart';
 import 'package:aspyric/core/constants/app_constants.dart';
@@ -116,7 +117,7 @@ List<_Violation> _auditText(WidgetTester tester, String route, String mode, Colo
     // skips empty / whitespace / zero-width / WidgetSpan-placeholder nodes
     // and icon-font glyphs (Private Use Area) \u2014 none of which are "text a
     // user is meant to read", so a low fg/bg contrast there is irrelevant.
-    if (!RegExp(r'[A-Za-z0-9\u00C0-\u024F\u0900-\u097F]').hasMatch(plain)) {
+    if (!RegExp('[A-Za-z0-9\u00C0-\u024F\u0900-\u097F]').hasMatch(plain)) {
       continue;
     }
 
@@ -235,26 +236,29 @@ void main() {
     final container = ProviderScope.containerOf(tester.element(find.byType(AspyricApp)));
     final router = container.read(appRouterProvider);
 
-    // ── Route sweep ────────────────────────────────────────────────────────
-    // The app is dark-only (see main.dart — themeMode is pinned to dark
-    // because screens paint from the fixed AppColors palette, not the theme),
-    // so there is one theme to audit.
-    const label = 'dark';
-    final scaffoldBg = AppTheme.darkTheme.scaffoldBackgroundColor;
+    // ── Route sweep × both themes ─────────────────────────────────────────
+    for (final mode in const [ThemeMode.dark, ThemeMode.light]) {
+      container.read(themeProvider.notifier).setTheme(mode);
+      await settle(tester);
+      final label = mode == ThemeMode.dark ? 'dark' : 'light';
+      final scaffoldBg = AppColors.background; // now theme-aware
 
-    for (final route in _routes) {
-      try {
-        router.go(route);
-        await settle(tester);
-      } catch (e) {
-        failures.add('navigate $route [$label]: $e');
-        continue;
+      for (final route in _routes) {
+        try {
+          router.go(route);
+          await settle(tester);
+        } catch (e) {
+          failures.add('navigate $route [$label]: $e');
+          continue;
+        }
+        final ex = tester.takeException();
+        if (ex != null) failures.add('render $route [$label] threw: $ex');
+        allViolations.addAll(_auditText(tester, route, label, scaffoldBg));
       }
-      final ex = tester.takeException();
-      if (ex != null) failures.add('render $route [$label] threw: $ex');
-      allViolations.addAll(_auditText(tester, route, label, scaffoldBg));
     }
 
+    // Interaction pass runs in dark (behaviour is theme-independent).
+    container.read(themeProvider.notifier).setTheme(ThemeMode.dark);
     router.go('/');
     await settle(tester);
 

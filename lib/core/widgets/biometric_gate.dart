@@ -119,10 +119,10 @@ class _BiometricGateState extends ConsumerState<BiometricGate>
                       )
                     ],
                   ),
-                  child: const Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 56),
+                  child: Icon(LucideIcons.fingerprint, color: AppColors.primary, size: 56),
                 ),
                 const SizedBox(height: 28),
-                const Text(
+                Text(
                   'Aspyric',
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary, letterSpacing: -0.5),
                 ),
@@ -140,7 +140,7 @@ class _BiometricGateState extends ConsumerState<BiometricGate>
                 ),
                 const SizedBox(height: 40),
                 if (_checking)
-                  const CircularProgressIndicator(color: AppColors.primary)
+                  CircularProgressIndicator(color: AppColors.primary)
                 else
                   Column(
                     children: [
@@ -161,7 +161,7 @@ class _BiometricGateState extends ConsumerState<BiometricGate>
                         const SizedBox(height: 12),
                         TextButton(
                           onPressed: _signOutInstead,
-                          child: const Text('Sign out instead', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                          child: Text('Sign out instead', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
                         ),
                       ],
                     ],

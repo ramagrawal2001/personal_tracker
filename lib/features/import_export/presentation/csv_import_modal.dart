@@ -179,19 +179,19 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'CSV Statement Importer',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 IconButton(
-                  icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                  icon: Icon(LucideIcons.x, color: AppColors.textMuted),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
             const SizedBox(height: 14),
 
-            const Text('Destination Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            Text('Destination Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: _selectedAccountId,
@@ -200,8 +200,8 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 filled: true,
                 fillColor: AppColors.surfaceLight,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
               ),
               items: accounts.map((acc) {
                 return DropdownMenuItem(
@@ -213,7 +213,7 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
             ),
             const SizedBox(height: 14),
 
-            const Text('Paste CSV / Bank Statement Text', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            Text('Paste CSV / Bank Statement Text', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 6),
             TextField(
               controller: _csvController,
@@ -229,11 +229,11 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
               height: 48,
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.primary),
+                  side: BorderSide(color: AppColors.primary),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                icon: const Icon(LucideIcons.fileSpreadsheet, size: 18, color: AppColors.primary),
-                label: const Text('Parse & Preview Statement', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                icon: Icon(LucideIcons.fileSpreadsheet, size: 18, color: AppColors.primary),
+                label: Text('Parse & Preview Statement', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
                 onPressed: _parseCsv,
               ),
             ),
@@ -242,13 +242,13 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
             if (_previewRows.isNotEmpty) ...[
               Text(
                 'Detected Transactions (${_previewRows.length})',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
               if (_skippedRows > 0) ...[
                 const SizedBox(height: 4),
                 Text(
                   '$_skippedRows row${_skippedRows > 1 ? 's' : ''} skipped (missing or non-positive amount)',
-                  style: const TextStyle(fontSize: 12, color: AppColors.warning),
+                  style: TextStyle(fontSize: 12, color: AppColors.warning),
                 ),
               ],
               const SizedBox(height: 8),
@@ -272,14 +272,14 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(row.merchantName, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 13)),
+                            Text(row.merchantName, style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 13)),
                             const SizedBox(height: 2),
-                            Text('Auto Category: ${row.categoryId}', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                            Text('Auto Category: ${row.categoryId}', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
                           ],
                         ),
                         Text(
                           '- ${CurrencyFormatter.format(row.amount)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.expense, fontSize: 14),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.expense, fontSize: 14),
                         ),
                       ],
                     ),

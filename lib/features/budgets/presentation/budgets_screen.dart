@@ -31,7 +31,7 @@ class BudgetsScreen extends ConsumerWidget {
       scrollable: true,
       actions: [
         IconButton(
-          icon: const Icon(LucideIcons.plus, color: AppColors.primary),
+          icon: Icon(LucideIcons.plus, color: AppColors.primary),
           onPressed: () => _showAddBudgetSheet(context, ref, budgets, categories),
         ),
       ],
@@ -44,12 +44,12 @@ class BudgetsScreen extends ConsumerWidget {
               decoration: AppDecorations.alertBanner(AppColors.warning),
               child: Row(
                 children: [
-                  const Icon(LucideIcons.alertTriangle, color: AppColors.warning, size: 20),
+                  Icon(LucideIcons.alertTriangle, color: AppColors.warning, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       _warningMessage(warningBudget.first, categories),
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500),
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -88,7 +88,7 @@ class BudgetsScreen extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               cat.name,
-                              style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
+                              style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
                             ),
                           ),
                           Text(
@@ -100,12 +100,12 @@ class BudgetsScreen extends ConsumerWidget {
                             ),
                           ),
                           PopupMenuButton<String>(
-                            icon: const Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
+                            icon: Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
                             color: AppColors.surface,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             itemBuilder: (_) => [
-                              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Edit Limit')])),
-                              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.expense))])),
+                              PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Edit Limit')])),
+                              PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.expense))])),
                             ],
                             onSelected: (v) {
                               if (v == 'edit') _showEditBudgetSheet(context, ref, budget);
@@ -134,7 +134,7 @@ class BudgetsScreen extends ConsumerWidget {
                           ),
                           Text(
                             'Remaining: ${CurrencyFormatter.format(budget.remaining > 0 ? budget.remaining : 0.0)}',
-                            style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                           ),
                         ],
                       ),
@@ -169,10 +169,10 @@ class BudgetsScreen extends ConsumerWidget {
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Edit Budget Limit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text('Edit Budget Limit', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 20),
               TextField(
                 controller: limitCtrl,
@@ -215,7 +215,7 @@ class BudgetsScreen extends ConsumerWidget {
 
     if (availableCategories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Every expense category already has a budget this month.'), backgroundColor: AppColors.warning),
+        SnackBar(content: Text('Every expense category already has a budget this month.'), backgroundColor: AppColors.warning),
       );
       return;
     }
@@ -233,10 +233,10 @@ class BudgetsScreen extends ConsumerWidget {
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('New Monthly Budget', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+              Text('New Monthly Budget', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
                 value: selectedCategoryId,

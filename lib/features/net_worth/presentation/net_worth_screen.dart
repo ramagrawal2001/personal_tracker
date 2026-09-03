@@ -38,11 +38,11 @@ class NetWorthScreen extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Total Assets', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    Text('Total Assets', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                     const SizedBox(height: 2),
                     Text(
                       CurrencyFormatter.format(financeState.totalAssets),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                     ),
                   ],
                 ),
@@ -50,11 +50,11 @@ class NetWorthScreen extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text('Total Liabilities', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    Text('Total Liabilities', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                     const SizedBox(height: 2),
                     Text(
                       CurrencyFormatter.format(financeState.totalLiabilities),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.expense),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.expense),
                     ),
                   ],
                 ),
@@ -78,10 +78,10 @@ class NetWorthScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: AppDecorations.iconBadge(AppColors.income, circle: true),
-                        child: const Icon(LucideIcons.trendingUp, color: AppColors.income, size: 14),
+                        child: Icon(LucideIcons.trendingUp, color: AppColors.income, size: 14),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Liquid Balance Trend — Last 6 Months (Lakhs ₹)',
                         style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
                       ),
@@ -89,7 +89,7 @@ class NetWorthScreen extends ConsumerWidget {
                   ),
                 ),
                 if (financeState.transactions.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(vertical: 32),
                     child: Center(
                       child: Text(

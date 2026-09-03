@@ -92,7 +92,7 @@ class _MainShellState extends State<MainShell> {
       isScrollControlled: true,
       builder: (ctx) {
         return Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
@@ -118,7 +118,7 @@ class _MainShellState extends State<MainShell> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Financial Modules',
                           style: TextStyle(
                             fontSize: 18,
@@ -127,7 +127,7 @@ class _MainShellState extends State<MainShell> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                          icon: Icon(LucideIcons.x, color: AppColors.textMuted),
                           onPressed: () => Navigator.pop(ctx),
                         ),
                       ],
@@ -197,7 +197,7 @@ class _MainShellState extends State<MainShell> {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
@@ -221,12 +221,12 @@ class _MainShellState extends State<MainShell> {
     final railDestinations = [
       NavigationRailDestination(
         icon: const Icon(LucideIcons.layoutDashboard),
-        selectedIcon: const Icon(LucideIcons.layoutDashboard, color: AppColors.primary),
+        selectedIcon: Icon(LucideIcons.layoutDashboard, color: AppColors.primary),
         label: Text(AppLocalizations.of(context).home),
       ),
       NavigationRailDestination(
         icon: const Icon(LucideIcons.receipt),
-        selectedIcon: const Icon(LucideIcons.receipt, color: AppColors.primary),
+        selectedIcon: Icon(LucideIcons.receipt, color: AppColors.primary),
         label: Text(AppLocalizations.of(context).transactions),
       ),
       NavigationRailDestination(
@@ -245,12 +245,12 @@ class _MainShellState extends State<MainShell> {
       ),
       NavigationRailDestination(
         icon: const Icon(LucideIcons.wallet),
-        selectedIcon: const Icon(LucideIcons.wallet, color: AppColors.primary),
+        selectedIcon: Icon(LucideIcons.wallet, color: AppColors.primary),
         label: Text(AppLocalizations.of(context).accounts),
       ),
       NavigationRailDestination(
         icon: const Icon(LucideIcons.grid),
-        selectedIcon: const Icon(LucideIcons.grid, color: AppColors.primary),
+        selectedIcon: Icon(LucideIcons.grid, color: AppColors.primary),
         label: Text(AppLocalizations.of(context).more),
       ),
     ];
@@ -258,17 +258,17 @@ class _MainShellState extends State<MainShell> {
     final notesRailDestinations = [
       NavigationRailDestination(
         icon: const Icon(LucideIcons.stickyNote),
-        selectedIcon: const Icon(LucideIcons.stickyNote, color: AppColors.primary),
+        selectedIcon: Icon(LucideIcons.stickyNote, color: AppColors.primary),
         label: const Text('All Notes'),
       ),
       NavigationRailDestination(
         icon: const Icon(LucideIcons.pin),
-        selectedIcon: const Icon(LucideIcons.pin, color: AppColors.primary),
+        selectedIcon: Icon(LucideIcons.pin, color: AppColors.primary),
         label: const Text('Pinned'),
       ),
       NavigationRailDestination(
         icon: const Icon(LucideIcons.archive),
-        selectedIcon: const Icon(LucideIcons.archive, color: AppColors.primary),
+        selectedIcon: Icon(LucideIcons.archive, color: AppColors.primary),
         label: const Text('Archive'),
       ),
     ];
@@ -325,10 +325,10 @@ class _MainShellState extends State<MainShell> {
               minExtendedWidth: 200,
               backgroundColor: AppColors.surface,
               indicatorColor: AppColors.primary.withValues(alpha: 0.15),
-              selectedIconTheme: const IconThemeData(color: AppColors.primary),
-              unselectedIconTheme: const IconThemeData(color: AppColors.textMuted),
-              selectedLabelTextStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-              unselectedLabelTextStyle: const TextStyle(color: AppColors.textMuted),
+              selectedIconTheme: IconThemeData(color: AppColors.primary),
+              unselectedIconTheme: IconThemeData(color: AppColors.textMuted),
+              selectedLabelTextStyle: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
+              unselectedLabelTextStyle: TextStyle(color: AppColors.textMuted),
             ),
             const VerticalDivider(thickness: 1, width: 1),
             // Content
@@ -408,7 +408,7 @@ class _MainShellState extends State<MainShell> {
 
     if (isNotes) {
       return Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.surface,
           border: Border(top: BorderSide(color: AppColors.border, width: 1)),
         ),
@@ -425,7 +425,7 @@ class _MainShellState extends State<MainShell> {
     }
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border, width: 1)),
       ),
@@ -435,13 +435,13 @@ class _MainShellState extends State<MainShell> {
         items: [
           BottomNavigationBarItem(
             icon: const Icon(LucideIcons.layoutDashboard),
-            activeIcon: const Icon(LucideIcons.layoutDashboard, color: AppColors.primary),
+            activeIcon: Icon(LucideIcons.layoutDashboard, color: AppColors.primary),
             label: AppLocalizations.of(context).home,
             tooltip: AppLocalizations.of(context).home,
           ),
           BottomNavigationBarItem(
             icon: const Icon(LucideIcons.receipt),
-            activeIcon: const Icon(LucideIcons.receipt, color: AppColors.primary),
+            activeIcon: Icon(LucideIcons.receipt, color: AppColors.primary),
             label: AppLocalizations.of(context).transactions,
             tooltip: AppLocalizations.of(context).transactions,
           ),
@@ -469,13 +469,13 @@ class _MainShellState extends State<MainShell> {
           ),
           BottomNavigationBarItem(
             icon: const Icon(LucideIcons.wallet),
-            activeIcon: const Icon(LucideIcons.wallet, color: AppColors.primary),
+            activeIcon: Icon(LucideIcons.wallet, color: AppColors.primary),
             label: AppLocalizations.of(context).accounts,
             tooltip: AppLocalizations.of(context).accounts,
           ),
           BottomNavigationBarItem(
             icon: const Icon(LucideIcons.grid),
-            activeIcon: const Icon(LucideIcons.grid, color: AppColors.primary),
+            activeIcon: Icon(LucideIcons.grid, color: AppColors.primary),
             label: AppLocalizations.of(context).more,
             tooltip: AppLocalizations.of(context).more,
           ),

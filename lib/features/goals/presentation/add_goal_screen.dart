@@ -48,10 +48,10 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: AppDecorations.iconBadge(AppColors.primary, circle: true),
-                      child: const Icon(LucideIcons.target, color: AppColors.primary, size: 20),
+                      child: Icon(LucideIcons.target, color: AppColors.primary, size: 20),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -72,7 +72,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                 const SizedBox(height: 20),
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Goal Title (e.g. Emergency Vault, MacBook Pro)',
                     prefixIcon: Icon(LucideIcons.tag, color: AppColors.primary, size: 18),
                   ),
@@ -86,7 +86,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: InputDecoration(
                           labelText: 'Target Amount (${CurrencyFormatter.symbol})',
-                          prefixIcon: const Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
+                          prefixIcon: Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
                         ),
                       ),
                     ),
@@ -97,7 +97,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: InputDecoration(
                           labelText: 'Already Saved (${CurrencyFormatter.symbol})',
-                          prefixIcon: const Icon(LucideIcons.wallet, color: AppColors.warning, size: 18),
+                          prefixIcon: Icon(LucideIcons.wallet, color: AppColors.warning, size: 18),
                         ),
                       ),
                     ),
@@ -115,13 +115,13 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
                     if (picked != null) setState(() => _targetDate = picked);
                   },
                   child: InputDecorator(
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Target Date (optional)',
                       prefixIcon: Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
                     ),
                     child: Text(
                       _targetDate != null ? '${_targetDate!.day}/${_targetDate!.month}/${_targetDate!.year}' : 'No target date set',
-                      style: const TextStyle(color: AppColors.textPrimary),
+                      style: TextStyle(color: AppColors.textPrimary),
                     ),
                   ),
                 ),
@@ -170,7 +170,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
 
     context.pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Savings Goal created!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
+      SnackBar(content: Text('Savings Goal created!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
     );
   }
 }

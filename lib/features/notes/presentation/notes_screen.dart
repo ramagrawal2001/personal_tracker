@@ -16,8 +16,8 @@ void _confirmDelete(BuildContext context, NotesNotifier notifier, String noteId)
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: AppColors.surface,
-      title: const Text('Delete note?', style: TextStyle(color: AppColors.textPrimary)),
-      content: const Text('This cannot be undone.', style: TextStyle(color: AppColors.textMuted)),
+      title: Text('Delete note?', style: TextStyle(color: AppColors.textPrimary)),
+      content: Text('This cannot be undone.', style: TextStyle(color: AppColors.textMuted)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         TextButton(
@@ -25,7 +25,7 @@ void _confirmDelete(BuildContext context, NotesNotifier notifier, String noteId)
             notifier.deleteNote(noteId);
             Navigator.pop(ctx);
           },
-          child: const Text('Delete', style: TextStyle(color: AppColors.expense)),
+          child: Text('Delete', style: TextStyle(color: AppColors.expense)),
         ),
       ],
     ),
@@ -81,7 +81,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
+        title: Text(
           'Notes & Scratchpad',
           style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary, letterSpacing: -0.2),
         ),
@@ -93,7 +93,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 color: AppColors.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(LucideIcons.plus, color: AppColors.primary, size: 20),
+              child: Icon(LucideIcons.plus, color: AppColors.primary, size: 20),
             ),
             onPressed: () => _openEditor(null),
           ),
@@ -110,10 +110,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
                 hintText: 'Search notes & checklists…',
-                prefixIcon: const Icon(LucideIcons.search, color: AppColors.textMuted, size: 18),
+                prefixIcon: Icon(LucideIcons.search, color: AppColors.textMuted, size: 18),
                 suffixIcon: query.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(LucideIcons.x, size: 16, color: AppColors.textMuted),
+                        icon: Icon(LucideIcons.x, size: 16, color: AppColors.textMuted),
                         onPressed: () {
                           _searchCtrl.clear();
                           setState(() {});
@@ -226,7 +226,19 @@ class _NotesGrid extends StatelessWidget {
           note: note,
           onTap: () => onTap(note),
           onPin: () => notifier.togglePin(note.id),
-          onArchive: () => notifier.toggleArchive(note.id),
+          onArchive: () {
+            final wasArchived = note.isArchived;
+            notifier.toggleArchive(note.id);
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(
+                content: Text(wasArchived ? 'Note restored' : 'Note archived'),
+                action: SnackBarAction(
+                  label: 'Undo',
+                  onPressed: () => notifier.toggleArchive(note.id),
+                ),
+              ));
+          },
           onDelete: () => _confirmDelete(context, notifier, note.id),
         );
       },

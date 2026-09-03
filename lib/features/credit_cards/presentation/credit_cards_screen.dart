@@ -60,7 +60,7 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
             elevation: 0,
             pinned: true,
             floating: true,
-            title: const Text(
+            title: Text(
               'Cards Vault',
               style: TextStyle(
                 fontSize: 18,
@@ -77,7 +77,7 @@ class _CreditCardsScreenState extends ConsumerState<CreditCardsScreen>
                     color: AppColors.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(LucideIcons.plus, color: AppColors.primary, size: 20),
+                  child: Icon(LucideIcons.plus, color: AppColors.primary, size: 20),
                 ),
                 onPressed: () => _showAddCardModal(context),
               ),
@@ -226,7 +226,7 @@ return SingleChildScrollView(
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Credit Utilization', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  Text('Credit Utilization', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                   Text(
                     '${utilPct.toStringAsFixed(1)}%',
                     style: TextStyle(
@@ -282,11 +282,11 @@ return SingleChildScrollView(
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Edit Card', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text('Edit Card', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 20),
                 TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Card Name')),
                 const SizedBox(height: 12),
@@ -305,7 +305,7 @@ return SingleChildScrollView(
                 ],
                 if (error != null) ...[
                   const SizedBox(height: 8),
-                  Text(error!, style: const TextStyle(color: AppColors.expense, fontSize: 12)),
+                  Text(error!, style: TextStyle(color: AppColors.expense, fontSize: 12)),
                 ],
                 const SizedBox(height: 24),
                 SizedBox(
@@ -364,15 +364,15 @@ return SingleChildScrollView(
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Remove Card?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text('Remove Card?', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         content: Text(
           'Remove ${card.name} (•••• ${card.last4}) from your vault?',
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -741,7 +741,7 @@ class _CardListTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             card.name,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
@@ -755,7 +755,7 @@ class _CardListTile extends StatelessWidget {
                               color: AppColors.expense.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: const Text(
+                            child: Text(
                               'EXPIRED',
                               style: TextStyle(
                                 fontSize: 9,
@@ -770,18 +770,18 @@ class _CardListTile extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       '${card.bank}  •  ${card.network.displayName}  •  •••• ${card.last4}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                     ),
                   ],
                 ),
               ),
               PopupMenuButton<String>(
-                icon: const Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
+                icon: Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
                 color: AppColors.surface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 itemBuilder: (_) => [
                   if (isCredit)
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'pay',
                       child: Row(
                         children: [
@@ -791,7 +791,7 @@ class _CardListTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'edit',
                     child: Row(
                       children: [
@@ -801,7 +801,7 @@ class _CardListTile extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'delete',
                     child: Row(
                       children: [
@@ -827,7 +827,7 @@ class _CardListTile extends StatelessWidget {
 
           if (isCredit && card.creditLimit > 0) ...[
             const SizedBox(height: 14),
-            const Divider(color: AppColors.border, height: 1),
+            Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -865,7 +865,7 @@ class _CardListTile extends StatelessWidget {
               children: [
                 Text(
                   'Stmt: ${card.statementDay}th  •  Due: ${card.dueDay}th',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
                 ),
                 GestureDetector(
                   onTap: onPayBill,
@@ -876,7 +876,7 @@ class _CardListTile extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Pay Bill',
                       style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
@@ -888,18 +888,18 @@ class _CardListTile extends StatelessWidget {
 
           if ((card.cardType == CardType.prepaid || card.cardType == CardType.forex) && hasFunds) ...[
             const SizedBox(height: 12),
-            const Divider(color: AppColors.border, height: 1),
+            Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(LucideIcons.wallet, size: 14, color: AppColors.income),
+                Icon(LucideIcons.wallet, size: 14, color: AppColors.income),
                 const SizedBox(width: 6),
-                const Text('Balance: ', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                Text('Balance: ', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                 Text(
                   card.currency != null && card.currency != 'INR'
                       ? '${card.currency} ${card.balance!.toStringAsFixed(2)}'
                       : CurrencyFormatter.format(card.balance!),
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.income),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.income),
                 ),
               ],
             ),
@@ -940,7 +940,7 @@ class _InfoChip extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+      Text(label, style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
       const SizedBox(height: 2),
       Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: valueColor)),
     ],
@@ -963,7 +963,7 @@ class _SummaryItem extends StatelessWidget {
       ),
       const SizedBox(height: 6),
       Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-      Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textMuted)),
+      Text(label, style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
     ],
   );
 }
@@ -1011,7 +1011,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
       minChildSize: 0.5,
       maxChildSize: 0.97,
       builder: (ctx, scroll) => Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
@@ -1029,18 +1029,18 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Add New Card',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   IconButton(
-                    icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                    icon: Icon(LucideIcons.x, color: AppColors.textMuted),
                     onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
             ),
-            const Divider(color: AppColors.border, height: 1),
+            Divider(color: AppColors.border, height: 1),
 
             Expanded(
               child: ListView(
@@ -1048,7 +1048,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                 padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 100),
                 children: [
                   // Card type selector
-                  const Text('Card Type', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  Text('Card Type', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   const SizedBox(height: 10),
                   _buildTypeSelector(),
                   const SizedBox(height: 20),
@@ -1082,7 +1082,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                   const SizedBox(height: 12),
 
                   // Network
-                  const Text('Network', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  Text('Network', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   const SizedBox(height: 8),
                   _buildNetworkSelector(),
                   const SizedBox(height: 12),
@@ -1179,9 +1179,9 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(LucideIcons.wifi, size: 16, color: AppColors.textMuted),
+                        Icon(LucideIcons.wifi, size: 16, color: AppColors.textMuted),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1201,7 +1201,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                   const SizedBox(height: 12),
 
                   // Card color
-                  const Text('Card Color', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  Text('Card Color', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   const SizedBox(height: 10),
                   _buildColorSelector(),
                   const SizedBox(height: 12),
@@ -1390,7 +1390,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+        Text(label, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
@@ -1401,12 +1401,12 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
           ),
           child: DropdownButton<T>(
             value: value,
-            items: items.map((i) => DropdownMenuItem(value: i, child: Text(display(i), style: const TextStyle(color: AppColors.textPrimary, fontSize: 13)))).toList(),
+            items: items.map((i) => DropdownMenuItem(value: i, child: Text(display(i), style: TextStyle(color: AppColors.textPrimary, fontSize: 13)))).toList(),
             onChanged: onChanged,
             isExpanded: true,
             underline: const SizedBox.shrink(),
             dropdownColor: AppColors.surface,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
           ),
         ),
       ],
@@ -1430,7 +1430,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
       maxLines: maxLines,
       inputFormatters: formatter != null ? [formatter] : null,
       onChanged: (_) => setState(() {}),
-      style: const TextStyle(color: AppColors.textPrimary),
+      style: TextStyle(color: AppColors.textPrimary),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -1438,10 +1438,10 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
         counterText: '',
         filled: true,
         fillColor: AppColors.surfaceLight,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
-        labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.primary, width: 2)),
+        labelStyle: TextStyle(color: AppColors.textMuted, fontSize: 13),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       ),
     );
@@ -1450,21 +1450,21 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
   void _save() {
     if (_nameCtrl.text.trim().isEmpty || _bankCtrl.text.trim().isEmpty || _last4Ctrl.text.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill card name, bank, and last 4 digits'), backgroundColor: AppColors.expense),
+        SnackBar(content: Text('Please fill card name, bank, and last 4 digits'), backgroundColor: AppColors.expense),
       );
       return;
     }
     final limit = double.tryParse(_limitCtrl.text) ?? 0;
     if (limit < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Credit limit cannot be negative'), backgroundColor: AppColors.expense),
+        SnackBar(content: Text('Credit limit cannot be negative'), backgroundColor: AppColors.expense),
       );
       return;
     }
     final balance = double.tryParse(_balanceCtrl.text);
     if (balance != null && balance < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Balance cannot be negative'), backgroundColor: AppColors.expense),
+        SnackBar(content: Text('Balance cannot be negative'), backgroundColor: AppColors.expense),
       );
       return;
     }

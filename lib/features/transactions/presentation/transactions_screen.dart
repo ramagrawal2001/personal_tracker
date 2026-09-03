@@ -138,11 +138,11 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               context: context,
               builder: (ctx) => AlertDialog(
                 backgroundColor: AppColors.surface,
-                title: const Text('Delete transaction?', style: TextStyle(color: AppColors.textPrimary)),
-                content: const Text('This cannot be undone.', style: TextStyle(color: AppColors.textMuted)),
+                title: Text('Delete transaction?', style: TextStyle(color: AppColors.textPrimary)),
+                content: Text('This cannot be undone.', style: TextStyle(color: AppColors.textMuted)),
                 actions: [
                   TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: AppColors.expense))),
+                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Delete', style: TextStyle(color: AppColors.expense))),
                 ],
               ),
             ) ??
@@ -172,12 +172,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 children: [
                   Text(
                     tx.merchant ?? tx.description ?? tx.type.displayName,
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
+                    style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${DateFormatter.formatShort(tx.date)}${tx.description != null ? " • ${tx.description}" : ""}',
-                    style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                   ),
                 ],
               ),

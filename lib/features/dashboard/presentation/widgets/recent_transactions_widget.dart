@@ -30,7 +30,7 @@ class RecentTransactionsWidget extends StatelessWidget {
           onAction: onViewAll,
         ),
         if (transactions.isEmpty)
-          const AppCard(
+          AppCard(
             padding: EdgeInsets.all(24),
             child: Center(
               child: Text(
@@ -80,14 +80,14 @@ class RecentTransactionsWidget extends StatelessWidget {
                         children: [
                           Text(
                             tx.merchant ?? tx.description ?? tx.type.displayName,
-                            style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
+                            style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             DateFormatter.formatRelative(tx.date),
-                            style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                           ),
                         ],
                       ),

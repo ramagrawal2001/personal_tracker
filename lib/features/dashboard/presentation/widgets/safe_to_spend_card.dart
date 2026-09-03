@@ -37,10 +37,10 @@ class SafeToSpendCard extends StatelessWidget {
                   color: AppColors.income.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 20),
+                child: Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 20),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -57,12 +57,12 @@ class SafeToSpendCard extends StatelessWidget {
               ),
               Text(
                 CurrencyFormatter.format(safeToSpend),
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.income),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.income),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: AppColors.border, height: 1),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -81,7 +81,7 @@ class SafeToSpendCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
         const SizedBox(height: 2),
         Text(
           value,

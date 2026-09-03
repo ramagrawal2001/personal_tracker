@@ -98,7 +98,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       scrollable: true,
       actions: [
         IconButton(
-          icon: const Icon(LucideIcons.plus, color: AppColors.primary),
+          icon: Icon(LucideIcons.plus, color: AppColors.primary),
           onPressed: () => _showRecurringSheet(context, ref, financeState),
         ),
       ],
@@ -117,12 +117,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: AppDecorations.iconBadge(AppColors.accent, circle: true),
-                          child: const Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
+                          child: Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
                         ),
                         const SizedBox(width: 10),
                         Text(
                           _monthLabel,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,
@@ -133,12 +133,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(LucideIcons.chevronLeft, size: 18, color: AppColors.textPrimary),
+                          icon: Icon(LucideIcons.chevronLeft, size: 18, color: AppColors.textPrimary),
                           onPressed: _prevMonth,
                           tooltip: 'Previous month',
                         ),
                         IconButton(
-                          icon: const Icon(LucideIcons.chevronRight, size: 18, color: AppColors.textPrimary),
+                          icon: Icon(LucideIcons.chevronRight, size: 18, color: AppColors.textPrimary),
                           onPressed: _nextMonth,
                           tooltip: 'Next month',
                         ),
@@ -200,11 +200,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(LucideIcons.alertCircle, color: AppColors.accent, size: 14),
+                        Icon(LucideIcons.alertCircle, color: AppColors.accent, size: 14),
                         const SizedBox(width: 6),
                         Text(
                           '${dueDays.length} payment${dueDays.length > 1 ? 's' : ''} scheduled in this period',
-                          style: const TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -254,7 +254,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: AppDecorations.iconBadge(AppColors.accent),
-                        child: const Icon(LucideIcons.calendar, color: AppColors.accent, size: 20),
+                        child: Icon(LucideIcons.calendar, color: AppColors.accent, size: 20),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -263,7 +263,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           children: [
                             Text(
                               item.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
                                 fontSize: 15,
@@ -282,7 +282,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       ),
                       Text(
                         CurrencyFormatter.format(item.amount),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
                           fontSize: 15,
@@ -318,11 +318,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(existing == null ? 'New Recurring Payment' : 'Edit Recurring Payment', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text(existing == null ? 'New Recurring Payment' : 'Edit Recurring Payment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 20),
                 TextField(
                   controller: titleCtrl,
@@ -355,7 +355,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   },
                   child: InputDecorator(
                     decoration: const InputDecoration(labelText: 'Next Due Date'),
-                    child: Text(DateFormatter.formatShort(dueDate), style: const TextStyle(color: AppColors.textPrimary)),
+                    child: Text(DateFormatter.formatShort(dueDate), style: TextStyle(color: AppColors.textPrimary)),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -385,7 +385,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Auto-Pay', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                  title: Text('Auto-Pay', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
                   value: isAutoPay,
                   activeColor: AppColors.primary,
                   onChanged: (v) => setSheetState(() => isAutoPay = v),
@@ -396,7 +396,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (titleCtrl.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Enter a title'), backgroundColor: AppColors.expense));
+                        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Enter a title'), backgroundColor: AppColors.expense));
                         return;
                       }
                       final amount = double.tryParse(amountCtrl.text);
@@ -445,8 +445,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Delete recurring payment?', style: TextStyle(color: AppColors.textPrimary)),
-        content: Text('Remove "${item.title}"? This cannot be undone.', style: const TextStyle(color: AppColors.textMuted)),
+        title: Text('Delete recurring payment?', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Remove "${item.title}"? This cannot be undone.', style: TextStyle(color: AppColors.textMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
@@ -454,7 +454,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               ref.read(financeNotifierProvider.notifier).deleteRecurringPayment(item.id);
               Navigator.pop(ctx);
             },
-            child: const Text('Delete', style: TextStyle(color: AppColors.expense)),
+            child: Text('Delete', style: TextStyle(color: AppColors.expense)),
           ),
         ],
       ),

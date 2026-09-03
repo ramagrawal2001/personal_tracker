@@ -50,11 +50,11 @@ class GoalsScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'Target: ${CurrencyFormatter.format(totalTarget)}',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
                     ),
                     Text(
                       '${CurrencyFormatter.format(totalTarget - totalSaved > 0 ? totalTarget - totalSaved : 0)} left',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -65,7 +65,7 @@ class GoalsScreen extends ConsumerWidget {
                     value: totalTarget > 0 ? (totalSaved / totalTarget).clamp(0.0, 1.0) : 0.0,
                     minHeight: 8,
                     backgroundColor: Colors.white10,
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppColors.income),
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.income),
                   ),
                 ),
               ],
@@ -130,7 +130,7 @@ class GoalsScreen extends ConsumerWidget {
                     children: [
                       Text(
                         goal.name,
-                        style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
+                        style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -149,11 +149,11 @@ class GoalsScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(LucideIcons.pencil, color: AppColors.primary, size: 16),
+                    icon: Icon(LucideIcons.pencil, color: AppColors.primary, size: 16),
                     onPressed: () => _showEditGoalSheet(context, ref, goal),
                   ),
                   IconButton(
-                    icon: const Icon(LucideIcons.trash2, color: AppColors.textMuted, size: 18),
+                    icon: Icon(LucideIcons.trash2, color: AppColors.textMuted, size: 18),
                     onPressed: () => _confirmDeleteGoal(context, ref, goal),
                   ),
                 ],
@@ -167,11 +167,11 @@ class GoalsScreen extends ConsumerWidget {
             children: [
               Text(
                 'Saved: ${CurrencyFormatter.format(goal.currentSavedAmount)}',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.income, fontSize: 14),
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.income, fontSize: 14),
               ),
               Text(
                 'Target: ${CurrencyFormatter.format(goal.targetAmount)}',
-                style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
               ),
             ],
           ),
@@ -194,8 +194,8 @@ class GoalsScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton.icon(
-                icon: const Icon(LucideIcons.plusCircle, size: 16, color: AppColors.primary),
-                label: const Text(
+                icon: Icon(LucideIcons.plusCircle, size: 16, color: AppColors.primary),
+                label: Text(
                   'Add Funds',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary),
                 ),
@@ -215,20 +215,20 @@ class GoalsScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Deposit to ${goal.name}', style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        title: Text('Deposit to ${goal.name}', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         content: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           autofocus: true,
           decoration: InputDecoration(
             labelText: 'Deposit Amount (${CurrencyFormatter.symbol})',
-            prefixIcon: const Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
+            prefixIcon: Icon(LucideIcons.indianRupee, color: AppColors.income, size: 18),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -237,7 +237,7 @@ class GoalsScreen extends ConsumerWidget {
                 ref.read(financeNotifierProvider.notifier).addFundsToGoal(goal.id, amt);
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Funds added to goal!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
+                  SnackBar(content: Text('Funds added to goal!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
                 );
               }
             },
@@ -263,22 +263,22 @@ class GoalsScreen extends ConsumerWidget {
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Edit Goal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text('Edit Goal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 20),
                 TextField(
                   controller: nameCtrl,
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: AppColors.textPrimary),
                   decoration: const InputDecoration(labelText: 'Goal Name'),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: targetCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(labelText: 'Target Amount (${CurrencyFormatter.symbol})', errorText: error),
                 ),
                 const SizedBox(height: 12),
@@ -296,7 +296,7 @@ class GoalsScreen extends ConsumerWidget {
                     decoration: const InputDecoration(labelText: 'Target Date'),
                     child: Text(
                       targetDate != null ? '${targetDate!.day}/${targetDate!.month}/${targetDate!.year}' : 'No target date',
-                      style: const TextStyle(color: AppColors.textPrimary),
+                      style: TextStyle(color: AppColors.textPrimary),
                     ),
                   ),
                 ),
@@ -336,8 +336,8 @@ class GoalsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Delete goal?', style: TextStyle(color: AppColors.textPrimary)),
-        content: Text('Delete "${goal.name}"? This cannot be undone.', style: const TextStyle(color: AppColors.textMuted)),
+        title: Text('Delete goal?', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Delete "${goal.name}"? This cannot be undone.', style: TextStyle(color: AppColors.textMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
@@ -348,7 +348,7 @@ class GoalsScreen extends ConsumerWidget {
                 const SnackBar(content: Text('Goal deleted'), behavior: SnackBarBehavior.floating),
               );
             },
-            child: const Text('Delete', style: TextStyle(color: AppColors.expense)),
+            child: Text('Delete', style: TextStyle(color: AppColors.expense)),
           ),
         ],
       ),

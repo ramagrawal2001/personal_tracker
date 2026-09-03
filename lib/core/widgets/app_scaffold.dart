@@ -34,7 +34,7 @@ class AppScaffold extends StatelessWidget {
             color: AppColors.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(LucideIcons.plus, color: AppColors.primary, size: 20),
+          child: Icon(LucideIcons.plus, color: AppColors.primary, size: 20),
         ),
         onPressed: onPressed,
       );
@@ -67,7 +67,7 @@ class AppScaffold extends StatelessWidget {
         scrolledUnderElevation: 0,
         leading: hasBack
             ? IconButton(
-                icon: const Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
+                icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
                 onPressed: () {
                   if (context.canPop()) {
                     context.pop();
@@ -80,7 +80,7 @@ class AppScaffold extends StatelessWidget {
         title: titleWidget ??
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,

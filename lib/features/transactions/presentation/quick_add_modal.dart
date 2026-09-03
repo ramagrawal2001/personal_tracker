@@ -153,10 +153,10 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               children: [
                 Text(
                   _isEditing ? 'Edit Transaction' : 'Log Transaction',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 IconButton(
-                  icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                  icon: Icon(LucideIcons.x, color: AppColors.textMuted),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -191,12 +191,12 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 controller: _amountController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 autofocus: !_isEditing,
-                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 decoration: InputDecoration(
                   prefixText: '${CurrencyFormatter.symbol} ',
-                  prefixStyle: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.primary),
+                  prefixStyle: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.primary),
                   hintText: '0',
-                  hintStyle: const TextStyle(color: AppColors.textMuted),
+                  hintStyle: TextStyle(color: AppColors.textMuted),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
@@ -208,7 +208,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             const SizedBox(height: 16),
 
             // Date picker
-            const Text('Date', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            Text('Date', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 6),
             InkWell(
               borderRadius: BorderRadius.circular(12),
@@ -231,9 +231,9 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.calendar, size: 16, color: AppColors.textMuted),
+                    Icon(LucideIcons.calendar, size: 16, color: AppColors.textMuted),
                     const SizedBox(width: 10),
-                    Text(DateFormatter.formatShort(_selectedDate), style: const TextStyle(color: AppColors.textPrimary)),
+                    Text(DateFormatter.formatShort(_selectedDate), style: TextStyle(color: AppColors.textPrimary)),
                   ],
                 ),
               ),
@@ -241,7 +241,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             const SizedBox(height: 14),
 
             // Source Account Selector (locked while editing)
-            const Text('From Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            Text('From Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: _selectedAccountId,
@@ -250,8 +250,8 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 filled: true,
                 fillColor: AppColors.surfaceLight,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
               ),
               items: accounts.map((acc) {
                 return DropdownMenuItem(
@@ -265,7 +265,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
 
             // Destination / Specific Selectors based on Type
             if (_selectedType == TransactionType.transfer) ...[
-              const Text('To Destination Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text('To Destination Account', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 value: _selectedToAccountId,
@@ -274,8 +274,8 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   filled: true,
                   fillColor: AppColors.surfaceLight,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
                 ),
                 items: filteredToAccounts.map((acc) {
                   return DropdownMenuItem(
@@ -289,7 +289,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             ],
 
             if (_selectedType == TransactionType.creditCardPayment) ...[
-              const Text('Target Credit Card', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text('Target Credit Card', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 value: _selectedCardId,
@@ -298,8 +298,8 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   filled: true,
                   fillColor: AppColors.surfaceLight,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
                 ),
                 items: creditCards.map((card) {
                   return DropdownMenuItem(
@@ -313,7 +313,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             ],
 
             if (_selectedType == TransactionType.loanPayment) ...[
-              const Text('Target Loan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text('Target Loan', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 value: _selectedLoanId,
@@ -322,8 +322,8 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   filled: true,
                   fillColor: AppColors.surfaceLight,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
                 ),
                 items: loans.map((loan) {
                   return DropdownMenuItem(
@@ -337,7 +337,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             ],
 
             if (_selectedType == TransactionType.expense || _selectedType == TransactionType.income) ...[
-              const Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 value: _selectedCategoryId,
@@ -346,8 +346,8 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   filled: true,
                   fillColor: AppColors.surfaceLight,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
                 ),
                 items: filteredCategories.map((cat) {
                   return DropdownMenuItem(

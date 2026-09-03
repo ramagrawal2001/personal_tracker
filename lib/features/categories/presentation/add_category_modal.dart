@@ -66,12 +66,12 @@ class _AddCategoryModalState extends ConsumerState<AddCategoryModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Add Category',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 IconButton(
-                  icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                  icon: Icon(LucideIcons.x, color: AppColors.textMuted),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -152,12 +152,12 @@ class _AddCategoryModalState extends ConsumerState<AddCategoryModal> {
               controller: _nameController,
               decoration: InputDecoration(
                 labelText: 'Category Name (e.g. Subscriptions, Groceries)',
-                prefixIcon: const Icon(LucideIcons.tag, color: AppColors.primary, size: 18),
+                prefixIcon: Icon(LucideIcons.tag, color: AppColors.primary, size: 18),
                 errorText: _error,
               ),
             ),
             const SizedBox(height: 18),
-            const Text('Icon', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            Text('Icon', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 10,
@@ -223,7 +223,7 @@ class _AddCategoryModalState extends ConsumerState<AddCategoryModal> {
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Category added successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
+      SnackBar(content: Text('Category added successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
     );
   }
 }

@@ -42,7 +42,7 @@ class InvestmentsScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('PORTFOLIO VALUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: AppColors.textMuted)),
+                    Text('PORTFOLIO VALUE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: AppColors.textMuted)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -63,7 +63,7 @@ class InvestmentsScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(CurrencyFormatter.format(totalCurrent), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary, letterSpacing: -0.5)),
+                Text(CurrencyFormatter.format(totalCurrent), style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary, letterSpacing: -0.5)),
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 12),
@@ -104,19 +104,19 @@ class InvestmentsScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text(inv.name, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15))),
+                          Expanded(child: Text(inv.name, style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15))),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: AppDecorations.iconBadge(AppColors.primary),
-                            child: Text(inv.type.displayName, style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w600)),
+                            child: Text(inv.type.displayName, style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w600)),
                           ),
                           PopupMenuButton<String>(
-                            icon: const Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
+                            icon: Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
                             color: AppColors.surface,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             itemBuilder: (_) => [
-                              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Update Value')])),
-                              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Remove', style: TextStyle(color: AppColors.expense))])),
+                              PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Update Value')])),
+                              PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Remove', style: TextStyle(color: AppColors.expense))])),
                             ],
                             onSelected: (v) {
                               if (v == 'edit') _showEditInvestmentSheet(context, ref, inv);
@@ -144,7 +144,7 @@ class InvestmentsScreen extends ConsumerWidget {
                           if (inv.monthlySipAmount > 0)
                             Text(
                               'SIP: ${CurrencyFormatter.format(inv.monthlySipAmount)}/mo',
-                              style: const TextStyle(fontSize: 12, color: AppColors.transfer, fontWeight: FontWeight.w600),
+                              style: TextStyle(fontSize: 12, color: AppColors.transfer, fontWeight: FontWeight.w600),
                             ),
                         ],
                       ),
@@ -163,7 +163,7 @@ class InvestmentsScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: align,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
         const SizedBox(height: 2),
         Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color ?? AppColors.textPrimary)),
       ],
@@ -182,11 +182,11 @@ class InvestmentsScreen extends ConsumerWidget {
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Update Investment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text('Update Investment', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 20),
                 TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Investment Name', prefixIcon: Icon(LucideIcons.trendingUp, size: 16))),
                 const SizedBox(height: 12),
@@ -199,7 +199,7 @@ class InvestmentsScreen extends ConsumerWidget {
                 TextField(controller: sipCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Monthly SIP (${CurrencyFormatter.symbol})', prefixIcon: const Icon(LucideIcons.repeat, size: 16))),
                 if (error != null) ...[
                   const SizedBox(height: 8),
-                  Text(error!, style: const TextStyle(color: AppColors.expense, fontSize: 12)),
+                  Text(error!, style: TextStyle(color: AppColors.expense, fontSize: 12)),
                 ],
                 const SizedBox(height: 24),
                 SizedBox(width: double.infinity, child: ElevatedButton(

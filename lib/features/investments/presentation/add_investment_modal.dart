@@ -72,12 +72,12 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Add Asset / Investment',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                 ),
                 IconButton(
-                  icon: const Icon(LucideIcons.x, color: AppColors.textMuted),
+                  icon: Icon(LucideIcons.x, color: AppColors.textMuted),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -205,7 +205,7 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
 
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Investment saved successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
+      SnackBar(content: Text('Investment saved successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
     );
   }
 }

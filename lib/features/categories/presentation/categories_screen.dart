@@ -27,7 +27,7 @@ class CategoriesScreen extends ConsumerWidget {
         actions: [
           AppScaffold.addAction(onPressed: () => AddCategoryModal.show(context)),
         ],
-        bottom: const TabBar(
+        bottom: TabBar(
           indicatorColor: AppColors.primary,
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.textMuted,
@@ -85,7 +85,7 @@ class CategoriesScreen extends ConsumerWidget {
               Expanded(
                 child: Text(
                   cat.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
                     fontSize: 15,
@@ -93,11 +93,11 @@ class CategoriesScreen extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(LucideIcons.pencil, color: AppColors.primary, size: 16),
+                icon: Icon(LucideIcons.pencil, color: AppColors.primary, size: 16),
                 onPressed: () => _showEditSheet(context, ref, cat),
               ),
               IconButton(
-                icon: const Icon(LucideIcons.trash2, color: AppColors.textMuted, size: 18),
+                icon: Icon(LucideIcons.trash2, color: AppColors.textMuted, size: 18),
                 onPressed: () => _confirmDelete(context, ref, cat),
               ),
             ],
@@ -117,19 +117,19 @@ class CategoriesScreen extends ConsumerWidget {
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Container(
-            decoration: const BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
             padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Edit Category', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                Text('Edit Category', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 const SizedBox(height: 20),
                 TextField(
                   controller: nameCtrl,
-                  style: const TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(color: AppColors.textPrimary),
                   decoration: InputDecoration(labelText: 'Category Name', errorText: error),
                 ),
                 const SizedBox(height: 16),
-                const Text('Icon', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                Text('Icon', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                 const SizedBox(height: 10),
                 Wrap(
                   spacing: 10,
@@ -183,8 +183,8 @@ class CategoriesScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: const Text('Delete category?', style: TextStyle(color: AppColors.textPrimary)),
-        content: Text('Delete "${cat.name}"? Existing transactions keep this category id but it will no longer be selectable.', style: const TextStyle(color: AppColors.textMuted)),
+        title: Text('Delete category?', style: TextStyle(color: AppColors.textPrimary)),
+        content: Text('Delete "${cat.name}"? Existing transactions keep this category id but it will no longer be selectable.', style: TextStyle(color: AppColors.textMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
@@ -195,7 +195,7 @@ class CategoriesScreen extends ConsumerWidget {
                 const SnackBar(content: Text('Category deleted'), behavior: SnackBarBehavior.floating),
               );
             },
-            child: const Text('Delete', style: TextStyle(color: AppColors.expense)),
+            child: Text('Delete', style: TextStyle(color: AppColors.expense)),
           ),
         ],
       ),
