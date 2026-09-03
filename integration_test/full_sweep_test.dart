@@ -83,6 +83,18 @@ Color _backgroundBehind(RenderObject start, Color fallback) {
       if (d is BoxDecoration && d.color != null && d.color!.a >= 1.0) {
         return d.color!;
       }
+      // A gradient surface (hero cards, glass credit cards) is a deliberate
+      // opaque background — approximate it with the mean of its opaque stops
+      // so contrast is still measured rather than skipped as unknown.
+      if (d is BoxDecoration && d.gradient != null) {
+        final stops = d.gradient!.colors.where((c) => c.a >= 1.0).toList();
+        if (stops.isNotEmpty) {
+          final r = stops.map((c) => c.r).reduce((a, b) => a + b) / stops.length;
+          final g = stops.map((c) => c.g).reduce((a, b) => a + b) / stops.length;
+          final b = stops.map((c) => c.b).reduce((a, b) => a + b) / stops.length;
+          return Color.from(alpha: 1.0, red: r, green: g, blue: b);
+        }
+      }
     }
     if (ro is RenderPhysicalModel && ro.color.a >= 1.0) return ro.color;
     if (ro is RenderPhysicalShape && ro.color.a >= 1.0) return ro.color;
