@@ -11,6 +11,26 @@ import '../import_export/presentation/csv_import_modal.dart';
 
 enum AppModule { finance, notes }
 
+/// Root-level tab destinations. These are peers of one another with nothing
+/// above them on the navigation stack, so a system back gesture from any of
+/// them is a genuine "leave the app" request.
+const Set<String> kRootTabPaths = {'/', '/transactions', '/accounts', '/notes'};
+
+/// Pure decision function: given the current router [currentLocation] and
+/// whether GoRouter reports a poppable page ([canPop]), decides where a system
+/// back gesture should go.
+///
+///  * `null`  → do not intercept. Let the framework pop the pushed page, or —
+///    when already on a root tab with nothing to pop — let the OS exit the app.
+///  * a path  → the current screen is a stray root-level (non-tab) destination
+///    with no back-stack entry; redirect there (Home) and consume the pop so
+///    the app is never dropped.
+String? backTarget(String currentLocation, bool canPop) {
+  if (canPop) return null;
+  if (kRootTabPaths.contains(currentLocation)) return null;
+  return '/';
+}
+
 class MainShell extends StatefulWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
@@ -144,18 +164,18 @@ class _MainShellState extends State<MainShell> {
                           childAspectRatio: 1.15,
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
-                            _buildMenuItem(ctx, 'Cards', LucideIcons.creditCard, AppColors.creditCard, () { Navigator.pop(ctx); context.go('/credit-cards'); }),
-                            _buildMenuItem(ctx, 'Loans', LucideIcons.landmark, AppColors.loan, () { Navigator.pop(ctx); context.go('/loans'); }),
-                            _buildMenuItem(ctx, 'Budgets', LucideIcons.pieChart, AppColors.warning, () { Navigator.pop(ctx); context.go('/budgets'); }),
-                            _buildMenuItem(ctx, 'Goals', LucideIcons.target, AppColors.income, () { Navigator.pop(ctx); context.go('/goals'); }),
-                            _buildMenuItem(ctx, 'Categories', LucideIcons.tag, AppColors.primary, () { Navigator.pop(ctx); context.go('/categories'); }),
-                            _buildMenuItem(ctx, 'Invest', LucideIcons.trendingUp, AppColors.transfer, () { Navigator.pop(ctx); context.go('/investments'); }),
-                            _buildMenuItem(ctx, 'Calendar', LucideIcons.calendar, AppColors.accent, () { Navigator.pop(ctx); context.go('/recurring'); }),
-                            _buildMenuItem(ctx, 'Reports', LucideIcons.barChart3, AppColors.income, () { Navigator.pop(ctx); context.go('/reports'); }),
-                            _buildMenuItem(ctx, 'Net Worth', LucideIcons.wallet, AppColors.transfer, () { Navigator.pop(ctx); context.go('/net-worth'); }),
-                            _buildMenuItem(ctx, 'Analytics', LucideIcons.lineChart, AppColors.accent, () { Navigator.pop(ctx); context.go('/analytics'); }),
+                            _buildMenuItem(ctx, 'Cards', LucideIcons.creditCard, AppColors.creditCard, () { Navigator.pop(ctx); context.push('/credit-cards'); }),
+                            _buildMenuItem(ctx, 'Loans', LucideIcons.landmark, AppColors.loan, () { Navigator.pop(ctx); context.push('/loans'); }),
+                            _buildMenuItem(ctx, 'Budgets', LucideIcons.pieChart, AppColors.warning, () { Navigator.pop(ctx); context.push('/budgets'); }),
+                            _buildMenuItem(ctx, 'Goals', LucideIcons.target, AppColors.income, () { Navigator.pop(ctx); context.push('/goals'); }),
+                            _buildMenuItem(ctx, 'Categories', LucideIcons.tag, AppColors.primary, () { Navigator.pop(ctx); context.push('/categories'); }),
+                            _buildMenuItem(ctx, 'Invest', LucideIcons.trendingUp, AppColors.transfer, () { Navigator.pop(ctx); context.push('/investments'); }),
+                            _buildMenuItem(ctx, 'Calendar', LucideIcons.calendar, AppColors.accent, () { Navigator.pop(ctx); context.push('/recurring'); }),
+                            _buildMenuItem(ctx, 'Reports', LucideIcons.barChart3, AppColors.income, () { Navigator.pop(ctx); context.push('/reports'); }),
+                            _buildMenuItem(ctx, 'Net Worth', LucideIcons.wallet, AppColors.transfer, () { Navigator.pop(ctx); context.push('/net-worth'); }),
+                            _buildMenuItem(ctx, 'Analytics', LucideIcons.lineChart, AppColors.accent, () { Navigator.pop(ctx); context.push('/analytics'); }),
                             _buildMenuItem(ctx, 'Import', LucideIcons.fileSpreadsheet, AppColors.income, () { Navigator.pop(ctx); CsvImportModal.show(ctx); }),
-                            _buildMenuItem(ctx, 'Settings', LucideIcons.settings, AppColors.textSecondary, () { Navigator.pop(ctx); context.go('/settings'); }),
+                            _buildMenuItem(ctx, 'Settings', LucideIcons.settings, AppColors.textSecondary, () { Navigator.pop(ctx); context.push('/settings'); }),
                           ],
                         );
                       },
@@ -207,6 +227,21 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Wraps the shell so a system-back gesture from a `push`ed secondary screen
+  /// pops normally, from a stray root-level screen goes Home, and from a root
+  /// tab is handed to the OS (exit) — see [backTarget].
+  Widget _guardBack(BuildContext context, String location, Widget child) {
+    final target = backTarget(location, GoRouter.of(context).canPop());
+    return PopScope(
+      canPop: target == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || target == null || !context.mounted) return;
+        context.go(target);
+      },
+      child: child,
     );
   }
 
@@ -274,7 +309,7 @@ class _MainShellState extends State<MainShell> {
     ];
 
     if (isLargeScreen) {
-      return Scaffold(
+      return _guardBack(context, location, Scaffold(
         backgroundColor: AppColors.background,
         body: Row(
           children: [
@@ -347,10 +382,10 @@ class _MainShellState extends State<MainShell> {
             ),
           ],
         ),
-      );
+      ));
     }
 
-    return Scaffold(
+    return _guardBack(context, location, Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
         children: [
@@ -395,7 +430,7 @@ class _MainShellState extends State<MainShell> {
         ],
       ),
       bottomNavigationBar: _buildBottomNav(context, selectedIndex, isNotes, location),
-    );
+    ));
   }
 
   Widget? _buildBottomNav(BuildContext context, int selectedIndex, bool isNotes, String location) {

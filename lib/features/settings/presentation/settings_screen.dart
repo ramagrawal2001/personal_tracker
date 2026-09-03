@@ -98,7 +98,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: Text(user?.email ?? 'Not signed in', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
                 subtitle: Text('Local Encrypted & Cloud Synced', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                 trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
-                onTap: () => context.go('/profile'),
+                onTap: () => context.push('/profile'),
               ),
             );
           }),
@@ -386,11 +386,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           AppCard(
             child: Column(
               children: [
-                _legalTile('Privacy Policy', LucideIcons.shield, () => context.go('/privacy-policy')),
+                _legalTile('Privacy Policy', LucideIcons.shield, () => context.push('/privacy-policy')),
                 Divider(color: AppColors.border, height: 1),
-                _legalTile('Terms & Conditions', LucideIcons.fileText, () => context.go('/terms')),
+                _legalTile('Terms & Conditions', LucideIcons.fileText, () => context.push('/terms')),
                 Divider(color: AppColors.border, height: 1),
-                _legalTile('Financial Analytics', LucideIcons.lineChart, () => context.go('/analytics')),
+                _legalTile('Financial Analytics', LucideIcons.lineChart, () => context.push('/analytics')),
               ],
             ),
           ),
@@ -417,7 +417,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     title: Text('Super Admin Panel', style: TextStyle(color: AppColors.expense, fontWeight: FontWeight.bold, fontSize: 14)),
                     subtitle: Text('Platform telemetry & user overview', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                     trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
-                    onTap: () => context.go('/admin'),
+                    onTap: () => context.push('/admin'),
                   ),
                 ),
               ],

@@ -88,7 +88,7 @@ class DashboardScreen extends ConsumerWidget {
                       netWorth: financeState.netWorth,
                       totalAssets: financeState.totalAssets,
                       totalLiabilities: financeState.totalLiabilities,
-                      onTap: () => context.go('/net-worth'),
+                      onTap: () => context.push('/net-worth'),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -142,7 +142,7 @@ class DashboardScreen extends ConsumerWidget {
                         Expanded(
                           child: UpcomingPaymentsWidget(
                             upcomingPayments: financeState.recurringPayments,
-                            onViewAll: () => context.go('/recurring'),
+                            onViewAll: () => context.push('/recurring'),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -157,7 +157,7 @@ class DashboardScreen extends ConsumerWidget {
                   ] else ...[
                     UpcomingPaymentsWidget(
                       upcomingPayments: financeState.recurringPayments,
-                      onViewAll: () => context.go('/recurring'),
+                      onViewAll: () => context.push('/recurring'),
                     ),
                     const SizedBox(height: 20),
                     RecentTransactionsWidget(
