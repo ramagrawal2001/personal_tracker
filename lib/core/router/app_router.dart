@@ -45,19 +45,43 @@ bool _isAdmin(AuthState authState) {
   return user.userMetadata?['app_role'] == 'admin' || user.appMetadata['app_role'] == 'admin';
 }
 
+/// Routes reachable without a session.
+const _publicPaths = <String>{
+  '/splash', '/login', '/forgot-password', '/privacy-policy', '/terms',
+};
+
+/// Bridges [authNotifierProvider] changes to go_router so `redirect` re-runs
+/// the moment auth state flips (sign-in, sign-out, token-refresh failure).
+class _AuthRefresh extends ChangeNotifier {
+  _AuthRefresh(Ref ref) {
+    ref.listen(authNotifierProvider, (_, __) => notifyListeners());
+  }
+}
+
 /// Built via a provider (rather than as a bare top-level constant) so the
-/// `/admin` guard below can read live auth state through [ref] on every
-/// navigation attempt, instead of only hiding the entry point in the UI.
+/// guard below can read live auth state through [ref] on every navigation
+/// attempt, instead of only hiding the entry point in the UI.
 final appRouterProvider = Provider<GoRouter>((ref) {
+  final refresh = _AuthRefresh(ref);
+  ref.onDispose(refresh.dispose);
   return GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/splash',
+  refreshListenable: refresh,
   redirect: (context, state) {
-    if (state.matchedLocation == '/admin') {
-      final authState = ref.read(authNotifierProvider);
-      if (!authState.isAuthenticated) return '/login';
-      if (!_isAdmin(authState)) return '/';
-    }
+    final auth = ref.read(authNotifierProvider);
+    final loc = state.matchedLocation;
+    final isPublic = _publicPaths.contains(loc);
+
+    // Hold on /splash until the session-restore probe has finished.
+    if (!auth.isRestored) return loc == '/splash' ? null : '/splash';
+
+    // No valid token → only public routes are reachable.
+    if (!auth.isAuthenticated) return isPublic ? null : '/login';
+
+    // Authenticated: keep the user out of the pre-auth screens.
+    if (loc == '/splash' || loc == '/login') return '/';
+    if (loc == '/admin' && !_isAdmin(auth)) return '/';
     return null;
   },
   routes: [

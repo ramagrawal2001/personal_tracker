@@ -85,13 +85,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier()
       : super(
           AuthState(
-            isAuthenticated: SupabaseService.currentUser != null,
-            user: SupabaseService.currentUser,
+            // Authenticated == a live Supabase session (valid access token).
+            isAuthenticated: SupabaseService.hasValidSession,
+            user: SupabaseService.currentSession?.user,
             isRestored: false,
           ),
         ) {
     _init();
   }
+
+  /// Debug-only: a demo/test account is active locally (no Supabase session).
+  /// Release builds never set this, so authentication there is purely
+  /// session-token driven.
+  bool _demoSessionActive = false;
 
   void _init() {
     _listenToSupabase();
@@ -114,7 +120,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
             user: session.user,
             isRestored: true,
           );
-        } else if (data.event == AuthChangeEvent.signedOut) {
+        } else if (!_demoSessionActive &&
+            (data.event == AuthChangeEvent.signedOut ||
+                data.event == AuthChangeEvent.tokenRefreshed)) {
+          // Session is null on signedOut, or on a tokenRefreshed that failed →
+          // force sign-out so the router bounces to /login and nothing runs
+          // without a token. (A live debug demo session is left alone.)
           _clearPersistedSession();
           state = AuthState(isAuthenticated: false, isRestored: true);
         }
@@ -129,46 +140,55 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _restoreCompleter = Completer<void>();
 
     try {
-      // 1. Check active Supabase current user
-      final currentSbUser = SupabaseService.currentUser;
-      if (currentSbUser != null) {
+      // 1. A live Supabase session (token) is the only real authentication.
+      //    supabase_flutter restores + auto-refreshes it from secure storage;
+      //    if the refresh token is dead, currentSession is null here.
+      final session = SupabaseService.currentSession;
+      if (session != null) {
         await _persistSession(
-          email: currentSbUser.email ?? '',
-          userId: currentSbUser.id,
-          name: currentSbUser.userMetadata?['full_name'] as String?,
+          email: session.user.email ?? '',
+          userId: session.user.id,
+          name: session.user.userMetadata?['full_name'] as String?,
         );
         state = state.copyWith(
           isAuthenticated: true,
-          user: currentSbUser,
+          user: session.user,
           isRestored: true,
         );
         _restoreCompleter?.complete();
         return;
       }
 
-      // 2. Check local SharedPreferences session
+      // 2. Local SharedPreferences fallback — ONLY for debug-build demo
+      //    accounts. A real user with a stale flag but no session is NOT
+      //    authenticated; clear the flag so they land on /login.
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getBool(_kSessionIsLoggedIn) ?? false;
       final savedEmail = prefs.getString(_kSessionUserEmail);
       final savedId = prefs.getString(_kSessionUserId);
       final savedName = prefs.getString(_kSessionUserName);
 
-      if (isLoggedIn && savedEmail != null && savedEmail.isNotEmpty) {
-        final restoredUser = User(
-          id: savedId ?? 'user_${savedEmail.hashCode}',
-          appMetadata: const {},
-          userMetadata: {'full_name': savedName ?? ''},
-          aud: 'authenticated',
-          email: savedEmail,
-          createdAt: DateTime.now().toIso8601String(),
-        );
+      final isDemo = kDebugMode &&
+          savedEmail != null &&
+          _demoAccounts.containsKey(savedEmail.trim().toLowerCase());
 
+      if (isLoggedIn && isDemo) {
+        _demoSessionActive = true;
         state = state.copyWith(
           isAuthenticated: true,
-          user: restoredUser,
+          user: User(
+            id: savedId ?? 'user_${savedEmail.hashCode}',
+            appMetadata: const {},
+            userMetadata: {'full_name': savedName ?? ''},
+            aud: 'authenticated',
+            email: savedEmail,
+            createdAt: DateTime.now().toIso8601String(),
+          ),
           isRestored: true,
         );
       } else {
+        if (isLoggedIn) await _clearPersistedSession();
+        _demoSessionActive = false;
         state = state.copyWith(
           isAuthenticated: false,
           isRestored: true,
@@ -215,12 +235,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   void clearError() => state = state.copyWith(errorMessage: null);
 
-  /// Explicitly activates and persists an authenticated user session (e.g. after Resend OTP verification)
+  /// Debug-only local sign-in for demo/test accounts. Real authentication must
+  /// go through [signIn] / [signUp] and produce a Supabase session; in release
+  /// builds this is a no-op.
   Future<void> activateSession({
     required String email,
     String? userId,
     String? name,
   }) async {
+    if (!kDebugMode) return;
     final uid = userId ?? 'user_${email.trim().toLowerCase().hashCode}';
     final user = User(
       id: uid,
@@ -253,6 +276,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     // ── Demo / test bypass (debug builds only) ──────────────────────────────
     if (kDebugMode && _demoAccounts[normalised] == password) {
       await Future.delayed(const Duration(milliseconds: 300));
+      _demoSessionActive = true;
       await activateSession(
         email: normalised,
         userId: 'demo_${normalised.hashCode}',
@@ -262,30 +286,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
     // ───────────────────────────────────────────────────────────────────────
 
-    try {
-      if (SupabaseService.isInitialized) {
-        final response = await SupabaseService.client.auth.signInWithPassword(
-          email: email,
-          password: password,
-        );
-        if (response.user != null) {
-          await _persistSession(
-            email: response.user!.email ?? email,
-            userId: response.user!.id,
-            name: response.user!.userMetadata?['full_name'] as String?,
-          );
-          state = state.copyWith(
-            isAuthenticated: true,
-            user: response.user,
-            isLoading: false,
-          );
-          return true;
-        }
-      }
+    if (!SupabaseService.isInitialized) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Can\'t reach the server. Check your connection and try again.',
+      );
+      return false;
+    }
 
-      // If Supabase not initialized or returned null, activate session locally
-      await activateSession(email: email);
-      return true;
+    try {
+      final response = await SupabaseService.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      // A session (token) is mandatory — a user without one is not signed in.
+      if (response.session != null) {
+        state = state.copyWith(
+          isAuthenticated: true,
+          user: response.session!.user,
+          isLoading: false,
+        );
+        return true;
+      }
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Email not verified. Check your inbox, then sign in.',
+      );
+      return false;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: _friendlyError(e));
       return false;
@@ -294,31 +321,40 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> signUp(String email, String password, {String? name}) async {
     state = state.copyWith(isLoading: true, errorMessage: null);
+
+    if (!SupabaseService.isInitialized) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Can\'t reach the server. Check your connection and try again.',
+      );
+      return false;
+    }
+
     try {
-      if (SupabaseService.isInitialized) {
-        final response = await SupabaseService.client.auth.signUp(
-          email: email,
-          password: password,
-          data: name != null ? {'full_name': name} : null,
+      final response = await SupabaseService.client.auth.signUp(
+        email: email,
+        password: password,
+        data: name != null ? {'full_name': name} : null,
+      );
+
+      // Signed in only if Supabase returned a real session. When the project
+      // has "Confirm email" on, signUp yields a user but no session — the
+      // account exists, but there is no token, so the user is NOT authenticated.
+      if (response.session != null) {
+        state = state.copyWith(
+          isAuthenticated: true,
+          user: response.session!.user,
+          isLoading: false,
         );
-        if (response.user != null) {
-          await _persistSession(
-            email: response.user!.email ?? email,
-            userId: response.user!.id,
-            name: name,
-          );
-          state = state.copyWith(
-            isAuthenticated: true,
-            user: response.user,
-            isLoading: false,
-          );
-          return true;
-        }
+        return true;
       }
 
-      // If Supabase is offline or email confirmation bypass, activate session locally
-      await activateSession(email: email, name: name);
-      return true;
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage:
+            'Account created. Please confirm your email from your inbox, then sign in.',
+      );
+      return false;
     } catch (e) {
       state = state.copyWith(isLoading: false, errorMessage: _friendlyError(e));
       return false;
@@ -333,6 +369,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       debugPrint('AuthNotifier: Supabase sign-out failed (clearing local session anyway): $e');
     }
+    _demoSessionActive = false;
     await _clearPersistedSession();
     state = AuthState(isAuthenticated: false, isRestored: true);
   }

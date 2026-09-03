@@ -106,34 +106,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           onVerified: () async {
             final authNotifier = ref.read(authNotifierProvider.notifier);
 
-            // 3. Authenticate / Register user & persist session after successful Resend OTP verification
-            try {
-              final upOk = await authNotifier.signUp(email, password, name: name.isNotEmpty ? name : null);
-              if (!upOk || !ref.read(authNotifierProvider).isAuthenticated) {
-                final inOk = await authNotifier.signIn(email, password);
-                if (!inOk || !ref.read(authNotifierProvider).isAuthenticated) {
-                  await authNotifier.activateSession(email: email, name: name.isNotEmpty ? name : null);
-                }
-              }
-            } catch (_) {
-              await authNotifier.activateSession(email: email, name: name.isNotEmpty ? name : null);
+            // 3. Register (or sign in) with Supabase. Entry requires a real
+            //    session token — no local fallback.
+            var ok = await authNotifier.signUp(email, password, name: name.isNotEmpty ? name : null);
+            if (!ok || !ref.read(authNotifierProvider).isAuthenticated) {
+              ok = await authNotifier.signIn(email, password);
+            }
+
+            if (!mounted) return;
+
+            if (!ok || !ref.read(authNotifierProvider).isAuthenticated) {
+              final msg = ref.read(authNotifierProvider).errorMessage
+                  ?? 'Could not complete sign-in. Please try again.';
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(msg),
+                  backgroundColor: AppColors.expense,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              return; // stay on the OTP screen; do NOT enter the app
             }
 
             final userId = ref.read(authNotifierProvider).user?.id
                 ?? 'user_${email.trim().toLowerCase().hashCode}';
             ref.read(financeNotifierProvider.notifier).clearForNewUser(userId);
 
-            if (mounted) {
-              Navigator.pop(context); // pop OTP screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Email verified successfully! Welcome to Aspyric.'),
-                  backgroundColor: AppColors.income,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              context.go('/');
-            }
+            Navigator.pop(context); // pop OTP screen
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Email verified successfully! Welcome to Aspyric.'),
+                backgroundColor: AppColors.income,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            context.go('/');
           },
         ),
       ),
