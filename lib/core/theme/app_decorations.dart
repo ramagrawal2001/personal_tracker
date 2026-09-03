@@ -64,7 +64,7 @@ class AppDecorations {
           colors: colors ??
               [
                 AppColors.surface,
-                const Color(0xFF1E1B4B),
+                AppColors.heroGradientMid,
                 AppColors.background,
               ],
           begin: Alignment.topLeft,

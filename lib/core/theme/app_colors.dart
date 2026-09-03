@@ -26,6 +26,11 @@ class AppColors {
   static Color get cardBg => _p(0xFF1E293B, 0xFFFFFFFF);
   static Color get cardBgElevated => _p(0xFF26334D, 0xFFF1F4FC);
 
+  /// Middle stop of [AppDecorations.surfaceGradient]. Dark = deep indigo for a
+  /// white-text hero card; light = a barely-there indigo tint so the same
+  /// card stays a light surface with dark, readable text.
+  static Color get heroGradientMid => _p(0xFF1E1B4B, 0xFFEDEEFB);
+
   // Borders & Dividers
   static Color get border => _p(0xFF334155, 0xFFE2E6F1);
   static Color get borderLight => _p(0xFF475569, 0xFFCED5E6);
