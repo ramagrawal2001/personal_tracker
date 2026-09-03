@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/l10n/app_localizations.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/palette_scope.dart';
 import 'core/theme/theme_provider.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/router/app_router.dart';
@@ -30,6 +32,21 @@ void main() {
       debugPrint('PlatformDispatcher error: $error\n$stack');
       return true;
     };
+
+    // Seed the ambient palette brightness ONCE, before the first frame paints,
+    // from the persisted theme mode (falling back to the platform brightness
+    // for System). After this, `MaterialApp.builder` is the single
+    // authoritative writer of `AppColors.brightness`.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      // Key mirrors `_kThemeKey` in core/theme/theme_provider.dart.
+      final saved = prefs.getString('app_theme_mode');
+      AppColors.brightness = switch (saved) {
+        'light' => Brightness.light,
+        'dark' => Brightness.dark,
+        _ => PlatformDispatcher.instance.platformBrightness,
+      };
+    } catch (_) {/* keep the default */}
 
     try {
       await SupabaseService.initialize();
@@ -65,36 +82,27 @@ class AspyricApp extends ConsumerWidget {
     // and starts draining the outbox once a session exists.
     ref.watch(syncServiceProvider);
 
-    // Resolve the effective brightness (System -> platform) and push it into
-    // the ambient `AppColors` palette BEFORE the widget tree under
-    // `MaterialApp` builds, so every screen's `AppColors.*` token follows the
-    // light/dark switch. `MaterialApp` also rebuilds the whole subtree when
-    // `themeMode` changes, so the tokens stay in sync on every toggle.
-    final platformBrightness =
-        MediaQuery.maybeOf(context)?.platformBrightness ??
-            WidgetsBinding.instance.platformDispatcher.platformBrightness;
-    AppColors.brightness = switch (themeMode) {
-      ThemeMode.light => Brightness.light,
-      ThemeMode.dark => Brightness.dark,
-      ThemeMode.system => platformBrightness,
-    };
-
     return MaterialApp.router(
       title: 'Aspyric',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
+      // Hard cut on theme change. `AppColors` is a static palette read at build
+      // time, so a 200ms `AnimatedTheme` crossfade would leave `Theme.of` (and
+      // therefore the palette) reporting the OLD brightness for the first
+      // ~100ms after a toggle — the "stale surface" bug. A zero-duration swap
+      // keeps the palette, the Material theme and the forced subtree rebuild
+      // below all in lock-step on a single frame.
+      themeAnimationDuration: Duration.zero,
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       routerConfig: router,
-      builder: (context, child) {
-        // Belt-and-braces: if System brightness changes while the app is
-        // open, MediaQuery here updates and re-syncs the palette.
-        AppColors.brightness = Theme.of(context).brightness;
-        return child ?? const SizedBox.shrink();
-      },
+      builder: (context, child) => PaletteScope(
+        mode: themeMode,
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }

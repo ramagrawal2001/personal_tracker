@@ -63,36 +63,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Stack(
-        children: [
-          // Background Gradient Glow Orbs
-          Positioned(
-            top: -120,
-            left: -80,
-            child: Container(
-              width: 350,
-              height: 350,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.primary.withValues(alpha: 0.18),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -100,
-            right: -80,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.income.withValues(alpha: 0.12),
-              ),
-            ),
-          ),
-
-          Center(
-            child: AnimatedBuilder(
+      body: Center(
+        child: AnimatedBuilder(
               animation: _controller,
               builder: (context, child) {
                 return Opacity(
@@ -102,26 +74,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Glassmorphism Logo Card
+                        // Clean logo tile — subtle border, one soft shadow.
                         Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(32),
-                            border: Border.all(color: AppColors.primary.withValues(alpha: 0.5), width: 2.5),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                                color: AppColors.border, width: 1),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.4),
-                                blurRadius: 30,
-                                offset: const Offset(0, 10),
+                                color: AppColors.shadow,
+                                blurRadius: 18,
+                                offset: const Offset(0, 8),
                               ),
                             ],
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(28),
+                            borderRadius: BorderRadius.circular(24),
                             child: Image.asset(
                               'assets/images/app_logo.jpg',
-                              width: 120,
-                              height: 120,
+                              width: 112,
+                              height: 112,
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -162,8 +135,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                 );
               },
             ),
-          ),
-        ],
       ),
     );
   }

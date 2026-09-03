@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/l10n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
+import '../../core/theme/theme_provider.dart';
 import '../../core/utils/responsive.dart';
 import '../transactions/presentation/quick_add_modal.dart';
 import '../import_export/presentation/csv_import_modal.dart';
@@ -31,15 +33,15 @@ String? backTarget(String currentLocation, bool canPop) {
   return '/';
 }
 
-class MainShell extends StatefulWidget {
+class MainShell extends ConsumerStatefulWidget {
   final Widget child;
   const MainShell({super.key, required this.child});
 
   @override
-  State<MainShell> createState() => _MainShellState();
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> {
   AppModule _activeModule = AppModule.finance;
   int _notesNavIndex = 0;
 
@@ -247,6 +249,14 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Safety net: `main.dart`'s `MaterialApp.builder` is the authoritative
+    // writer of `AppColors.brightness` and re-keys this subtree on every theme
+    // flip, so the shell is always rebuilt fresh. Re-sync here too (cheap, and
+    // correct because theme changes are a hard cut) before the shell's own
+    // sub-widgets read `AppColors.*`.
+    ref.watch(themeProvider);
+    AppColors.brightness = Theme.of(context).brightness;
+
     final selectedIndex = _calculateSelectedIndex(context);
     final isNotes = _activeModule == AppModule.notes;
     final location = GoRouterState.of(context).uri.path;
@@ -273,7 +283,7 @@ class _MainShellState extends State<MainShell> {
               color: AppColors.primary,
               shape: BoxShape.circle,
             ),
-            child: const Icon(LucideIcons.plus, color: Colors.white, size: 18),
+            child: Icon(LucideIcons.plus, color: AppColors.onPrimary, size: 18),
           ),
         ),
         label: const Text('Quick Add'),
@@ -402,34 +412,45 @@ class _MainShellState extends State<MainShell> {
       resizeToAvoidBottomInset: false,
       body: Column(
         children: [
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _ModuleSwitcherTab(
-                      label: AppLocalizations.of(context).home,
-                      icon: LucideIcons.trendingUp,
-                      selected: !isNotes,
-                      onTap: () => _switchModule(AppModule.finance),
-                      showLabel: true,
-                      semanticLabel: 'Switch to Finance module',
+          // Themed top bar behind the Home / Notes switcher. Explicitly painted
+          // so the status-bar region and this strip always track the active
+          // mode instead of showing a stale colour.
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: Border(
+                bottom: BorderSide(color: AppColors.border, width: 1),
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _ModuleSwitcherTab(
+                        label: AppLocalizations.of(context).home,
+                        icon: LucideIcons.trendingUp,
+                        selected: !isNotes,
+                        onTap: () => _switchModule(AppModule.finance),
+                        showLabel: true,
+                        semanticLabel: 'Switch to Finance module',
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _ModuleSwitcherTab(
-                      label: AppLocalizations.of(context).notes,
-                      icon: LucideIcons.stickyNote,
-                      selected: isNotes,
-                      onTap: () => _switchModule(AppModule.notes),
-                      showLabel: true,
-                      semanticLabel: 'Switch to Notes module',
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _ModuleSwitcherTab(
+                        label: AppLocalizations.of(context).notes,
+                        icon: LucideIcons.stickyNote,
+                        selected: isNotes,
+                        onTap: () => _switchModule(AppModule.notes),
+                        showLabel: true,
+                        semanticLabel: 'Switch to Notes module',
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -503,13 +524,13 @@ class _MainShellState extends State<MainShell> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                      color: AppColors.shadow,
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
-                child: const Icon(LucideIcons.plus, color: Colors.white, size: 22),
+                child: Icon(LucideIcons.plus, color: AppColors.onPrimary, size: 22),
               ),
             ),
             label: '',
@@ -565,7 +586,9 @@ class _ModuleSwitcherTab extends StatelessWidget {
           curve: Curves.easeInOut,
           padding: showLabel ? const EdgeInsets.symmetric(vertical: 7.5, horizontal: 8) : const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: selected ? AppColors.primary.withValues(alpha: 0.15) : AppColors.surface,
+            color: selected
+                ? AppColors.primary.withValues(alpha: 0.15)
+                : AppColors.surfaceLight,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: selected ? AppColors.primary.withValues(alpha: 0.45) : AppColors.border,

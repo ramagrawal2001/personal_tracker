@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/theme_provider.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/app_scaffold.dart';
@@ -20,6 +21,7 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final financeState = ref.watch(financeNotifierProvider);
+    final themeMode = ref.watch(themeProvider);
 
     return AppScaffold(
       title: 'Dashboard',
@@ -51,6 +53,39 @@ class DashboardScreen extends ConsumerWidget {
         ],
       ),
       actions: [
+        IconButton(
+          tooltip: switch (themeMode) {
+            ThemeMode.system => 'Theme: System (tap for Light)',
+            ThemeMode.light => 'Theme: Light (tap for Dark)',
+            ThemeMode.dark => 'Theme: Dark (tap for System)',
+          },
+          icon: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceLight,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Icon(
+              switch (themeMode) {
+                ThemeMode.system => LucideIcons.monitorSmartphone,
+                ThemeMode.light => LucideIcons.sun,
+                ThemeMode.dark => LucideIcons.moon,
+              },
+              color: AppColors.textPrimary,
+              size: 18,
+            ),
+          ),
+          onPressed: () {
+            // Cycle: System -> Light -> Dark -> System
+            final next = switch (themeMode) {
+              ThemeMode.system => ThemeMode.light,
+              ThemeMode.light => ThemeMode.dark,
+              ThemeMode.dark => ThemeMode.system,
+            };
+            ref.read(themeProvider.notifier).setTheme(next);
+          },
+        ),
         IconButton(
           icon: Container(
             padding: const EdgeInsets.all(6),

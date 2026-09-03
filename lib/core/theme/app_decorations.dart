@@ -9,6 +9,7 @@ class AppDecorations {
   static const double radiusLg = 20;
   static const double radiusXl = 24;
 
+  /// Flat surface panel: subtle 1px border, no shadow.
   static BoxDecoration card({Color? color, double radius = radiusMd}) =>
       BoxDecoration(
         color: color ?? AppColors.surface,
@@ -16,20 +17,23 @@ class AppDecorations {
         border: Border.all(color: AppColors.border),
       );
 
+  /// Raised panel: still flat-toned, lifted by ONE very soft shadow (no glow).
   static BoxDecoration cardElevated({Color? color, double radius = radiusMd}) =>
       BoxDecoration(
         color: color ?? AppColors.cardBgElevated,
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: AppColors.borderLight.withValues(alpha: 0.5)),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: AppColors.shadow,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       );
 
+  /// Branded "hero" card — a solid deep teal (mode-independent) with an
+  /// almost-imperceptible vertical sheen. White text sits on it at ~7.6:1.
   static BoxDecoration heroGradient({
     List<Color>? colors,
     double radius = radiusLg,
@@ -37,24 +41,21 @@ class AppDecorations {
       BoxDecoration(
         gradient: LinearGradient(
           colors: colors ??
-              [
-                AppColors.primary,
-                AppColors.primary.withValues(alpha: 0.85),
-                const Color(0xFF4F46E5),
-              ],
+              const [AppColors.heroSurfaceAlt, AppColors.heroSurface],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.25),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: AppColors.shadow,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       );
 
+  /// A plain surface with the faintest tonal shift — reads as one flat panel.
   static BoxDecoration surfaceGradient({
     List<Color>? colors,
     double radius = radiusLg,
@@ -62,11 +63,7 @@ class AppDecorations {
       BoxDecoration(
         gradient: LinearGradient(
           colors: colors ??
-              [
-                AppColors.surface,
-                AppColors.heroGradientMid,
-                AppColors.background,
-              ],
+              [AppColors.surface, AppColors.heroGradientMid],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
