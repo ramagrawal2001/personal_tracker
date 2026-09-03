@@ -78,6 +78,7 @@ class NoteModel {
   final List<String> labels;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool isDeleted;
 
   const NoteModel({
     required this.id,
@@ -91,6 +92,7 @@ class NoteModel {
     this.labels = const [],
     required this.createdAt,
     required this.updatedAt,
+    this.isDeleted = false,
   });
 
   bool get isEmpty => title.isEmpty && body.isEmpty && checklistItems.isEmpty;
@@ -105,6 +107,7 @@ class NoteModel {
     List<NoteChecklistItem>? checklistItems,
     List<String>? labels,
     DateTime? updatedAt,
+    bool? isDeleted,
   }) {
     return NoteModel(
       id: id,
@@ -118,6 +121,7 @@ class NoteModel {
       labels: labels ?? this.labels,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 }

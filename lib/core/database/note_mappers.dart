@@ -23,6 +23,7 @@ extension NoteEntryMapper on NoteEntry {
       labels: rawLabels.cast<String>(),
       createdAt: createdAt,
       updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -41,6 +42,8 @@ extension NoteModelMapper on NoteModel {
       labelsJson: Value(jsonEncode(labels)),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }

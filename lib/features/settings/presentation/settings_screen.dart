@@ -8,6 +8,8 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/sync/sync_service.dart';
+import '../../../core/sync/sync_status.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
@@ -97,6 +99,65 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text('Local Encrypted & Cloud Synced', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                 trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
                 onTap: () => context.go('/profile'),
+              ),
+            );
+          }),
+          const SizedBox(height: 18),
+
+          // ── Cloud Sync ───────────────────────────────────────────────
+          const SectionLabel(label: 'Cloud Sync'),
+          Consumer(builder: (context, ref, _) {
+            final sync = ref.watch(syncStatusProvider);
+            final online = sync.isOnline;
+            final parts = <String>[
+              online ? 'Online' : 'Offline',
+              '${sync.pendingCount} pending',
+            ];
+            if (sync.lastSyncTime != null) {
+              final t = sync.lastSyncTime!;
+              parts.add('last ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}');
+            }
+            return AppCard(
+              child: Column(
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: AppDecorations.iconBadge(online ? AppColors.income : AppColors.textMuted),
+                      child: Icon(LucideIcons.refreshCw,
+                          color: online ? AppColors.income : AppColors.textMuted, size: 18),
+                    ),
+                    title: Text('Sync Status',
+                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                    subtitle: Text(parts.join(' • '),
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    trailing: sync.isSyncing
+                        ? const SizedBox(
+                            width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : TextButton(
+                            onPressed: () => ref.read(syncServiceProvider).flushNow(),
+                            child: Text('Sync now',
+                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                  ),
+                  if (sync.deadLetterCount > 0) ...[
+                    Divider(color: AppColors.border, height: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          Icon(LucideIcons.alertTriangle, color: AppColors.expense, size: 14),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text('${sync.deadLetterCount} item(s) failed to sync and were parked',
+                                style: TextStyle(color: AppColors.expense, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
             );
           }),

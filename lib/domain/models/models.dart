@@ -11,6 +11,8 @@ class AccountModel {
   final String currency;
   final bool isActive;
   final DateTime createdAt;
+  final DateTime updatedAt;
+  final bool isDeleted;
 
   AccountModel({
     required this.id,
@@ -23,7 +25,9 @@ class AccountModel {
     this.currency = 'INR',
     this.isActive = true,
     required this.createdAt,
-  });
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 
   AccountModel copyWith({
     String? name,
@@ -33,6 +37,8 @@ class AccountModel {
     double? openingBalance,
     double? calculatedBalance,
     bool? isActive,
+    DateTime? updatedAt,
+    bool? isDeleted,
   }) {
     return AccountModel(
       id: id,
@@ -45,6 +51,8 @@ class AccountModel {
       currency: currency,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 }
@@ -56,6 +64,8 @@ class CategoryModel {
   final String type; // 'income' or 'expense'
   final String icon;
   final String colorHex;
+  final DateTime updatedAt;
+  final bool isDeleted;
 
   CategoryModel({
     required this.id,
@@ -64,7 +74,9 @@ class CategoryModel {
     required this.type,
     required this.icon,
     this.colorHex = '0xFF6366F1',
-  });
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 }
 
 class TransactionSplit {
@@ -77,6 +89,18 @@ class TransactionSplit {
     required this.amount,
     this.note,
   });
+
+  Map<String, dynamic> toMap() => {
+        'categoryId': categoryId,
+        'amount': amount,
+        'note': note,
+      };
+
+  factory TransactionSplit.fromMap(Map<String, dynamic> m) => TransactionSplit(
+        categoryId: m['categoryId'] as String,
+        amount: (m['amount'] as num).toDouble(),
+        note: m['note'] as String?,
+      );
 }
 
 enum SyncStatus {
@@ -115,6 +139,8 @@ class TransactionModel {
   final String? investmentId;
   final SyncStatus syncStatus;
   final DateTime createdAt;
+  final DateTime updatedAt;
+  final bool isDeleted;
 
   TransactionModel({
     required this.id,
@@ -135,7 +161,9 @@ class TransactionModel {
     this.investmentId,
     this.syncStatus = SyncStatus.synced,
     required this.createdAt,
-  });
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 
   TransactionModel copyWith({
     String? id,
@@ -156,6 +184,8 @@ class TransactionModel {
     String? investmentId,
     SyncStatus? syncStatus,
     DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isDeleted,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -176,6 +206,8 @@ class TransactionModel {
       investmentId: investmentId ?? this.investmentId,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 }
@@ -296,6 +328,9 @@ class CardModel {
   final double? balance;        // Current balance (prepaid / forex cards)
   final String? currency;       // For forex cards (USD, EUR, etc.)
 
+  final DateTime updatedAt;
+  final bool isDeleted;
+
   double get availableLimit => creditLimit > 0 ? creditLimit - currentOutstanding : 0;
   double get utilizationPercentage => creditLimit > 0 ? (currentOutstanding / creditLimit) * 100 : 0;
   double get minimumDue => currentOutstanding * 0.05;
@@ -337,7 +372,9 @@ class CardModel {
     this.linkedAccountId,
     this.balance,
     this.currency,
-  });
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 
   CardModel copyWith({
     CardType? cardType,
@@ -358,6 +395,8 @@ class CardModel {
     String? linkedAccountId,
     double? balance,
     String? currency,
+    DateTime? updatedAt,
+    bool? isDeleted,
   }) {
     return CardModel(
       id: id,
@@ -379,6 +418,8 @@ class CardModel {
       linkedAccountId: linkedAccountId ?? this.linkedAccountId,
       balance: balance ?? this.balance,
       currency: currency ?? this.currency,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 }
@@ -398,6 +439,8 @@ class LoanModel {
   final int dueDay;
   final DateTime startDate;
   final int remainingTenureMonths;
+  final DateTime updatedAt;
+  final bool isDeleted;
 
   LoanModel({
     required this.id,
@@ -410,7 +453,9 @@ class LoanModel {
     required this.dueDay,
     required this.startDate,
     required this.remainingTenureMonths,
-  });
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 }
 
 class BudgetModel {
@@ -419,6 +464,8 @@ class BudgetModel {
   final double monthlyLimit;
   final String monthYear; // e.g., '2026-08'
   final double spentAmount;
+  final DateTime updatedAt;
+  final bool isDeleted;
 
   double get remaining => monthlyLimit - spentAmount;
   double get percentage => monthlyLimit > 0 ? (spentAmount / monthlyLimit).clamp(0.0, 1.0) : 0.0;
@@ -429,7 +476,9 @@ class BudgetModel {
     required this.monthlyLimit,
     required this.monthYear,
     required this.spentAmount,
-  });
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 }
 
 class RecurringPaymentModel {
@@ -441,6 +490,8 @@ class RecurringPaymentModel {
   final String? categoryId;
   final String? accountId;
   final bool isAutoPay;
+  final DateTime updatedAt;
+  final bool isDeleted;
 
   RecurringPaymentModel({
     required this.id,
@@ -451,7 +502,9 @@ class RecurringPaymentModel {
     this.categoryId,
     this.accountId,
     this.isAutoPay = false,
-  });
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 }
 
 class InvestmentModel {
@@ -462,6 +515,8 @@ class InvestmentModel {
   final double currentValue;
   final double monthlySipAmount;
   final int sipDay;
+  final DateTime updatedAt;
+  final bool isDeleted;
 
   double get netReturns => currentValue - investedAmount;
   double get returnsPercentage => investedAmount > 0 ? ((currentValue - investedAmount) / investedAmount) * 100 : 0.0;
@@ -474,7 +529,9 @@ class InvestmentModel {
     required this.currentValue,
     this.monthlySipAmount = 0.0,
     this.sipDay = 1,
-  });
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 }
 
 class GoalModel {
@@ -485,6 +542,8 @@ class GoalModel {
   final DateTime? targetDate;
   final String icon;
   final String colorHex;
+  final DateTime updatedAt;
+  final bool isDeleted;
 
   double get progressPercentage => targetAmount > 0 ? (currentSavedAmount / targetAmount).clamp(0.0, 1.0) : 0.0;
   double get remainingAmount => (targetAmount - currentSavedAmount) > 0 ? (targetAmount - currentSavedAmount) : 0.0;
@@ -497,7 +556,9 @@ class GoalModel {
     this.targetDate,
     this.icon = 'target',
     this.colorHex = '0xFF6366F1',
-  });
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
 
   GoalModel copyWith({
     String? id,
@@ -507,6 +568,8 @@ class GoalModel {
     DateTime? targetDate,
     String? icon,
     String? colorHex,
+    DateTime? updatedAt,
+    bool? isDeleted,
   }) {
     return GoalModel(
       id: id ?? this.id,
@@ -516,6 +579,8 @@ class GoalModel {
       targetDate: targetDate ?? this.targetDate,
       icon: icon ?? this.icon,
       colorHex: colorHex ?? this.colorHex,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 }

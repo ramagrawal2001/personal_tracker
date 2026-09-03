@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -5,6 +6,8 @@ import '../../domain/models/note_model.dart';
 import '../database/app_database.dart';
 import '../database/finance_repository.dart' show appDatabaseProvider;
 import '../database/note_mappers.dart';
+import '../sync/cloud_mappers.dart';
+import '../sync/outbox_write_through.dart';
 
 const _uuid = Uuid();
 
@@ -20,8 +23,11 @@ class NotesState {
       NotesState(notes: notes ?? this.notes);
 }
 
-class NotesNotifier extends StateNotifier<NotesState> {
+class NotesNotifier extends StateNotifier<NotesState> with OutboxWriteThrough {
   final AppDatabase _db;
+
+  @override
+  AppDatabase get db => _db;
 
   NotesNotifier(this._db) : super(NotesState()) {
     _loadFromDb();
@@ -29,7 +35,9 @@ class NotesNotifier extends StateNotifier<NotesState> {
 
   Future<void> _loadFromDb() async {
     try {
-      final notes = (await _db.select(_db.notes).get()).map((e) => e.toModel()).toList()
+      final notes = (await (_db.select(_db.notes)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList()
         ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       state = NotesState(notes: notes);
     } catch (e) {
@@ -39,7 +47,8 @@ class NotesNotifier extends StateNotifier<NotesState> {
 
   void _persist(NoteModel note) async {
     try {
-      await _db.into(_db.notes).insertOnConflictUpdate(note.toCompanion());
+      await writeThrough('notes', note.id,
+          () => _db.into(_db.notes).insertOnConflictUpdate(note.toCompanion()));
     } catch (e) {
       debugPrint('NotesNotifier: failed to persist note: $e');
     }
@@ -66,10 +75,46 @@ class NotesNotifier extends StateNotifier<NotesState> {
   void deleteNote(String id) async {
     state = state.copyWith(notes: state.notes.where((n) => n.id != id).toList());
     try {
-      await (_db.delete(_db.notes)..where((n) => n.id.equals(id))).go();
+      final now = DateTime.now();
+      await deleteThrough('notes', id, () => (_db.update(_db.notes)..where((n) => n.id.equals(id)))
+          .write(NotesCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
     } catch (e) {
       debugPrint('NotesNotifier: failed to delete note: $e');
     }
+  }
+
+  // ── Remote-apply (Phase 2/3 consumers; guarded so writes never re-enqueue) ──
+
+  void applyRemoteUpsert(Map<String, dynamic> row) {
+    applyingRemote = true;
+    try {
+      final note = NoteCloud.fromCloud(row);
+      _fireAndForget(() => _db.into(_db.notes).insertOnConflictUpdate(note.toCompanion()));
+      final next = state.notes.where((n) => n.id != note.id).toList();
+      if (!note.isDeleted) next.insert(0, note);
+      next.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      state = state.copyWith(notes: next);
+    } finally {
+      applyingRemote = false;
+    }
+  }
+
+  void applyRemoteDelete(String id) {
+    applyingRemote = true;
+    try {
+      state = state.copyWith(notes: state.notes.where((n) => n.id != id).toList());
+      final now = DateTime.now();
+      _fireAndForget(() => (_db.update(_db.notes)..where((n) => n.id.equals(id)))
+          .write(NotesCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+    } finally {
+      applyingRemote = false;
+    }
+  }
+
+  void _fireAndForget(Future<void> Function() op) {
+    op().catchError((Object e) {
+      debugPrint('NotesNotifier: remote-apply write failed: $e');
+    });
   }
 
   void togglePin(String id) {

@@ -1,20 +1,23 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../constants/app_constants.dart';
 import '../utils/currency_formatter.dart';
+import '../sync/cloud_mappers.dart';
+import '../sync/outbox_write_through.dart';
 import '../../domain/models/models.dart';
 import 'app_database.dart';
 import 'finance_mappers.dart';
 
 const _uuid = Uuid();
 
-const _kEmergencyBuffer = 'finance_emergency_buffer';
-const _kCurrencySymbol = 'finance_currency_symbol';
-const _kBiometricEnabled = 'finance_biometric_enabled';
-const _kRoundUpEnabled = 'finance_round_up_enabled';
-const _kAutoBackupEnabled = 'finance_auto_backup_enabled';
+const _kEmergencyBuffer = kPrefEmergencyBuffer;
+const _kCurrencySymbol = kPrefCurrencySymbol;
+const _kBiometricEnabled = kPrefBiometricEnabled;
+const _kRoundUpEnabled = kPrefRoundUpEnabled;
+const _kAutoBackupEnabled = kPrefAutoBackupEnabled;
 
 class FinanceState {
   final List<AccountModel> accounts;
@@ -329,8 +332,11 @@ class FinanceState {
 
 }
 
-class FinanceNotifier extends StateNotifier<FinanceState> {
+class FinanceNotifier extends StateNotifier<FinanceState> with OutboxWriteThrough {
   final AppDatabase _db;
+
+  @override
+  AppDatabase get db => _db;
 
   /// [autoLoad] is disabled in unit tests so state stays purely in-memory and
   /// synchronous, without racing an async DB read against the test body.
@@ -379,16 +385,35 @@ class FinanceNotifier extends StateNotifier<FinanceState> {
   /// settings (SharedPreferences) at startup so nothing is lost on restart.
   Future<void> _loadPersistedState() async {
     try {
-      final accounts = (await _db.select(_db.accounts).get()).map((e) => e.toModel()).toList();
-      var categories = (await _db.select(_db.categories).get()).map((e) => e.toModel()).toList();
-      final transactions = (await _db.select(_db.transactions).get()).map((e) => e.toModel()).toList()
+      final accounts = (await (_db.select(_db.accounts)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
+      var categories = (await (_db.select(_db.categories)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
+      final transactions = (await (_db.select(_db.transactions)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList()
         ..sort((a, b) => b.date.compareTo(a.date));
-      final creditCards = (await _db.select(_db.creditCards).get()).map((e) => e.toModel()).toList();
-      final loans = (await _db.select(_db.loans).get()).map((e) => e.toModel()).toList();
-      final budgets = (await _db.select(_db.budgets).get()).map((e) => e.toModel()).toList();
-      final recurringPayments = (await _db.select(_db.recurringPayments).get()).map((e) => e.toModel()).toList();
-      final investments = (await _db.select(_db.investments).get()).map((e) => e.toModel()).toList();
-      final goals = (await _db.select(_db.goals).get()).map((e) => e.toModel()).toList();
+      final creditCards = (await (_db.select(_db.creditCards)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
+      final loans = (await (_db.select(_db.loans)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
+      final budgets = (await (_db.select(_db.budgets)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
+      final recurringPayments =
+          (await (_db.select(_db.recurringPayments)..where((t) => t.isDeleted.equals(false))).get())
+              .map((e) => e.toModel())
+              .toList();
+      final investments = (await (_db.select(_db.investments)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
+      final goals = (await (_db.select(_db.goals)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
 
       if (categories.isEmpty) {
         categories = _defaultCategories();
@@ -553,24 +578,39 @@ if (creditCardId != null) {
       investments: updatedInvestments,
     );
 
-    _fireAndForget(() => _db.into(_db.transactions).insertOnConflictUpdate(newTx.toCompanion()), 'transaction');
+    _fireAndForget(
+        () => writeThrough('transactions', newTx.id,
+            () => _db.into(_db.transactions).insertOnConflictUpdate(newTx.toCompanion())),
+        'transaction');
 
     if (creditCardId != null) {
       final idx = updatedCards.indexWhere((c) => c.id == creditCardId);
       if (idx != -1) {
-        _fireAndForget(() => _db.into(_db.creditCards).insertOnConflictUpdate(updatedCards[idx].toCompanion()), 'credit card outstanding');
+        final card = updatedCards[idx];
+        _fireAndForget(
+            () => writeThrough('credit_cards', card.id,
+                () => _db.into(_db.creditCards).insertOnConflictUpdate(card.toCompanion())),
+            'credit card outstanding');
       }
     }
     if (type == TransactionType.loanPayment && loanId != null) {
       final idx = updatedLoans.indexWhere((l) => l.id == loanId);
       if (idx != -1) {
-        _fireAndForget(() => _db.into(_db.loans).insertOnConflictUpdate(updatedLoans[idx].toCompanion()), 'loan outstanding');
+        final loan = updatedLoans[idx];
+        _fireAndForget(
+            () => writeThrough('loans', loan.id,
+                () => _db.into(_db.loans).insertOnConflictUpdate(loan.toCompanion())),
+            'loan outstanding');
       }
     }
     if (type == TransactionType.investment && investmentId != null) {
       final idx = updatedInvestments.indexWhere((i) => i.id == investmentId);
       if (idx != -1) {
-        _fireAndForget(() => _db.into(_db.investments).insertOnConflictUpdate(updatedInvestments[idx].toCompanion()), 'investment update');
+        final inv = updatedInvestments[idx];
+        _fireAndForget(
+            () => writeThrough('investments', inv.id,
+                () => _db.into(_db.investments).insertOnConflictUpdate(inv.toCompanion())),
+            'investment update');
       }
     }
   }
@@ -587,7 +627,10 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.transactions).insertOnConflictUpdate(updated!.toCompanion()), 'transaction sync status');
+      _fireAndForget(
+          () => writeThrough('transactions', updated!.id,
+              () => _db.into(_db.transactions).insertOnConflictUpdate(updated!.toCompanion())),
+          'transaction sync status');
     }
   }
 
@@ -666,12 +709,21 @@ if (creditCardId != null) {
       loans: updatedLoans,
     );
 
-    _fireAndForget(() => _db.into(_db.transactions).insertOnConflictUpdate(updated.toCompanion()), 'transaction update');
+    _fireAndForget(
+        () => writeThrough('transactions', updated.id,
+            () => _db.into(_db.transactions).insertOnConflictUpdate(updated.toCompanion())),
+        'transaction update');
     if (adjustedCard != null) {
-      _fireAndForget(() => _db.into(_db.creditCards).insertOnConflictUpdate(adjustedCard!.toCompanion()), 'credit card outstanding after edit');
+      _fireAndForget(
+          () => writeThrough('credit_cards', adjustedCard!.id,
+              () => _db.into(_db.creditCards).insertOnConflictUpdate(adjustedCard!.toCompanion())),
+          'credit card outstanding after edit');
     }
     if (adjustedLoan != null) {
-      _fireAndForget(() => _db.into(_db.loans).insertOnConflictUpdate(adjustedLoan!.toCompanion()), 'loan outstanding after edit');
+      _fireAndForget(
+          () => writeThrough('loans', adjustedLoan!.id,
+              () => _db.into(_db.loans).insertOnConflictUpdate(adjustedLoan!.toCompanion())),
+          'loan outstanding after edit');
     }
   }
 
@@ -697,7 +749,7 @@ if (creditCardId != null) {
       accounts: [...state.accounts, newAcc],
     );
 
-    _fireAndForget(() => _db.into(_db.accounts).insertOnConflictUpdate(newAcc.toCompanion()), 'account');
+    _fireAndForget(() => writeThrough('accounts', newAcc.id, () => _db.into(_db.accounts).insertOnConflictUpdate(newAcc.toCompanion())), 'account');
   }
 
   void addCard({
@@ -746,7 +798,7 @@ if (creditCardId != null) {
       creditCards: [...state.creditCards, newCard],
     );
 
-    _fireAndForget(() => _db.into(_db.creditCards).insertOnConflictUpdate(newCard.toCompanion()), 'credit card');
+    _fireAndForget(() => writeThrough('credit_cards', newCard.id, () => _db.into(_db.creditCards).insertOnConflictUpdate(newCard.toCompanion())), 'credit card');
   }
 
   /// Backward-compat wrapper so existing calls compile
@@ -813,7 +865,7 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.creditCards).insertOnConflictUpdate(updated!.toCompanion()), 'card update');
+      _fireAndForget(() => writeThrough('credit_cards', updated!.id, () => _db.into(_db.creditCards).insertOnConflictUpdate(updated!.toCompanion())), 'card update');
     }
   }
 
@@ -821,7 +873,7 @@ if (creditCardId != null) {
     state = state.copyWith(
       creditCards: state.creditCards.where((c) => c.id != cardId).toList(),
     );
-    _fireAndForget(() => (_db.delete(_db.creditCards)..where((c) => c.id.equals(cardId))).go(), 'credit card deletion');
+    _fireAndForget(() => deleteThrough('credit_cards', cardId, () => (_db.update(_db.creditCards)..where((c) => c.id.equals(cardId))).write(CreditCardsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'credit card deletion');
   }
 
   void addLoan({
@@ -850,7 +902,7 @@ if (creditCardId != null) {
       loans: [...state.loans, newLoan],
     );
 
-    _fireAndForget(() => _db.into(_db.loans).insertOnConflictUpdate(newLoan.toCompanion()), 'loan');
+    _fireAndForget(() => writeThrough('loans', newLoan.id, () => _db.into(_db.loans).insertOnConflictUpdate(newLoan.toCompanion())), 'loan');
   }
 
   void addInvestment({
@@ -875,7 +927,7 @@ if (creditCardId != null) {
       investments: [...state.investments, newInv],
     );
 
-    _fireAndForget(() => _db.into(_db.investments).insertOnConflictUpdate(newInv.toCompanion()), 'investment');
+    _fireAndForget(() => writeThrough('investments', newInv.id, () => _db.into(_db.investments).insertOnConflictUpdate(newInv.toCompanion())), 'investment');
   }
 
   void addGoal({
@@ -898,7 +950,7 @@ if (creditCardId != null) {
       goals: [...state.goals, newGoal],
     );
 
-    _fireAndForget(() => _db.into(_db.goals).insertOnConflictUpdate(newGoal.toCompanion()), 'goal');
+    _fireAndForget(() => writeThrough('goals', newGoal.id, () => _db.into(_db.goals).insertOnConflictUpdate(newGoal.toCompanion())), 'goal');
   }
 
   void addFundsToGoal(String goalId, double amount) {
@@ -913,7 +965,7 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.goals).insertOnConflictUpdate(updated!.toCompanion()), 'goal funds');
+      _fireAndForget(() => writeThrough('goals', updated!.id, () => _db.into(_db.goals).insertOnConflictUpdate(updated!.toCompanion())), 'goal funds');
     }
   }
 
@@ -921,7 +973,7 @@ if (creditCardId != null) {
     state = state.copyWith(
       goals: state.goals.where((g) => g.id != id).toList(),
     );
-    _fireAndForget(() => (_db.delete(_db.goals)..where((g) => g.id.equals(id))).go(), 'goal deletion');
+    _fireAndForget(() => deleteThrough('goals', id, () => (_db.update(_db.goals)..where((g) => g.id.equals(id))).write(GoalsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'goal deletion');
   }
 
   void toggleBiometric(bool value) {
@@ -932,11 +984,30 @@ if (creditCardId != null) {
   void toggleRoundUp(bool value) {
     state = state.copyWith(isRoundUpEnabled: value);
     _savePref((prefs) => prefs.setBool(_kRoundUpEnabled, value));
+    _enqueueSettingsSync();
   }
 
   void toggleAutoBackup(bool value) {
     state = state.copyWith(isAutoBackupEnabled: value);
     _savePref((prefs) => prefs.setBool(_kAutoBackupEnabled, value));
+    _enqueueSettingsSync();
+  }
+
+  /// Records a `settings_updated_at` clock and enqueues a `user_settings`
+  /// outbox row so the (non-biometric) preferences reach the cloud. Biometric
+  /// is deliberately device-local and never touched here.
+  void _enqueueSettingsSync() {
+    if (applyingRemote) return;
+    _fireAndForget(() async {
+      final now = DateTime.now();
+      await _db.into(_db.syncMeta).insertOnConflictUpdate(
+            SyncMetaCompanion(key: const Value('settings_updated_at'), value: Value(now.toIso8601String())),
+          );
+      final boundRow =
+          await (_db.select(_db.syncMeta)..where((m) => m.key.equals('bound_user'))).getSingleOrNull();
+      final uid = boundRow?.value ?? 'me';
+      await enqueueOutbox('user_settings', uid, 'upsert');
+    }, 'settings sync enqueue');
   }
 
   void addCategory({
@@ -960,25 +1031,27 @@ if (creditCardId != null) {
       categories: [...state.categories, newCat],
     );
 
-    _fireAndForget(() => _db.into(_db.categories).insertOnConflictUpdate(newCat.toCompanion()), 'category');
+    _fireAndForget(() => writeThrough('categories', newCat.id, () => _db.into(_db.categories).insertOnConflictUpdate(newCat.toCompanion())), 'category');
   }
 
   void deleteCategory(String id) {
     state = state.copyWith(
       categories: state.categories.where((c) => c.id != id).toList(),
     );
-    _fireAndForget(() => (_db.delete(_db.categories)..where((c) => c.id.equals(id))).go(), 'category deletion');
+    _fireAndForget(() => deleteThrough('categories', id, () => (_db.update(_db.categories)..where((c) => c.id.equals(id))).write(CategoriesCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'category deletion');
   }
 
   void setEmergencyBuffer(double amount) {
     state = state.copyWith(emergencyBuffer: amount);
     _savePref((prefs) => prefs.setDouble(_kEmergencyBuffer, amount));
+    _enqueueSettingsSync();
   }
 
   void setCurrencySymbol(String symbol) {
     state = state.copyWith(currencySymbol: symbol);
     CurrencyFormatter.updateSymbol(symbol);
     _savePref((prefs) => prefs.setString(_kCurrencySymbol, symbol));
+    _enqueueSettingsSync();
   }
 
   /// Wipes all locally persisted finance data and resets to a clean slate —
@@ -988,8 +1061,15 @@ if (creditCardId != null) {
     CurrencyFormatter.updateSymbol('₹'); // reset to default for the new user
     _fireAndForget(() async {
       await _db.wipeAllData();
-      for (final cat in _defaultCategories()) {
-        await _db.into(_db.categories).insertOnConflictUpdate(cat.toCompanion());
+      // Reseed default categories without enqueuing outbox rows — the new user
+      // gets their own copy from the cloud, or these become their local seed.
+      applyingRemote = true;
+      try {
+        for (final cat in _defaultCategories()) {
+          await _db.into(_db.categories).insertOnConflictUpdate(cat.toCompanion());
+        }
+      } finally {
+        applyingRemote = false;
       }
     }, 'clearing data for new user');
   }
@@ -998,7 +1078,7 @@ if (creditCardId != null) {
     state = state.copyWith(
       transactions: state.transactions.where((t) => t.id != id).toList(),
     );
-    _fireAndForget(() => (_db.delete(_db.transactions)..where((t) => t.id.equals(id))).go(), 'transaction deletion');
+    _fireAndForget(() => deleteThrough('transactions', id, () => (_db.update(_db.transactions)..where((t) => t.id.equals(id))).write(TransactionsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'transaction deletion');
   }
 
   // ── Accounts ───────────────────────────────────────────────────────────────
@@ -1006,7 +1086,7 @@ if (creditCardId != null) {
     state = state.copyWith(
       accounts: state.accounts.where((a) => a.id != id).toList(),
     );
-    _fireAndForget(() => (_db.delete(_db.accounts)..where((a) => a.id.equals(id))).go(), 'account deletion');
+    _fireAndForget(() => deleteThrough('accounts', id, () => (_db.update(_db.accounts)..where((a) => a.id.equals(id))).write(AccountsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'account deletion');
   }
 
   void updateAccount(String id, {String? name, AccountType? type, String? bank, String? accountNumberLast4, double? openingBalance}) {
@@ -1019,14 +1099,14 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.accounts).insertOnConflictUpdate(updated!.toCompanion()), 'account update');
+      _fireAndForget(() => writeThrough('accounts', updated!.id, () => _db.into(_db.accounts).insertOnConflictUpdate(updated!.toCompanion())), 'account update');
     }
   }
 
   // ── Loans ──────────────────────────────────────────────────────────────────
   void deleteLoan(String id) {
     state = state.copyWith(loans: state.loans.where((l) => l.id != id).toList());
-    _fireAndForget(() => (_db.delete(_db.loans)..where((l) => l.id.equals(id))).go(), 'loan deletion');
+    _fireAndForget(() => deleteThrough('loans', id, () => (_db.update(_db.loans)..where((l) => l.id.equals(id))).write(LoansCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'loan deletion');
   }
 
   void updateLoan(String id, {String? name, String? provider, double? outstandingAmount, double? monthlyEmi, int? dueDay}) {
@@ -1050,7 +1130,7 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.loans).insertOnConflictUpdate(updated!.toCompanion()), 'loan update');
+      _fireAndForget(() => writeThrough('loans', updated!.id, () => _db.into(_db.loans).insertOnConflictUpdate(updated!.toCompanion())), 'loan update');
     }
   }
 
@@ -1066,12 +1146,12 @@ if (creditCardId != null) {
       spentAmount: 0.0,
     );
     state = state.copyWith(budgets: [...state.budgets, newBudget]);
-    _fireAndForget(() => _db.into(_db.budgets).insertOnConflictUpdate(newBudget.toCompanion()), 'budget');
+    _fireAndForget(() => writeThrough('budgets', newBudget.id, () => _db.into(_db.budgets).insertOnConflictUpdate(newBudget.toCompanion())), 'budget');
   }
 
   void deleteBudget(String id) {
     state = state.copyWith(budgets: state.budgets.where((b) => b.id != id).toList());
-    _fireAndForget(() => (_db.delete(_db.budgets)..where((b) => b.id.equals(id))).go(), 'budget deletion');
+    _fireAndForget(() => deleteThrough('budgets', id, () => (_db.update(_db.budgets)..where((b) => b.id.equals(id))).write(BudgetsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'budget deletion');
   }
 
   void updateBudget(String id, {double? limitAmount, String? categoryId}) {
@@ -1090,7 +1170,7 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.budgets).insertOnConflictUpdate(updated!.toCompanion()), 'budget update');
+      _fireAndForget(() => writeThrough('budgets', updated!.id, () => _db.into(_db.budgets).insertOnConflictUpdate(updated!.toCompanion())), 'budget update');
     }
   }
 
@@ -1115,7 +1195,7 @@ if (creditCardId != null) {
       isAutoPay: isAutoPay,
     );
     state = state.copyWith(recurringPayments: [...state.recurringPayments, newPayment]);
-    _fireAndForget(() => _db.into(_db.recurringPayments).insertOnConflictUpdate(newPayment.toCompanion()), 'recurring payment');
+    _fireAndForget(() => writeThrough('recurring_payments', newPayment.id, () => _db.into(_db.recurringPayments).insertOnConflictUpdate(newPayment.toCompanion())), 'recurring payment');
   }
 
   void updateRecurringPayment(String id, {
@@ -1145,19 +1225,19 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.recurringPayments).insertOnConflictUpdate(updated!.toCompanion()), 'recurring payment update');
+      _fireAndForget(() => writeThrough('recurring_payments', updated!.id, () => _db.into(_db.recurringPayments).insertOnConflictUpdate(updated!.toCompanion())), 'recurring payment update');
     }
   }
 
   void deleteRecurringPayment(String id) {
     state = state.copyWith(recurringPayments: state.recurringPayments.where((p) => p.id != id).toList());
-    _fireAndForget(() => (_db.delete(_db.recurringPayments)..where((p) => p.id.equals(id))).go(), 'recurring payment deletion');
+    _fireAndForget(() => deleteThrough('recurring_payments', id, () => (_db.update(_db.recurringPayments)..where((p) => p.id.equals(id))).write(RecurringPaymentsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'recurring payment deletion');
   }
 
   // ── Investments ────────────────────────────────────────────────────────────
   void deleteInvestment(String id) {
     state = state.copyWith(investments: state.investments.where((i) => i.id != id).toList());
-    _fireAndForget(() => (_db.delete(_db.investments)..where((i) => i.id.equals(id))).go(), 'investment deletion');
+    _fireAndForget(() => deleteThrough('investments', id, () => (_db.update(_db.investments)..where((i) => i.id.equals(id))).write(InvestmentsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'investment deletion');
   }
 
   void updateInvestment(String id, {String? name, double? currentValue, double? investedAmount, double? monthlySipAmount}) {
@@ -1178,7 +1258,7 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.investments).insertOnConflictUpdate(updated!.toCompanion()), 'investment update');
+      _fireAndForget(() => writeThrough('investments', updated!.id, () => _db.into(_db.investments).insertOnConflictUpdate(updated!.toCompanion())), 'investment update');
     }
   }
 
@@ -1193,7 +1273,7 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.goals).insertOnConflictUpdate(updated!.toCompanion()), 'goal update');
+      _fireAndForget(() => writeThrough('goals', updated!.id, () => _db.into(_db.goals).insertOnConflictUpdate(updated!.toCompanion())), 'goal update');
     }
   }
 
@@ -1211,7 +1291,164 @@ if (creditCardId != null) {
       }).toList(),
     );
     if (updated != null) {
-      _fireAndForget(() => _db.into(_db.categories).insertOnConflictUpdate(updated!.toCompanion()), 'category update');
+      _fireAndForget(() => writeThrough('categories', updated!.id, () => _db.into(_db.categories).insertOnConflictUpdate(updated!.toCompanion())), 'category update');
+    }
+  }
+
+  // ── Remote-apply (Phase 2/3 consumers; guarded so writes never re-enqueue) ──
+
+  static List<T> _spliceById<T>(List<T> list, T item, String Function(T) idOf, bool removed) {
+    final id = idOf(item);
+    final next = list.where((e) => idOf(e) != id).toList();
+    if (!removed) next.add(item);
+    return next;
+  }
+
+  void _persistRemote(Future<void> Function() op) => _fireAndForget(op, 'remote apply write');
+
+  /// Applies a cloud upsert (row already LWW-checked by the caller): writes it
+  /// to Drift and splices the in-memory list by id.
+  void applyRemoteUpsert(String table, Map<String, dynamic> row) {
+    applyingRemote = true;
+    try {
+      switch (table) {
+        case 'accounts':
+          final m = AccountCloud.fromCloud(row);
+          _persistRemote(() => _db.into(_db.accounts).insertOnConflictUpdate(m.toCompanion()));
+          state = state.copyWith(accounts: _spliceById(state.accounts, m, (a) => a.id, m.isDeleted));
+          break;
+        case 'categories':
+          final m = CategoryCloud.fromCloud(row);
+          _persistRemote(() => _db.into(_db.categories).insertOnConflictUpdate(m.toCompanion()));
+          state = state.copyWith(categories: _spliceById(state.categories, m, (c) => c.id, m.isDeleted));
+          break;
+        case 'transactions':
+          final m = TransactionCloud.fromCloud(row);
+          _persistRemote(() => _db.into(_db.transactions).insertOnConflictUpdate(m.toCompanion()));
+          state = state.copyWith(
+            transactions: _spliceById(state.transactions, m, (t) => t.id, m.isDeleted)
+              ..sort((a, b) => b.date.compareTo(a.date)),
+          );
+          break;
+        case 'credit_cards':
+          final m = CardCloud.fromCloud(row);
+          _persistRemote(() => _db.into(_db.creditCards).insertOnConflictUpdate(m.toCompanion()));
+          state = state.copyWith(creditCards: _spliceById(state.creditCards, m, (c) => c.id, m.isDeleted));
+          break;
+        case 'loans':
+          final m = LoanCloud.fromCloud(row);
+          _persistRemote(() => _db.into(_db.loans).insertOnConflictUpdate(m.toCompanion()));
+          state = state.copyWith(loans: _spliceById(state.loans, m, (l) => l.id, m.isDeleted));
+          break;
+        case 'budgets':
+          final m = BudgetCloud.fromCloud(row);
+          _persistRemote(() => _db.into(_db.budgets).insertOnConflictUpdate(m.toCompanion()));
+          state = state.copyWith(budgets: _spliceById(state.budgets, m, (b) => b.id, m.isDeleted));
+          break;
+        case 'recurring_payments':
+          final m = RecurringPaymentCloud.fromCloud(row);
+          _persistRemote(() => _db.into(_db.recurringPayments).insertOnConflictUpdate(m.toCompanion()));
+          state = state.copyWith(
+              recurringPayments: _spliceById(state.recurringPayments, m, (p) => p.id, m.isDeleted));
+          break;
+        case 'investments':
+          final m = InvestmentCloud.fromCloud(row);
+          _persistRemote(() => _db.into(_db.investments).insertOnConflictUpdate(m.toCompanion()));
+          state = state.copyWith(investments: _spliceById(state.investments, m, (i) => i.id, m.isDeleted));
+          break;
+        case 'goals':
+          final m = GoalCloud.fromCloud(row);
+          _persistRemote(() => _db.into(_db.goals).insertOnConflictUpdate(m.toCompanion()));
+          state = state.copyWith(goals: _spliceById(state.goals, m, (g) => g.id, m.isDeleted));
+          break;
+        default:
+          debugPrint('FinanceNotifier.applyRemoteUpsert: unknown table "$table"');
+      }
+    } finally {
+      applyingRemote = false;
+    }
+  }
+
+  void applyRemoteDelete(String table, String id) {
+    applyingRemote = true;
+    try {
+      final now = DateTime.now();
+      switch (table) {
+        case 'accounts':
+          state = state.copyWith(accounts: state.accounts.where((a) => a.id != id).toList());
+          _persistRemote(() => (_db.update(_db.accounts)..where((t) => t.id.equals(id)))
+              .write(AccountsCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+          break;
+        case 'categories':
+          state = state.copyWith(categories: state.categories.where((c) => c.id != id).toList());
+          _persistRemote(() => (_db.update(_db.categories)..where((t) => t.id.equals(id)))
+              .write(CategoriesCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+          break;
+        case 'transactions':
+          state = state.copyWith(transactions: state.transactions.where((t) => t.id != id).toList());
+          _persistRemote(() => (_db.update(_db.transactions)..where((t) => t.id.equals(id)))
+              .write(TransactionsCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+          break;
+        case 'credit_cards':
+          state = state.copyWith(creditCards: state.creditCards.where((c) => c.id != id).toList());
+          _persistRemote(() => (_db.update(_db.creditCards)..where((t) => t.id.equals(id)))
+              .write(CreditCardsCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+          break;
+        case 'loans':
+          state = state.copyWith(loans: state.loans.where((l) => l.id != id).toList());
+          _persistRemote(() => (_db.update(_db.loans)..where((t) => t.id.equals(id)))
+              .write(LoansCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+          break;
+        case 'budgets':
+          state = state.copyWith(budgets: state.budgets.where((b) => b.id != id).toList());
+          _persistRemote(() => (_db.update(_db.budgets)..where((t) => t.id.equals(id)))
+              .write(BudgetsCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+          break;
+        case 'recurring_payments':
+          state = state.copyWith(
+              recurringPayments: state.recurringPayments.where((p) => p.id != id).toList());
+          _persistRemote(() => (_db.update(_db.recurringPayments)..where((t) => t.id.equals(id)))
+              .write(RecurringPaymentsCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+          break;
+        case 'investments':
+          state = state.copyWith(investments: state.investments.where((i) => i.id != id).toList());
+          _persistRemote(() => (_db.update(_db.investments)..where((t) => t.id.equals(id)))
+              .write(InvestmentsCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+          break;
+        case 'goals':
+          state = state.copyWith(goals: state.goals.where((g) => g.id != id).toList());
+          _persistRemote(() => (_db.update(_db.goals)..where((t) => t.id.equals(id)))
+              .write(GoalsCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
+          break;
+        default:
+          debugPrint('FinanceNotifier.applyRemoteDelete: unknown table "$table"');
+      }
+    } finally {
+      applyingRemote = false;
+    }
+  }
+
+  /// Applies a cloud `user_settings` row: the four synced prefs + state +
+  /// currency formatter. Never touches biometric.
+  void applyRemoteSettings(Map<String, dynamic> row) {
+    applyingRemote = true;
+    try {
+      final s = CloudSettings.fromCloud(row);
+      state = state.copyWith(
+        emergencyBuffer: s.emergencyBuffer,
+        currencySymbol: s.currencySymbol,
+        isRoundUpEnabled: s.isRoundUpEnabled,
+        isAutoBackupEnabled: s.isAutoBackupEnabled,
+      );
+      CurrencyFormatter.updateSymbol(s.currencySymbol);
+      _savePref((prefs) async {
+        await prefs.setDouble(_kEmergencyBuffer, s.emergencyBuffer);
+        await prefs.setString(_kCurrencySymbol, s.currencySymbol);
+        await prefs.setBool(_kRoundUpEnabled, s.isRoundUpEnabled);
+        await prefs.setBool(_kAutoBackupEnabled, s.isAutoBackupEnabled);
+      });
+    } finally {
+      applyingRemote = false;
     }
   }
 }

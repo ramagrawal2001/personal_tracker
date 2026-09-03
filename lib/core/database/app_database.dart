@@ -20,6 +20,8 @@ part 'app_database.g.dart';
   Investments,
   Goals,
   Notes,
+  SyncOutbox,
+  SyncMeta,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -33,7 +35,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -43,6 +45,59 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (Migrator m, int from, int to) async {
           if (from < 2) {
             await m.createTable(notes);
+          }
+          if (from < 3) {
+            // Columns are added defensively: a synthetic upgrade path (see
+            // test/migration_check_test.dart) may create the tables from the
+            // current schema first, so an unconditional addColumn would hit
+            // "duplicate column name".
+            final columnCache = <String, Set<String>>{};
+            Future<Set<String>> existingColumns(String table) async {
+              return columnCache[table] ??= (await customSelect('PRAGMA table_info($table)').get())
+                  .map((row) => row.read<String>('name'))
+                  .toSet();
+            }
+
+            Future<void> addColumnIfMissing(TableInfo table, GeneratedColumn column) async {
+              final cols = await existingColumns(table.actualTableName);
+              if (!cols.contains(column.name)) {
+                await m.addColumn(table, column);
+                cols.add(column.name);
+              }
+            }
+
+            // `updatedAt` for tables that did not already have it.
+            await addColumnIfMissing(categories, categories.updatedAt);
+            await addColumnIfMissing(transactions, transactions.updatedAt);
+            await addColumnIfMissing(creditCards, creditCards.updatedAt);
+            await addColumnIfMissing(loans, loans.updatedAt);
+            await addColumnIfMissing(budgets, budgets.updatedAt);
+            await addColumnIfMissing(recurringPayments, recurringPayments.updatedAt);
+            await addColumnIfMissing(investments, investments.updatedAt);
+            await addColumnIfMissing(goals, goals.updatedAt);
+
+            // `isDeleted` / `deletedAt` tombstone columns on every entity table.
+            for (final entry in <List<Object>>[
+              [accounts, accounts.isDeleted, accounts.deletedAt],
+              [categories, categories.isDeleted, categories.deletedAt],
+              [transactions, transactions.isDeleted, transactions.deletedAt],
+              [creditCards, creditCards.isDeleted, creditCards.deletedAt],
+              [loans, loans.isDeleted, loans.deletedAt],
+              [budgets, budgets.isDeleted, budgets.deletedAt],
+              [recurringPayments, recurringPayments.isDeleted, recurringPayments.deletedAt],
+              [investments, investments.isDeleted, investments.deletedAt],
+              [goals, goals.isDeleted, goals.deletedAt],
+              [notes, notes.isDeleted, notes.deletedAt],
+            ]) {
+              await addColumnIfMissing(entry[0] as TableInfo, entry[1] as GeneratedColumn);
+              await addColumnIfMissing(entry[0] as TableInfo, entry[2] as GeneratedColumn);
+            }
+
+            await m.createTable(syncOutbox);
+            await m.createTable(syncMeta);
+
+            // Only `transactions` carries a `created_at` we can backfill from.
+            await customStatement('UPDATE transactions SET updated_at = created_at');
           }
         },
       );
@@ -59,6 +114,8 @@ class AppDatabase extends _$AppDatabase {
       await delete(accounts).go();
       await delete(categories).go();
       await delete(notes).go();
+      await delete(syncOutbox).go();
+      await delete(syncMeta).go();
     });
   }
 

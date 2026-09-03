@@ -21,6 +21,8 @@ extension AccountEntryMapper on AccountEntry {
       currency: currency,
       isActive: isActive,
       createdAt: createdAt,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -37,7 +39,9 @@ extension AccountModelMapper on AccountModel {
       currency: Value(currency),
       isActive: Value(isActive),
       createdAt: Value(createdAt),
-      updatedAt: Value(DateTime.now()),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }
@@ -51,6 +55,8 @@ extension CategoryEntryMapper on CategoryEntry {
       type: type,
       icon: icon,
       colorHex: colorHex,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -64,6 +70,9 @@ extension CategoryModelMapper on CategoryModel {
       type: Value(type),
       icon: Value(icon),
       colorHex: Value(colorHex),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }
@@ -86,6 +95,8 @@ extension TransactionEntryMapper on TransactionEntry {
       loanId: loanId,
       syncStatus: SyncStatus.values.byName(syncStatus),
       createdAt: createdAt,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -108,6 +119,9 @@ extension TransactionModelMapper on TransactionModel {
       loanId: Value(loanId),
       syncStatus: Value(syncStatus.name),
       createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }
@@ -134,6 +148,8 @@ extension CreditCardEntryMapper on CreditCardEntry {
       linkedAccountId: linkedAccountId,
       balance: balance,
       currency: currency,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -160,6 +176,9 @@ extension CardModelMapper on CardModel {
       linkedAccountId: Value(linkedAccountId),
       balance: Value(balance),
       currency: Value(currency),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }
@@ -177,6 +196,8 @@ extension LoanEntryMapper on LoanEntry {
       dueDay: dueDay,
       startDate: startDate,
       remainingTenureMonths: remainingTenureMonths,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -194,6 +215,9 @@ extension LoanModelMapper on LoanModel {
       dueDay: Value(dueDay),
       startDate: Value(startDate),
       remainingTenureMonths: Value(remainingTenureMonths),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }
@@ -206,6 +230,8 @@ extension BudgetEntryMapper on BudgetEntry {
       monthlyLimit: monthlyLimit,
       monthYear: monthYear,
       spentAmount: spentAmount,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -218,6 +244,9 @@ extension BudgetModelMapper on BudgetModel {
       monthlyLimit: Value(monthlyLimit),
       monthYear: Value(monthYear),
       spentAmount: Value(spentAmount),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }
@@ -233,6 +262,8 @@ extension RecurringPaymentEntryMapper on RecurringPaymentEntry {
       categoryId: categoryId,
       accountId: accountId,
       isAutoPay: isAutoPay,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -248,6 +279,9 @@ extension RecurringPaymentModelMapper on RecurringPaymentModel {
       categoryId: Value(categoryId),
       accountId: Value(accountId),
       isAutoPay: Value(isAutoPay),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }
@@ -262,6 +296,8 @@ extension InvestmentEntryMapper on InvestmentEntry {
       currentValue: currentValue,
       monthlySipAmount: monthlySipAmount,
       sipDay: sipDay,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -276,6 +312,9 @@ extension InvestmentModelMapper on InvestmentModel {
       currentValue: Value(currentValue),
       monthlySipAmount: Value(monthlySipAmount),
       sipDay: Value(sipDay),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }
@@ -290,6 +329,8 @@ extension GoalEntryMapper on GoalEntry {
       targetDate: targetDate,
       icon: icon,
       colorHex: colorHex,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
     );
   }
 }
@@ -304,6 +345,9 @@ extension GoalModelMapper on GoalModel {
       targetDate: Value(targetDate),
       icon: Value(icon),
       colorHex: Value(colorHex),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
     );
   }
 }

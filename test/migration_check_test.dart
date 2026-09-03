@@ -54,6 +54,13 @@ void main() {
     expect(notes, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 2);
+    expect(versionRow.data['user_version'], 3);
+
+    // v3 additions: the sync tables exist and the tombstone column is present.
+    final outbox = await phase2.select(phase2.syncOutbox).get();
+    expect(outbox, isEmpty);
+    final liveAccounts =
+        await (phase2.select(phase2.accounts)..where((t) => t.isDeleted.equals(false))).get();
+    expect(liveAccounts.length, 1);
   });
 }
