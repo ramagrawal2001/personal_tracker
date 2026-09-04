@@ -211,13 +211,25 @@ return SingleChildScrollView(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SectionHeader(title: 'Your Cards'),
-                ...cards.map((c) => _CardListTile(
-                  card: c,
-                  onPayBill: () => QuickAddModal.show(context, initialType: TransactionType.creditCardPayment, initialCreditCardId: c.id),
-                  onEdit: () => _showEditCardSheet(c),
-                  onDelete: () => _confirmDelete(c),
-                  onViewSecrets: () => _showCardSecrets(c),
-                )),
+                ...cards.map((c) {
+                  AccountModel? linked;
+                  if (c.linkedAccountId != null) {
+                    for (final a in ref.read(financeNotifierProvider).accountsWithCalculatedBalances) {
+                      if (a.id == c.linkedAccountId && !a.isDeleted) {
+                        linked = a;
+                        break;
+                      }
+                    }
+                  }
+                  return _CardListTile(
+                    card: c,
+                    linkedAccount: linked,
+                    onPayBill: () => QuickAddModal.show(context, initialType: TransactionType.creditCardPayment, initialCreditCardId: c.id),
+                    onEdit: () => _showEditCardSheet(c),
+                    onDelete: () => _confirmDelete(c),
+                    onViewSecrets: () => _showCardSecrets(c),
+                  );
+                }),
               ],
             ),
           ),
@@ -335,6 +347,15 @@ return SingleChildScrollView(
     final cvvCtrl = TextEditingController();
     final pinCtrl = TextEditingController();
     final isCredit = card.cardType == CardType.credit;
+    final isDebit = card.cardType == CardType.debit;
+    final linkableAccounts = ref
+        .read(financeNotifierProvider)
+        .accountsWithCalculatedBalances
+        .where((a) => !a.isDeleted)
+        .toList();
+    String? linkedAccountId = linkableAccounts.any((a) => a.id == card.linkedAccountId)
+        ? card.linkedAccountId
+        : null;
     String? colorHex = card.colorHex;
     String? error;
 
@@ -367,6 +388,46 @@ return SingleChildScrollView(
                   ]),
                   const SizedBox(height: 12),
                   TextField(controller: dueDayCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Due Day (1-31)')),
+                ],
+                if (isDebit) ...[
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Icon(LucideIcons.building2, size: 13, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text('Linked bank account — purchases deduct from it',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  if (linkableAccounts.isEmpty)
+                    Text('Add a bank account first — a debit card must be linked to one.',
+                        style: TextStyle(fontSize: 12, color: AppColors.expense))
+                  else
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      value: linkedAccountId,
+                      dropdownColor: AppColors.surface,
+                      hint: Text('Select an account', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        filled: true,
+                        fillColor: AppColors.surfaceLight,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+                      ),
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                      items: linkableAccounts.map((a) {
+                        final l4 = (a.accountNumberLast4 != null && a.accountNumberLast4!.isNotEmpty)
+                            ? '  ••••${a.accountNumberLast4}'
+                            : '';
+                        return DropdownMenuItem(
+                          value: a.id,
+                          child: Text('${a.name} · ${a.type.displayName}$l4', overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: (v) => setSheetState(() => linkedAccountId = v),
+                    ),
                 ],
                 const SizedBox(height: 16),
                 Row(children: [
@@ -438,6 +499,10 @@ return SingleChildScrollView(
                         setSheetState(() => error = 'Name and bank are required');
                         return;
                       }
+                      if (isDebit && linkedAccountId == null) {
+                        setSheetState(() => error = 'Select the bank account this debit card draws from');
+                        return;
+                      }
                       double? limit;
                       int? statementDay;
                       int? dueDay;
@@ -488,6 +553,7 @@ return SingleChildScrollView(
                         creditLimit: limit,
                         statementDay: statementDay,
                         dueDay: dueDay,
+                        linkedAccountId: isDebit ? linkedAccountId : null,
                       );
                       navigator.pop();
                     },
@@ -851,11 +917,12 @@ class _NetworkBadge extends StatelessWidget {
 // ─── Card List Tile ───────────────────────────────────────────────────────────
 class _CardListTile extends StatelessWidget {
   final CardModel card;
+  final AccountModel? linkedAccount;
   final VoidCallback onPayBill;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onViewSecrets;
-  const _CardListTile({required this.card, required this.onPayBill, required this.onEdit, required this.onDelete, required this.onViewSecrets});
+  const _CardListTile({required this.card, this.linkedAccount, required this.onPayBill, required this.onEdit, required this.onDelete, required this.onViewSecrets});
 
   bool get _hasSecrets => card.encCardNumber != null || card.encCvv != null || card.encPin != null;
 
@@ -1077,6 +1144,61 @@ class _CardListTile extends StatelessWidget {
             ),
           ],
 
+          if (card.cardType == CardType.debit) ...[
+            const SizedBox(height: 12),
+            Divider(color: AppColors.border, height: 1),
+            const SizedBox(height: 10),
+            if (linkedAccount != null) ...[
+              Row(
+                children: [
+                  Icon(LucideIcons.building2, size: 14, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Linked to ${linkedAccount!.name}'
+                      '${(linkedAccount!.accountNumberLast4 != null && linkedAccount!.accountNumberLast4!.isNotEmpty) ? '  ••••${linkedAccount!.accountNumberLast4}' : ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(LucideIcons.wallet, size: 14, color: AppColors.income),
+                  const SizedBox(width: 6),
+                  Text('Balance: ', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  Expanded(
+                    child: Text(
+                      CurrencyFormatter.format(linkedAccount!.calculatedBalance),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.income),
+                    ),
+                  ),
+                ],
+              ),
+            ] else
+              GestureDetector(
+                onTap: onEdit,
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.link, size: 13, color: AppColors.warning),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Link a bank account so purchases deduct correctly',
+                        style: TextStyle(fontSize: 12, color: AppColors.warning, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Icon(LucideIcons.chevronRight, size: 14, color: AppColors.warning),
+                  ],
+                ),
+              ),
+          ],
+
           if ((card.cardType == CardType.prepaid || card.cardType == CardType.forex) && hasFunds) ...[
             const SizedBox(height: 12),
             Divider(color: AppColors.border, height: 1),
@@ -1203,6 +1325,8 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
   CardNetwork _selectedNetwork = CardNetwork.visa;
   CardColorPreset _selectedColor = CardColorPreset.midnight;
   String? _customColorHex;
+  String? _linkedAccountId;
+  String? _linkError;
 
   final _nameCtrl = TextEditingController();
   final _bankCtrl = TextEditingController();
@@ -1233,6 +1357,11 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
 
   @override
   Widget build(BuildContext context) {
+    final linkableAccounts = ref
+        .watch(financeNotifierProvider)
+        .accountsWithCalculatedBalances
+        .where((a) => !a.isDeleted)
+        .toList();
     return DraggableScrollableSheet(
       initialChildSize: 0.92,
       minChildSize: 0.5,
@@ -1435,6 +1564,14 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                     const SizedBox(height: 12),
                   ],
 
+                  // Debit-card ↔ bank-account linkage. A purchase on a debit
+                  // card deducts from the linked account's balance — it does
+                  // not accrue a separate "outstanding" the way credit does.
+                  if (_selectedType == CardType.debit) ...[
+                    _buildLinkedAccountPicker(linkableAccounts),
+                    const SizedBox(height: 12),
+                  ],
+
                   // Prepaid / forex balance
                   if (_selectedType == CardType.prepaid || _selectedType == CardType.forex) ...[
                     _field(
@@ -1573,7 +1710,10 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
         children: CardType.values.map((type) {
           final selected = type == _selectedType;
           return GestureDetector(
-            onTap: () => setState(() => _selectedType = type),
+            onTap: () => setState(() {
+              _selectedType = type;
+              _linkError = null;
+            }),
             child: AnimatedContainer(
               duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 8),
@@ -1724,6 +1864,64 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     }
   }
 
+  Widget _buildLinkedAccountPicker(List<AccountModel> accounts) {
+    final validId = accounts.any((a) => a.id == _linkedAccountId) ? _linkedAccountId : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(LucideIcons.building2, size: 14, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text('Linked Bank Account',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text('Purchases on this card deduct from the linked account.',
+            style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        const SizedBox(height: 10),
+        if (accounts.isEmpty)
+          Text('Add a bank account first — a debit card must be linked to one.',
+              style: TextStyle(fontSize: 12, color: AppColors.expense))
+        else
+          DropdownButtonFormField<String>(
+            isExpanded: true,
+            value: validId,
+            dropdownColor: AppColors.surface,
+            hint: Text('Select an account', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              filled: true,
+              fillColor: AppColors.surfaceLight,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.border)),
+            ),
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+            items: accounts.map((a) {
+              final l4 = (a.accountNumberLast4 != null && a.accountNumberLast4!.isNotEmpty)
+                  ? '  ••••${a.accountNumberLast4}'
+                  : '';
+              return DropdownMenuItem(
+                value: a.id,
+                child: Text('${a.name} · ${a.type.displayName}$l4', overflow: TextOverflow.ellipsis),
+              );
+            }).toList(),
+            onChanged: (v) => setState(() {
+              _linkedAccountId = v;
+              _linkError = null;
+            }),
+          ),
+        if (_linkError != null) ...[
+          const SizedBox(height: 6),
+          Text(_linkError!, style: TextStyle(fontSize: 12, color: AppColors.expense)),
+        ],
+      ],
+    );
+  }
+
   Widget _buildDropdown<T>({
     required String label,
     required T value,
@@ -1818,6 +2016,15 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
       );
       return;
     }
+    if (_selectedType == CardType.debit) {
+      final accounts = ref.read(financeNotifierProvider).accounts;
+      final linked = _linkedAccountId != null &&
+          accounts.any((a) => a.id == _linkedAccountId && !a.isDeleted);
+      if (!linked) {
+        setState(() => _linkError = 'Select the bank account this debit card draws from');
+        return;
+      }
+    }
     setState(() => _saving = true);
 
     // Encrypt the sensitive fields transparently with the per-user DEK. Never
@@ -1859,6 +2066,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
       creditLimit: double.tryParse(_limitCtrl.text) ?? 0,
       statementDay: _statementDay,
       dueDay: _dueDay,
+      linkedAccountId: _selectedType == CardType.debit ? _linkedAccountId : null,
       balance: double.tryParse(_balanceCtrl.text),
       currency: _selectedType == CardType.forex ? _currencyCtrl.text.trim().toUpperCase() : null,
     );

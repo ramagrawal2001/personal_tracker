@@ -518,11 +518,15 @@ class FinanceNotifier extends StateNotifier<FinanceState> with OutboxWriteThroug
       createdAt: DateTime.now(),
     );
 
-    // Credit card outstanding management
+    // Credit card outstanding management. Only *credit* cards carry an
+    // `currentOutstanding` — a debit-card spend is just an expense on the
+    // linked bank account (tx.accountId == card.linkedAccountId), so
+    // `accountsWithCalculatedBalances` already subtracts it and this block
+    // must be a no-op for debit / prepaid / store / forex cards.
     List<CreditCardModel> updatedCards = List.from(state.creditCards);
 if (creditCardId != null) {
         final cardIdx = updatedCards.indexWhere((c) => c.id == creditCardId);
-        if (cardIdx != -1) {
+        if (cardIdx != -1 && updatedCards[cardIdx].cardType == CardType.credit) {
           final card = updatedCards[cardIdx];
           double newOutstanding = card.currentOutstanding;
 
@@ -610,7 +614,7 @@ if (creditCardId != null) {
 
     if (creditCardId != null) {
       final idx = updatedCards.indexWhere((c) => c.id == creditCardId);
-      if (idx != -1) {
+      if (idx != -1 && updatedCards[idx].cardType == CardType.credit) {
         final card = updatedCards[idx];
         _fireAndForget(
             () => writeThrough('credit_cards', card.id,
@@ -699,7 +703,9 @@ if (creditCardId != null) {
 
     if (delta != 0 && original.creditCardId != null) {
       final cardIdx = state.creditCards.indexWhere((c) => c.id == original.creditCardId);
-      if (cardIdx != -1) {
+      // Debit / prepaid / store / forex cards have no `currentOutstanding`;
+      // their spend lives on the linked account and needs no adjustment here.
+      if (cardIdx != -1 && state.creditCards[cardIdx].cardType == CardType.credit) {
         final card = state.creditCards[cardIdx];
         int sign;
         if (original.type == TransactionType.creditCardPayment || original.type == TransactionType.refund) {
@@ -1147,7 +1153,10 @@ if (creditCardId != null) {
 
     if (original != null && original.creditCardId != null) {
       final i = state.creditCards.indexWhere((c) => c.id == original.creditCardId);
-      if (i != -1) {
+      // Only credit cards store an outstanding to reverse. For a debit-card
+      // spend, deleting the row is enough — the linked account's balance is
+      // recomputed from transaction history.
+      if (i != -1 && state.creditCards[i].cardType == CardType.credit) {
         final card = state.creditCards[i];
         double outstanding = card.currentOutstanding;
         if (original.type == TransactionType.expense) {
