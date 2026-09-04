@@ -4,9 +4,11 @@ import 'package:integration_test/integration_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:aspyric/main.dart';
+import '../test/support/test_bootstrap.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  bootstrapTestEnv();
 
   /// Pumps frames (bounded) until [condition] is satisfied or we give up.
   /// Used instead of [WidgetTester.pumpAndSettle] because the splash screen

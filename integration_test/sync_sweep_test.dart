@@ -9,7 +9,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/native.dart';
@@ -25,12 +24,13 @@ import 'package:aspyric/core/sync/sync_service.dart';
 import 'package:aspyric/domain/models/models.dart';
 
 import '../test/sync/fake_cloud_gateway.dart';
+import '../test/support/test_bootstrap.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  // No network in the test sandbox — use the bundled font fallback instead of
+  // No network in the test sandbox — fall back to the platform font instead of
   // fetching Inter from fonts.gstatic.com (which otherwise throws post-test).
-  GoogleFonts.config.allowRuntimeFetching = false;
+  bootstrapTestEnv();
 
   Future<void> settle(WidgetTester t, {int frames = 25}) async {
     for (var i = 0; i < frames; i++) {

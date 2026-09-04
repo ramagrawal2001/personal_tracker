@@ -358,7 +358,27 @@ class FinanceNotifier extends StateNotifier<FinanceState> with OutboxWriteThroug
   FinanceNotifier(this._db, {bool autoLoad = true}) : super(_emptyState()) {
     if (autoLoad) {
       _loadPersistedState();
+      SecretCipherService.readyListenable.addListener(_onCipherBecameReady);
     }
+  }
+
+  /// Whether the field-encryption DEK was already available the first time
+  /// [_loadPersistedState] mapped rows. When it wasn't (a session-restore cold
+  /// start — the async keystore read lost the race), [_onCipherBecameReady]
+  /// re-reads once the DEK arrives so secret card / bank fields stop showing
+  /// ciphertext.
+  bool _cipherReadyOnLoad = false;
+
+  void _onCipherBecameReady() {
+    if (_cipherReadyOnLoad || !SecretCipherService.ready) return;
+    _cipherReadyOnLoad = true;
+    _loadPersistedState();
+  }
+
+  @override
+  void dispose() {
+    SecretCipherService.readyListenable.removeListener(_onCipherBecameReady);
+    super.dispose();
   }
 
   /// Default categories always available to every user
@@ -403,6 +423,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with OutboxWriteThroug
       // Bring the field-encryption DEK back from the OS keystore so sensitive
       // card / bank values decrypt transparently after an app relaunch.
       await SecretCipherService(_db).restoreFromCache();
+      _cipherReadyOnLoad = _cipherReadyOnLoad || SecretCipherService.ready;
 
       final accounts = (await (_db.select(_db.accounts)..where((t) => t.isDeleted.equals(false))).get())
           .map((e) => e.toModel())

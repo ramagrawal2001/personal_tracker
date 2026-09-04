@@ -74,7 +74,33 @@ class SecretCipherService {
 
   /// Process-global plaintext DEK cache. Static so every holder of a
   /// [SecretCipherService] shares one unlocked state.
-  static enc.Key? _dek;
+  static enc.Key? _dekKey;
+
+  static enc.Key? get _dek => _dekKey;
+
+  /// Assigning the DEK also drives [readyListenable] / [needsRecoveryListenable]
+  /// so the data notifiers and the recovery-prompt UI react without polling.
+  static set _dek(enc.Key? value) {
+    _dekKey = value;
+    readyListenable.value = value != null;
+    if (value != null) needsRecoveryListenable.value = false;
+  }
+
+  /// Flips to `true` the instant the in-memory DEK becomes available (login,
+  /// signup, keystore restore on a session-restore cold start, or a manual
+  /// recovery) and back to `false` on sign-out / user switch. Data notifiers
+  /// that mapped encrypted rows while the DEK was still absent listen to this
+  /// and re-read from Drift so ciphertext placeholders become plaintext.
+  static final ValueNotifier<bool> readyListenable = ValueNotifier<bool>(false);
+
+  /// `true` when the user is authenticated but the DEK could not be opened — a
+  /// fresh device after a password change / reset, where the cloud DEK wrapper
+  /// is still under the OLD key. The shell watches this to raise the
+  /// recovery prompt. Cleared the moment a DEK becomes available.
+  static final ValueNotifier<bool> needsRecoveryListenable = ValueNotifier<bool>(false);
+
+  /// Synchronous view of [needsRecoveryListenable].
+  static bool get needsRecovery => needsRecoveryListenable.value;
 
   /// The recovery code from the most recent provisioning, kept in memory until
   /// [takeRecoveryCodeForOneTimeDisplay] consumes it (survives even if the OS
@@ -299,6 +325,7 @@ class SecretCipherService {
         // Do NOT regenerate — that would orphan every ciphertext. The UI must
         // offer restoreWithPreviousPassword / restoreWithRecoveryCode.
         debugPrint('SecretCipherService: DEK wrapper will not open for $userId');
+        needsRecoveryListenable.value = true;
       }
       return;
     }
@@ -372,7 +399,17 @@ class SecretCipherService {
       return;
     }
     final demo = await _readStore(_demoDekStorageKey);
-    if (demo != null) _dek = enc.Key.fromBase64(demo);
+    if (demo != null) {
+      _dek = enc.Key.fromBase64(demo);
+      return;
+    }
+    // No device DEK. A password-wrapper in local meta means this user enrolled
+    // on another device and this one came up (session restored from prefs)
+    // after a password reset — the DEK can only be reopened with the previous
+    // password or the recovery code, so surface the recovery prompt.
+    if ((await _readMeta(_metaWrappedDek)) != null) {
+      needsRecoveryListenable.value = true;
+    }
   }
 
   // ── recovery code display ────────────────────────────────────────────────
@@ -415,6 +452,7 @@ class SecretCipherService {
   static Future<void> clearCachedDek() async {
     _dek = null;
     _pendingRecoveryCode = null;
+    needsRecoveryListenable.value = false;
     try {
       await _secureStorage.delete(key: _dekCacheStorageKey);
     } catch (e) {

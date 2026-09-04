@@ -23,6 +23,8 @@ import 'package:aspyric/core/database/finance_repository.dart';
 import 'package:aspyric/core/constants/app_constants.dart';
 import 'package:drift/native.dart';
 
+import '../test/support/test_bootstrap.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Contrast helpers (WCAG 2.1 relative luminance / ratio)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -202,6 +204,7 @@ const _routes = <String>[
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  bootstrapTestEnv();
 
   Future<void> settle(WidgetTester t, {int frames = 22}) async {
     for (var i = 0; i < frames; i++) {

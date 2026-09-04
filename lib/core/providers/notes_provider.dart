@@ -6,6 +6,7 @@ import '../../domain/models/note_model.dart';
 import '../database/app_database.dart';
 import '../database/finance_repository.dart' show appDatabaseProvider;
 import '../database/note_mappers.dart';
+import '../services/secret_cipher_service.dart';
 import '../sync/cloud_mappers.dart';
 import '../sync/outbox_write_through.dart';
 
@@ -31,10 +32,22 @@ class NotesNotifier extends StateNotifier<NotesState> with OutboxWriteThrough {
 
   NotesNotifier(this._db) : super(NotesState()) {
     _loadFromDb();
+    SecretCipherService.readyListenable.addListener(_onCipherBecameReady);
   }
+
+  /// Mirrors [FinanceNotifier._cipherReadyOnLoad]: `false` means the notes were
+  /// mapped before the field-encryption DEK was available (session-restore cold
+  /// start), so [_onCipherBecameReady] must re-read once it arrives, otherwise
+  /// title / body / checklist / labels render as ciphertext.
+  bool _cipherReadyOnLoad = false;
 
   Future<void> _loadFromDb() async {
     try {
+      // Bring the DEK back from the OS keystore first so note fields decrypt on
+      // a cold start instead of showing ciphertext until something else
+      // triggers a reload.
+      await SecretCipherService(_db).restoreFromCache();
+      _cipherReadyOnLoad = _cipherReadyOnLoad || SecretCipherService.ready;
       final notes = (await (_db.select(_db.notes)..where((t) => t.isDeleted.equals(false))).get())
           .map((e) => e.toModel())
           .toList()
@@ -43,6 +56,22 @@ class NotesNotifier extends StateNotifier<NotesState> with OutboxWriteThrough {
     } catch (e) {
       debugPrint('NotesNotifier: failed to load persisted notes: $e');
     }
+  }
+
+  /// Re-reads every note from Drift. Public so a vault restore or a late DEK
+  /// unlock can refresh the in-memory list.
+  Future<void> reloadFromDb() => _loadFromDb();
+
+  void _onCipherBecameReady() {
+    if (_cipherReadyOnLoad || !SecretCipherService.ready) return;
+    _cipherReadyOnLoad = true;
+    _loadFromDb();
+  }
+
+  @override
+  void dispose() {
+    SecretCipherService.readyListenable.removeListener(_onCipherBecameReady);
+    super.dispose();
   }
 
   void _persist(NoteModel note) async {

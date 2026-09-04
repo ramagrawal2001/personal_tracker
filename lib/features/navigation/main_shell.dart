@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../core/l10n/app_localizations.dart';
+import '../../core/services/secret_cipher_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../core/utils/responsive.dart';
+import '../auth/presentation/auth_repository.dart';
+import '../auth/presentation/cipher_recovery_prompt.dart';
 import '../transactions/presentation/quick_add_modal.dart';
 import '../import_export/presentation/csv_import_modal.dart';
 
@@ -44,6 +47,32 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> {
   AppModule _activeModule = AppModule.finance;
   int _notesNavIndex = 0;
+  bool _recoveryPromptOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Fresh device after a password reset: the DEK is locked. Raise the
+    // recovery prompt on the first authenticated frame, and again if the lock
+    // state flips later (e.g. an interactive login on this device).
+    SecretCipherService.needsRecoveryListenable.addListener(_maybeShowRecoveryPrompt);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowRecoveryPrompt());
+  }
+
+  @override
+  void dispose() {
+    SecretCipherService.needsRecoveryListenable.removeListener(_maybeShowRecoveryPrompt);
+    super.dispose();
+  }
+
+  void _maybeShowRecoveryPrompt() {
+    if (!mounted || _recoveryPromptOpen || !SecretCipherService.needsRecovery) return;
+    final user = ref.read(authNotifierProvider).user;
+    if (user == null) return;
+    _recoveryPromptOpen = true;
+    CipherRecoveryPrompt.show(context, userId: user.id)
+        .whenComplete(() => _recoveryPromptOpen = false);
+  }
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;

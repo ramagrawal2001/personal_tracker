@@ -15,9 +15,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'crud_sweep_scenario.dart';
+import '../test/support/test_bootstrap.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  bootstrapTestEnv();
 
   testWidgets('create → edit → delete round-trips for every core module',
       (WidgetTester tester) async {

@@ -38,6 +38,72 @@ class _HostState extends State<_Host> {
   }
 }
 
+/// Stands in for `MainShell` + its persistent routed screens: holds a selected
+/// tab index and a per-tab scroll position in `State`, reads the static
+/// [AppColors] palette, and has NO dependency on `Theme.of` / `themeProvider`.
+class _FakeShell extends StatefulWidget {
+  const _FakeShell();
+  @override
+  State<_FakeShell> createState() => _FakeShellState();
+}
+
+class _FakeShellState extends State<_FakeShell> {
+  static int mountCount = 0;
+  static int buildCount = 0;
+
+  int _tab = 0;
+  final ScrollController _tab2Scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    mountCount++;
+  }
+
+  @override
+  void dispose() {
+    _tab2Scroll.dispose();
+    super.dispose();
+  }
+
+  Widget _page(int p, [ScrollController? c]) => ListView.builder(
+        controller: c,
+        itemCount: 60,
+        itemBuilder: (_, i) => SizedBox(
+          height: 44,
+          child: Text('page-$p item $i',
+              style: TextStyle(color: AppColors.textPrimary)),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    buildCount++;
+    return ColoredBox(
+      color: AppColors.background,
+      child: Column(
+        children: [
+          Expanded(
+            child: IndexedStack(
+              index: _tab,
+              children: [_page(0), _page(1, _tab2Scroll), _page(2)],
+            ),
+          ),
+          Row(
+            children: [
+              for (var i = 0; i < 3; i++)
+                TextButton(
+                  onPressed: () => setState(() => _tab = i),
+                  child: Text('Tab ${i + 1}'),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 void main() {
   testWidgets('a theme-agnostic child re-reads AppColors on every brightness flip',
       (tester) async {
@@ -125,5 +191,44 @@ void main() {
     for (var i = 0; i < dark.length; i++) {
       expect(dark[i], isNot(light[i]), reason: 'token #$i must differ between modes');
     }
+  });
+
+  testWidgets('theme toggle preserves shell tab + scroll State while flipping the palette',
+      (tester) async {
+    _FakeShellState.mountCount = 0;
+
+    final hostKey = GlobalKey<_HostState>();
+    // `const _FakeShell()` -> the SAME widget instance on every PaletteScope
+    // rebuild, so nothing but PaletteScope's own in-place rebuild can repaint
+    // it, and its State can never be silently remounted by a widget swap.
+    await tester.pumpWidget(
+      _Host(key: hostKey, childBuilder: () => const _FakeShell()),
+    );
+    await tester.pumpAndSettle();
+    expect(_FakeShellState.mountCount, 1);
+    expect(AppColors.brightness, Brightness.light);
+
+    // Move to a non-default tab and scroll its list.
+    await tester.tap(find.text('Tab 2'));
+    await tester.pumpAndSettle();
+    final shell = tester.state<_FakeShellState>(find.byType(_FakeShell));
+    shell._tab2Scroll.jumpTo(700);
+    await tester.pumpAndSettle();
+    expect(shell._tab2Scroll.offset, 700);
+
+    final buildsBefore = _FakeShellState.buildCount;
+
+    // Flip Light -> Dark.
+    hostKey.currentState!.setMode(ThemeMode.dark);
+    await tester.pumpAndSettle();
+
+    // Palette actually flipped...
+    expect(AppColors.brightness, Brightness.dark);
+    // ...the shell repainted in place through the fresh palette...
+    expect(_FakeShellState.buildCount, greaterThan(buildsBefore));
+    // ...and no State was destroyed: same tab, same scroll offset, no remount.
+    expect(_FakeShellState.mountCount, 1, reason: 'State must not be remounted');
+    expect(shell._tab, 1, reason: 'selected tab preserved');
+    expect(shell._tab2Scroll.offset, 700, reason: 'scroll offset preserved');
   });
 }
