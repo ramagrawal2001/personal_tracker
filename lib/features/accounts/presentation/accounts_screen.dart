@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../../core/services/secret_cipher_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/secret_reveal_sheet.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/summary_card.dart';
@@ -67,10 +70,13 @@ class AccountsScreen extends ConsumerWidget {
                     color: AppColors.surface,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     itemBuilder: (_) => [
+                      if (acc.encAccountNumber != null || acc.encIfsc != null)
+                        PopupMenuItem(value: 'secrets', child: Row(children: [Icon(LucideIcons.lock, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Bank details', style: TextStyle(color: AppColors.textPrimary))])),
                       PopupMenuItem(value: 'edit', child: Row(children: [Icon(LucideIcons.pencil, size: 14, color: AppColors.primary), SizedBox(width: 8), Text('Edit', style: TextStyle(color: AppColors.textPrimary))])),
                       PopupMenuItem(value: 'delete', child: Row(children: [Icon(LucideIcons.trash2, size: 14, color: AppColors.expense), SizedBox(width: 8), Text('Delete', style: TextStyle(color: AppColors.expense))])),
                     ],
                     onSelected: (v) {
+                      if (v == 'secrets') _showAccountSecrets(context, acc);
                       if (v == 'edit') _showEditSheet(context, ref, acc);
                       if (v == 'delete') _confirmDelete(context, ref, acc);
                     },
@@ -84,11 +90,30 @@ class AccountsScreen extends ConsumerWidget {
     );
   }
 
+  void _showAccountSecrets(BuildContext context, acc) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => SecretRevealSheet(
+        title: '${acc.name} details',
+        fields: [
+          SecretField('Account number', acc.encAccountNumber,
+              maskedFallback: acc.accountNumberLast4 != null ? '•••• ${acc.accountNumberLast4}' : '••••', groupDigits: true),
+          SecretField('IFSC / routing', acc.encIfsc, maskedFallback: '••••••'),
+        ],
+      ),
+    );
+  }
+
   void _showEditSheet(BuildContext context, WidgetRef ref, acc) {
     final nameCtrl = TextEditingController(text: acc.name);
     final bankCtrl = TextEditingController(text: acc.bank ?? '');
     final last4Ctrl = TextEditingController(text: acc.accountNumberLast4 ?? '');
     final openingCtrl = TextEditingController(text: acc.openingBalance.toStringAsFixed(0));
+    final acctNumCtrl = TextEditingController();
+    final ifscCtrl = TextEditingController();
     AccountType selectedType = acc.type;
     String? error;
     showModalBottomSheet(
@@ -124,9 +149,23 @@ class AccountsScreen extends ConsumerWidget {
                   style: TextStyle(color: AppColors.textPrimary),
                   decoration: _dec('Opening Balance (${CurrencyFormatter.symbol})', LucideIcons.indianRupee).copyWith(errorText: error),
                 ),
+                const SizedBox(height: 16),
+                Row(children: [
+                  Icon(LucideIcons.lock, size: 13, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(acc.encAccountNumber != null ? 'Replace sensitive details' : 'Add sensitive details',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                TextField(controller: acctNumCtrl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Full account number (leave blank to keep)', LucideIcons.hash)),
+                const SizedBox(height: 12),
+                TextField(controller: ifscCtrl, textCapitalization: TextCapitalization.characters, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('IFSC / routing (leave blank to keep)', LucideIcons.landmark)),
                 const SizedBox(height: 24),
                 SizedBox(width: double.infinity, child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    final navigator = Navigator.of(context);
                     final opening = double.tryParse(openingCtrl.text);
                     if (opening == null) {
                       setSheetState(() => error = 'Enter a valid opening balance');
@@ -136,15 +175,34 @@ class AccountsScreen extends ConsumerWidget {
                       setSheetState(() => error = 'Enter an account name');
                       return;
                     }
+                    final rawNum = acctNumCtrl.text.replaceAll(RegExp(r'\D'), '');
+                    final ifsc = ifscCtrl.text.trim().toUpperCase();
+                    String? encNum, encIfsc, newLast4;
+                    if (rawNum.isNotEmpty || ifsc.isNotEmpty) {
+                      final cipher = ref.read(secretCipherServiceProvider);
+                      if (!cipher.isReady) await cipher.restoreFromCache();
+                      if (cipher.isReady) {
+                        if (rawNum.isNotEmpty) {
+                          encNum = cipher.encryptField(rawNum);
+                          if (rawNum.length >= 4) newLast4 = rawNum.substring(rawNum.length - 4);
+                        }
+                        if (ifsc.isNotEmpty) encIfsc = cipher.encryptField(ifsc);
+                      } else {
+                        setSheetState(() => error = 'Secure storage is locked — sign in again to edit encrypted details');
+                        return;
+                      }
+                    }
                     ref.read(financeNotifierProvider.notifier).updateAccount(
                       acc.id,
                       name: nameCtrl.text.trim(),
                       type: selectedType,
                       bank: bankCtrl.text.trim().isEmpty ? null : bankCtrl.text.trim(),
-                      accountNumberLast4: last4Ctrl.text.trim().isEmpty ? null : last4Ctrl.text.trim(),
+                      accountNumberLast4: newLast4 ?? (last4Ctrl.text.trim().isEmpty ? null : last4Ctrl.text.trim()),
                       openingBalance: opening,
+                      encAccountNumber: encNum,
+                      encIfsc: encIfsc,
                     );
-                    Navigator.pop(context);
+                    navigator.pop();
                   },
                   child: const Text('Save Changes'),
                 )),

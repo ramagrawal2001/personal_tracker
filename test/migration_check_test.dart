@@ -54,7 +54,7 @@ void main() {
     expect(notes, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 3);
+    expect(versionRow.data['user_version'], 4);
 
     // v3 additions: the sync tables exist and the tombstone column is present.
     final outbox = await phase2.select(phase2.syncOutbox).get();
@@ -62,5 +62,15 @@ void main() {
     final liveAccounts =
         await (phase2.select(phase2.accounts)..where((t) => t.isDeleted.equals(false))).get();
     expect(liveAccounts.length, 1);
+
+    // v4 additions: encrypted secret columns are present and default to null.
+    final cardCols = (await phase2.customSelect('PRAGMA table_info(credit_cards)').get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(cardCols.containsAll({'enc_card_number', 'enc_cvv', 'enc_pin', 'color_hex'}), isTrue);
+    final acctCols = (await phase2.customSelect('PRAGMA table_info(accounts)').get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(acctCols.containsAll({'enc_account_number', 'enc_ifsc'}), isTrue);
   });
 }

@@ -14,6 +14,13 @@ class AccountModel {
   final DateTime updatedAt;
   final bool isDeleted;
 
+  /// Sensitive bank details, AES-GCM ciphertext blobs produced by
+  /// [SecretCipherService.encryptField]. Never plaintext. `accountNumberLast4`
+  /// stays plaintext for display and is derived from the full number at save
+  /// time.
+  final String? encAccountNumber;
+  final String? encIfsc;
+
   AccountModel({
     required this.id,
     required this.name,
@@ -27,6 +34,8 @@ class AccountModel {
     required this.createdAt,
     DateTime? updatedAt,
     this.isDeleted = false,
+    this.encAccountNumber,
+    this.encIfsc,
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   AccountModel copyWith({
@@ -39,6 +48,8 @@ class AccountModel {
     bool? isActive,
     DateTime? updatedAt,
     bool? isDeleted,
+    String? encAccountNumber,
+    String? encIfsc,
   }) {
     return AccountModel(
       id: id,
@@ -53,6 +64,8 @@ class AccountModel {
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
       isDeleted: isDeleted ?? this.isDeleted,
+      encAccountNumber: encAccountNumber ?? this.encAccountNumber,
+      encIfsc: encIfsc ?? this.encIfsc,
     );
   }
 }
@@ -314,8 +327,19 @@ class CardModel {
   final int? expiryMonth;
   final int? expiryYear;
   final CardColorPreset colorPreset;
+  /// Free-form card colour as `0xAARRGGBB` (same shape as
+  /// [CategoryModel.colorHex]). When set it overrides [colorPreset] in the
+  /// card renderers; null falls back to the preset gradient.
+  final String? colorHex;
   final bool isVirtual;
   final String? notes;          // PIN hint, portal URL, etc.
+
+  /// Sensitive card details, AES-GCM ciphertext blobs produced by
+  /// [SecretCipherService.encryptField]. Never plaintext. `last4` stays
+  /// plaintext for display and is derived from the full number at save time.
+  final String? encCardNumber;
+  final String? encCvv;
+  final String? encPin;
 
   // Credit-card-specific fields (only relevant for CardType.credit)
   final double creditLimit;
@@ -363,8 +387,12 @@ class CardModel {
     this.expiryMonth,
     this.expiryYear,
     this.colorPreset = CardColorPreset.midnight,
+    this.colorHex,
     this.isVirtual = false,
     this.notes,
+    this.encCardNumber,
+    this.encCvv,
+    this.encPin,
     this.creditLimit = 0,
     this.currentOutstanding = 0,
     this.statementDay = 1,
@@ -386,8 +414,12 @@ class CardModel {
     int? expiryMonth,
     int? expiryYear,
     CardColorPreset? colorPreset,
+    String? colorHex,
     bool? isVirtual,
     String? notes,
+    String? encCardNumber,
+    String? encCvv,
+    String? encPin,
     double? creditLimit,
     double? currentOutstanding,
     int? statementDay,
@@ -409,8 +441,12 @@ class CardModel {
       expiryMonth: expiryMonth ?? this.expiryMonth,
       expiryYear: expiryYear ?? this.expiryYear,
       colorPreset: colorPreset ?? this.colorPreset,
+      colorHex: colorHex ?? this.colorHex,
       isVirtual: isVirtual ?? this.isVirtual,
       notes: notes ?? this.notes,
+      encCardNumber: encCardNumber ?? this.encCardNumber,
+      encCvv: encCvv ?? this.encCvv,
+      encPin: encPin ?? this.encPin,
       creditLimit: creditLimit ?? this.creditLimit,
       currentOutstanding: currentOutstanding ?? this.currentOutstanding,
       statementDay: statementDay ?? this.statementDay,

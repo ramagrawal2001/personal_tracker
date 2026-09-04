@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/services/secret_cipher_service.dart';
 
 const _kSessionIsLoggedIn = 'aspyric_session_logged_in';
 const _kSessionUserId     = 'aspyric_session_user_id';
@@ -82,7 +83,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   StreamSubscription<AuthState>? _supabaseSub;
   Completer<void>? _restoreCompleter;
 
-  AuthNotifier()
+  /// Used to reach [secretCipherServiceProvider] at the points where the
+  /// plaintext password is briefly in hand (sign-in / sign-up).
+  final Ref _ref;
+
+  AuthNotifier(this._ref)
       : super(
           AuthState(
             // Authenticated == a live Supabase session (valid access token).
@@ -277,11 +282,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (kDebugMode && _demoAccounts[normalised] == password) {
       await Future.delayed(const Duration(milliseconds: 300));
       _demoSessionActive = true;
+      final demoUid = 'demo_${normalised.hashCode}';
       await activateSession(
         email: normalised,
-        userId: 'demo_${normalised.hashCode}',
+        userId: demoUid,
         name: normalised.split('@').first.toUpperCase(),
       );
+      await _initSecretCipher(demoUid, password, isDemo: true);
       return true;
     }
     // ───────────────────────────────────────────────────────────────────────
@@ -306,6 +313,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user: response.session!.user,
           isLoading: false,
         );
+        await _initSecretCipher(response.session!.user.id, password);
         return true;
       }
       state = state.copyWith(
@@ -346,6 +354,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           user: response.session!.user,
           isLoading: false,
         );
+        await _initSecretCipher(response.session!.user.id, password, isSignup: true);
         return true;
       }
 
@@ -370,8 +379,34 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint('AuthNotifier: Supabase sign-out failed (clearing local session anyway): $e');
     }
     _demoSessionActive = false;
+    // Forget the cached field-encryption DEK. The cloud wrappers stay, so the
+    // same user re-logging-in on this device restores it automatically.
+    await SecretCipherService.clearCachedDek();
     await _clearPersistedSession();
     state = AuthState(isAuthenticated: false, isRestored: true);
+  }
+
+  /// Bootstraps [SecretCipherService] with the plaintext password that is
+  /// briefly available here. Failures are swallowed — encryption of new
+  /// sensitive fields is simply skipped until the DEK is available.
+  Future<void> _initSecretCipher(
+    String userId,
+    String password, {
+    bool isSignup = false,
+    bool isDemo = false,
+  }) async {
+    try {
+      final cipher = _ref.read(secretCipherServiceProvider);
+      if (isDemo) {
+        await cipher.onLogin(userId, password, isDemo: true);
+      } else if (isSignup) {
+        await cipher.onSignup(userId, password);
+      } else {
+        await cipher.onLogin(userId, password);
+      }
+    } catch (e) {
+      debugPrint('AuthNotifier: secret cipher init failed: $e');
+    }
   }
 
   @override
@@ -382,5 +417,5 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
+  return AuthNotifier(ref);
 });

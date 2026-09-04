@@ -70,6 +70,8 @@ extension AccountCloud on AccountModel {
         'type': type.name,
         'bank': bank,
         'account_number_last4': accountNumberLast4,
+        'enc_account_number': encAccountNumber,
+        'enc_ifsc': encIfsc,
         'opening_balance': openingBalance,
         'calculated_balance': calculatedBalance,
         'currency': currency,
@@ -86,6 +88,8 @@ extension AccountCloud on AccountModel {
         type: AccountType.values.byName(m['type'] as String),
         bank: m['bank'] as String?,
         accountNumberLast4: m['account_number_last4'] as String?,
+        encAccountNumber: m['enc_account_number'] as String?,
+        encIfsc: m['enc_ifsc'] as String?,
         openingBalance: _d(m['opening_balance']),
         calculatedBalance: _d(m['calculated_balance'] ?? m['opening_balance'] ?? 0),
         currency: m['currency'] as String? ?? 'INR',
@@ -192,8 +196,12 @@ extension CardCloud on CardModel {
         'expiry_month': expiryMonth,
         'expiry_year': expiryYear,
         'color_preset': colorPreset.name,
+        'color_hex': colorHex,
         'is_virtual': isVirtual,
         'notes': notes,
+        'enc_card_number': encCardNumber,
+        'enc_cvv': encCvv,
+        'enc_pin': encPin,
         'credit_limit': creditLimit,
         'current_outstanding': currentOutstanding,
         'statement_day': statementDay,
@@ -218,8 +226,12 @@ extension CardCloud on CardModel {
         expiryMonth: _intN(m['expiry_month']),
         expiryYear: _intN(m['expiry_year']),
         colorPreset: CardColorPreset.values.byName(m['color_preset'] as String? ?? 'midnight'),
+        colorHex: m['color_hex'] as String?,
         isVirtual: _bool(m['is_virtual']),
         notes: m['notes'] as String?,
+        encCardNumber: m['enc_card_number'] as String?,
+        encCvv: m['enc_cvv'] as String?,
+        encPin: m['enc_pin'] as String?,
         creditLimit: _d(m['credit_limit'] ?? 0),
         currentOutstanding: _d(m['current_outstanding'] ?? 0),
         statementDay: _int(m['statement_day'] ?? 1),
@@ -437,6 +449,10 @@ Map<String, dynamic> settingsToCloudJson(
   required bool isRoundUpEnabled,
   required bool isAutoBackupEnabled,
   required DateTime updatedAt,
+  String? secWrappedDek,
+  String? secKekSalt,
+  String? secWrappedDekRc,
+  String? secRcSalt,
 }) {
   return {
     'user_id': userId,
@@ -445,6 +461,12 @@ Map<String, dynamic> settingsToCloudJson(
     'is_round_up_enabled': isRoundUpEnabled,
     'is_auto_backup_enabled': isAutoBackupEnabled,
     'updated_at': updatedAt.toUtc().toIso8601String(),
+    // Envelope-encryption key material. The operator sees only ciphertext;
+    // useless without the user's password or recovery code.
+    'sec_wrapped_dek': secWrappedDek,
+    'sec_kek_salt': secKekSalt,
+    'sec_wrapped_dek_rc': secWrappedDekRc,
+    'sec_rc_salt': secRcSalt,
   };
 }
 
@@ -455,6 +477,10 @@ class CloudSettings {
   final bool isRoundUpEnabled;
   final bool isAutoBackupEnabled;
   final DateTime updatedAt;
+  final String? secWrappedDek;
+  final String? secKekSalt;
+  final String? secWrappedDekRc;
+  final String? secRcSalt;
 
   const CloudSettings({
     required this.emergencyBuffer,
@@ -462,6 +488,10 @@ class CloudSettings {
     required this.isRoundUpEnabled,
     required this.isAutoBackupEnabled,
     required this.updatedAt,
+    this.secWrappedDek,
+    this.secKekSalt,
+    this.secWrappedDekRc,
+    this.secRcSalt,
   });
 
   factory CloudSettings.fromCloud(Map<String, dynamic> m) => CloudSettings(
@@ -470,5 +500,9 @@ class CloudSettings {
         isRoundUpEnabled: _bool(m['is_round_up_enabled']),
         isAutoBackupEnabled: _bool(m['is_auto_backup_enabled']),
         updatedAt: _dt(m['updated_at'] ?? DateTime.now().toUtc().toIso8601String()),
+        secWrappedDek: m['sec_wrapped_dek'] as String?,
+        secKekSalt: m['sec_kek_salt'] as String?,
+        secWrappedDekRc: m['sec_wrapped_dek_rc'] as String?,
+        secRcSalt: m['sec_rc_salt'] as String?,
       );
 }

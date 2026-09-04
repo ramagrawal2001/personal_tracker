@@ -56,6 +56,28 @@ class $AccountsTable extends Accounts
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _encAccountNumberMeta = const VerificationMeta(
+    'encAccountNumber',
+  );
+  @override
+  late final GeneratedColumn<String> encAccountNumber = GeneratedColumn<String>(
+    'enc_account_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _encIfscMeta = const VerificationMeta(
+    'encIfsc',
+  );
+  @override
+  late final GeneratedColumn<String> encIfsc = GeneratedColumn<String>(
+    'enc_ifsc',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _openingBalanceMeta = const VerificationMeta(
     'openingBalance',
   );
@@ -150,6 +172,8 @@ class $AccountsTable extends Accounts
     type,
     bank,
     accountNumberLast4,
+    encAccountNumber,
+    encIfsc,
     openingBalance,
     currency,
     isActive,
@@ -204,6 +228,21 @@ class $AccountsTable extends Accounts
           data['account_number_last4']!,
           _accountNumberLast4Meta,
         ),
+      );
+    }
+    if (data.containsKey('enc_account_number')) {
+      context.handle(
+        _encAccountNumberMeta,
+        encAccountNumber.isAcceptableOrUnknown(
+          data['enc_account_number']!,
+          _encAccountNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('enc_ifsc')) {
+      context.handle(
+        _encIfscMeta,
+        encIfsc.isAcceptableOrUnknown(data['enc_ifsc']!, _encIfscMeta),
       );
     }
     if (data.containsKey('opening_balance')) {
@@ -284,6 +323,14 @@ class $AccountsTable extends Accounts
         DriftSqlType.string,
         data['${effectivePrefix}account_number_last4'],
       ),
+      encAccountNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}enc_account_number'],
+      ),
+      encIfsc: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}enc_ifsc'],
+      ),
       openingBalance: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}opening_balance'],
@@ -327,6 +374,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
   final String type;
   final String? bank;
   final String? accountNumberLast4;
+  final String? encAccountNumber;
+  final String? encIfsc;
   final double openingBalance;
   final String currency;
   final bool isActive;
@@ -340,6 +389,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     required this.type,
     this.bank,
     this.accountNumberLast4,
+    this.encAccountNumber,
+    this.encIfsc,
     required this.openingBalance,
     required this.currency,
     required this.isActive,
@@ -359,6 +410,12 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     }
     if (!nullToAbsent || accountNumberLast4 != null) {
       map['account_number_last4'] = Variable<String>(accountNumberLast4);
+    }
+    if (!nullToAbsent || encAccountNumber != null) {
+      map['enc_account_number'] = Variable<String>(encAccountNumber);
+    }
+    if (!nullToAbsent || encIfsc != null) {
+      map['enc_ifsc'] = Variable<String>(encIfsc);
     }
     map['opening_balance'] = Variable<double>(openingBalance);
     map['currency'] = Variable<String>(currency);
@@ -381,6 +438,12 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
       accountNumberLast4: accountNumberLast4 == null && nullToAbsent
           ? const Value.absent()
           : Value(accountNumberLast4),
+      encAccountNumber: encAccountNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(encAccountNumber),
+      encIfsc: encIfsc == null && nullToAbsent
+          ? const Value.absent()
+          : Value(encIfsc),
       openingBalance: Value(openingBalance),
       currency: Value(currency),
       isActive: Value(isActive),
@@ -406,6 +469,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
       accountNumberLast4: serializer.fromJson<String?>(
         json['accountNumberLast4'],
       ),
+      encAccountNumber: serializer.fromJson<String?>(json['encAccountNumber']),
+      encIfsc: serializer.fromJson<String?>(json['encIfsc']),
       openingBalance: serializer.fromJson<double>(json['openingBalance']),
       currency: serializer.fromJson<String>(json['currency']),
       isActive: serializer.fromJson<bool>(json['isActive']),
@@ -424,6 +489,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
       'type': serializer.toJson<String>(type),
       'bank': serializer.toJson<String?>(bank),
       'accountNumberLast4': serializer.toJson<String?>(accountNumberLast4),
+      'encAccountNumber': serializer.toJson<String?>(encAccountNumber),
+      'encIfsc': serializer.toJson<String?>(encIfsc),
       'openingBalance': serializer.toJson<double>(openingBalance),
       'currency': serializer.toJson<String>(currency),
       'isActive': serializer.toJson<bool>(isActive),
@@ -440,6 +507,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     String? type,
     Value<String?> bank = const Value.absent(),
     Value<String?> accountNumberLast4 = const Value.absent(),
+    Value<String?> encAccountNumber = const Value.absent(),
+    Value<String?> encIfsc = const Value.absent(),
     double? openingBalance,
     String? currency,
     bool? isActive,
@@ -455,6 +524,10 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     accountNumberLast4: accountNumberLast4.present
         ? accountNumberLast4.value
         : this.accountNumberLast4,
+    encAccountNumber: encAccountNumber.present
+        ? encAccountNumber.value
+        : this.encAccountNumber,
+    encIfsc: encIfsc.present ? encIfsc.value : this.encIfsc,
     openingBalance: openingBalance ?? this.openingBalance,
     currency: currency ?? this.currency,
     isActive: isActive ?? this.isActive,
@@ -472,6 +545,10 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
       accountNumberLast4: data.accountNumberLast4.present
           ? data.accountNumberLast4.value
           : this.accountNumberLast4,
+      encAccountNumber: data.encAccountNumber.present
+          ? data.encAccountNumber.value
+          : this.encAccountNumber,
+      encIfsc: data.encIfsc.present ? data.encIfsc.value : this.encIfsc,
       openingBalance: data.openingBalance.present
           ? data.openingBalance.value
           : this.openingBalance,
@@ -492,6 +569,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
           ..write('type: $type, ')
           ..write('bank: $bank, ')
           ..write('accountNumberLast4: $accountNumberLast4, ')
+          ..write('encAccountNumber: $encAccountNumber, ')
+          ..write('encIfsc: $encIfsc, ')
           ..write('openingBalance: $openingBalance, ')
           ..write('currency: $currency, ')
           ..write('isActive: $isActive, ')
@@ -510,6 +589,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     type,
     bank,
     accountNumberLast4,
+    encAccountNumber,
+    encIfsc,
     openingBalance,
     currency,
     isActive,
@@ -527,6 +608,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
           other.type == this.type &&
           other.bank == this.bank &&
           other.accountNumberLast4 == this.accountNumberLast4 &&
+          other.encAccountNumber == this.encAccountNumber &&
+          other.encIfsc == this.encIfsc &&
           other.openingBalance == this.openingBalance &&
           other.currency == this.currency &&
           other.isActive == this.isActive &&
@@ -542,6 +625,8 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
   final Value<String> type;
   final Value<String?> bank;
   final Value<String?> accountNumberLast4;
+  final Value<String?> encAccountNumber;
+  final Value<String?> encIfsc;
   final Value<double> openingBalance;
   final Value<String> currency;
   final Value<bool> isActive;
@@ -556,6 +641,8 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     this.type = const Value.absent(),
     this.bank = const Value.absent(),
     this.accountNumberLast4 = const Value.absent(),
+    this.encAccountNumber = const Value.absent(),
+    this.encIfsc = const Value.absent(),
     this.openingBalance = const Value.absent(),
     this.currency = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -571,6 +658,8 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     required String type,
     this.bank = const Value.absent(),
     this.accountNumberLast4 = const Value.absent(),
+    this.encAccountNumber = const Value.absent(),
+    this.encIfsc = const Value.absent(),
     this.openingBalance = const Value.absent(),
     this.currency = const Value.absent(),
     this.isActive = const Value.absent(),
@@ -590,6 +679,8 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     Expression<String>? type,
     Expression<String>? bank,
     Expression<String>? accountNumberLast4,
+    Expression<String>? encAccountNumber,
+    Expression<String>? encIfsc,
     Expression<double>? openingBalance,
     Expression<String>? currency,
     Expression<bool>? isActive,
@@ -606,6 +697,8 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
       if (bank != null) 'bank': bank,
       if (accountNumberLast4 != null)
         'account_number_last4': accountNumberLast4,
+      if (encAccountNumber != null) 'enc_account_number': encAccountNumber,
+      if (encIfsc != null) 'enc_ifsc': encIfsc,
       if (openingBalance != null) 'opening_balance': openingBalance,
       if (currency != null) 'currency': currency,
       if (isActive != null) 'is_active': isActive,
@@ -623,6 +716,8 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     Value<String>? type,
     Value<String?>? bank,
     Value<String?>? accountNumberLast4,
+    Value<String?>? encAccountNumber,
+    Value<String?>? encIfsc,
     Value<double>? openingBalance,
     Value<String>? currency,
     Value<bool>? isActive,
@@ -638,6 +733,8 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
       type: type ?? this.type,
       bank: bank ?? this.bank,
       accountNumberLast4: accountNumberLast4 ?? this.accountNumberLast4,
+      encAccountNumber: encAccountNumber ?? this.encAccountNumber,
+      encIfsc: encIfsc ?? this.encIfsc,
       openingBalance: openingBalance ?? this.openingBalance,
       currency: currency ?? this.currency,
       isActive: isActive ?? this.isActive,
@@ -666,6 +763,12 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     }
     if (accountNumberLast4.present) {
       map['account_number_last4'] = Variable<String>(accountNumberLast4.value);
+    }
+    if (encAccountNumber.present) {
+      map['enc_account_number'] = Variable<String>(encAccountNumber.value);
+    }
+    if (encIfsc.present) {
+      map['enc_ifsc'] = Variable<String>(encIfsc.value);
     }
     if (openingBalance.present) {
       map['opening_balance'] = Variable<double>(openingBalance.value);
@@ -702,6 +805,8 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
           ..write('type: $type, ')
           ..write('bank: $bank, ')
           ..write('accountNumberLast4: $accountNumberLast4, ')
+          ..write('encAccountNumber: $encAccountNumber, ')
+          ..write('encIfsc: $encIfsc, ')
           ..write('openingBalance: $openingBalance, ')
           ..write('currency: $currency, ')
           ..write('isActive: $isActive, ')
@@ -2383,6 +2488,17 @@ class $CreditCardsTable extends CreditCards
     requiredDuringInsert: false,
     defaultValue: const Constant('midnight'),
   );
+  static const VerificationMeta _colorHexMeta = const VerificationMeta(
+    'colorHex',
+  );
+  @override
+  late final GeneratedColumn<String> colorHex = GeneratedColumn<String>(
+    'color_hex',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _isVirtualMeta = const VerificationMeta(
     'isVirtual',
   );
@@ -2402,6 +2518,35 @@ class $CreditCardsTable extends CreditCards
   @override
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
     'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _encCardNumberMeta = const VerificationMeta(
+    'encCardNumber',
+  );
+  @override
+  late final GeneratedColumn<String> encCardNumber = GeneratedColumn<String>(
+    'enc_card_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _encCvvMeta = const VerificationMeta('encCvv');
+  @override
+  late final GeneratedColumn<String> encCvv = GeneratedColumn<String>(
+    'enc_cvv',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _encPinMeta = const VerificationMeta('encPin');
+  @override
+  late final GeneratedColumn<String> encPin = GeneratedColumn<String>(
+    'enc_pin',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -2536,8 +2681,12 @@ class $CreditCardsTable extends CreditCards
     expiryMonth,
     expiryYear,
     colorPreset,
+    colorHex,
     isVirtual,
     notes,
+    encCardNumber,
+    encCvv,
+    encPin,
     creditLimit,
     currentOutstanding,
     statementDay,
@@ -2635,6 +2784,12 @@ class $CreditCardsTable extends CreditCards
         ),
       );
     }
+    if (data.containsKey('color_hex')) {
+      context.handle(
+        _colorHexMeta,
+        colorHex.isAcceptableOrUnknown(data['color_hex']!, _colorHexMeta),
+      );
+    }
     if (data.containsKey('is_virtual')) {
       context.handle(
         _isVirtualMeta,
@@ -2645,6 +2800,27 @@ class $CreditCardsTable extends CreditCards
       context.handle(
         _notesMeta,
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('enc_card_number')) {
+      context.handle(
+        _encCardNumberMeta,
+        encCardNumber.isAcceptableOrUnknown(
+          data['enc_card_number']!,
+          _encCardNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('enc_cvv')) {
+      context.handle(
+        _encCvvMeta,
+        encCvv.isAcceptableOrUnknown(data['enc_cvv']!, _encCvvMeta),
+      );
+    }
+    if (data.containsKey('enc_pin')) {
+      context.handle(
+        _encPinMeta,
+        encPin.isAcceptableOrUnknown(data['enc_pin']!, _encPinMeta),
       );
     }
     if (data.containsKey('credit_limit')) {
@@ -2768,6 +2944,10 @@ class $CreditCardsTable extends CreditCards
         DriftSqlType.string,
         data['${effectivePrefix}color_preset'],
       )!,
+      colorHex: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color_hex'],
+      ),
       isVirtual: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_virtual'],
@@ -2775,6 +2955,18 @@ class $CreditCardsTable extends CreditCards
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
+      ),
+      encCardNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}enc_card_number'],
+      ),
+      encCvv: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}enc_cvv'],
+      ),
+      encPin: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}enc_pin'],
       ),
       creditLimit: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
@@ -2836,8 +3028,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
   final int? expiryMonth;
   final int? expiryYear;
   final String colorPreset;
+  final String? colorHex;
   final bool isVirtual;
   final String? notes;
+  final String? encCardNumber;
+  final String? encCvv;
+  final String? encPin;
   final double creditLimit;
   final double currentOutstanding;
   final int statementDay;
@@ -2859,8 +3055,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
     this.expiryMonth,
     this.expiryYear,
     required this.colorPreset,
+    this.colorHex,
     required this.isVirtual,
     this.notes,
+    this.encCardNumber,
+    this.encCvv,
+    this.encPin,
     required this.creditLimit,
     required this.currentOutstanding,
     required this.statementDay,
@@ -2889,9 +3089,21 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
       map['expiry_year'] = Variable<int>(expiryYear);
     }
     map['color_preset'] = Variable<String>(colorPreset);
+    if (!nullToAbsent || colorHex != null) {
+      map['color_hex'] = Variable<String>(colorHex);
+    }
     map['is_virtual'] = Variable<bool>(isVirtual);
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || encCardNumber != null) {
+      map['enc_card_number'] = Variable<String>(encCardNumber);
+    }
+    if (!nullToAbsent || encCvv != null) {
+      map['enc_cvv'] = Variable<String>(encCvv);
+    }
+    if (!nullToAbsent || encPin != null) {
+      map['enc_pin'] = Variable<String>(encPin);
     }
     map['credit_limit'] = Variable<double>(creditLimit);
     map['current_outstanding'] = Variable<double>(currentOutstanding);
@@ -2930,10 +3142,22 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
           ? const Value.absent()
           : Value(expiryYear),
       colorPreset: Value(colorPreset),
+      colorHex: colorHex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorHex),
       isVirtual: Value(isVirtual),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      encCardNumber: encCardNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(encCardNumber),
+      encCvv: encCvv == null && nullToAbsent
+          ? const Value.absent()
+          : Value(encCvv),
+      encPin: encPin == null && nullToAbsent
+          ? const Value.absent()
+          : Value(encPin),
       creditLimit: Value(creditLimit),
       currentOutstanding: Value(currentOutstanding),
       statementDay: Value(statementDay),
@@ -2971,8 +3195,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
       expiryMonth: serializer.fromJson<int?>(json['expiryMonth']),
       expiryYear: serializer.fromJson<int?>(json['expiryYear']),
       colorPreset: serializer.fromJson<String>(json['colorPreset']),
+      colorHex: serializer.fromJson<String?>(json['colorHex']),
       isVirtual: serializer.fromJson<bool>(json['isVirtual']),
       notes: serializer.fromJson<String?>(json['notes']),
+      encCardNumber: serializer.fromJson<String?>(json['encCardNumber']),
+      encCvv: serializer.fromJson<String?>(json['encCvv']),
+      encPin: serializer.fromJson<String?>(json['encPin']),
       creditLimit: serializer.fromJson<double>(json['creditLimit']),
       currentOutstanding: serializer.fromJson<double>(
         json['currentOutstanding'],
@@ -3001,8 +3229,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
       'expiryMonth': serializer.toJson<int?>(expiryMonth),
       'expiryYear': serializer.toJson<int?>(expiryYear),
       'colorPreset': serializer.toJson<String>(colorPreset),
+      'colorHex': serializer.toJson<String?>(colorHex),
       'isVirtual': serializer.toJson<bool>(isVirtual),
       'notes': serializer.toJson<String?>(notes),
+      'encCardNumber': serializer.toJson<String?>(encCardNumber),
+      'encCvv': serializer.toJson<String?>(encCvv),
+      'encPin': serializer.toJson<String?>(encPin),
       'creditLimit': serializer.toJson<double>(creditLimit),
       'currentOutstanding': serializer.toJson<double>(currentOutstanding),
       'statementDay': serializer.toJson<int>(statementDay),
@@ -3027,8 +3259,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
     Value<int?> expiryMonth = const Value.absent(),
     Value<int?> expiryYear = const Value.absent(),
     String? colorPreset,
+    Value<String?> colorHex = const Value.absent(),
     bool? isVirtual,
     Value<String?> notes = const Value.absent(),
+    Value<String?> encCardNumber = const Value.absent(),
+    Value<String?> encCvv = const Value.absent(),
+    Value<String?> encPin = const Value.absent(),
     double? creditLimit,
     double? currentOutstanding,
     int? statementDay,
@@ -3050,8 +3286,14 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
     expiryMonth: expiryMonth.present ? expiryMonth.value : this.expiryMonth,
     expiryYear: expiryYear.present ? expiryYear.value : this.expiryYear,
     colorPreset: colorPreset ?? this.colorPreset,
+    colorHex: colorHex.present ? colorHex.value : this.colorHex,
     isVirtual: isVirtual ?? this.isVirtual,
     notes: notes.present ? notes.value : this.notes,
+    encCardNumber: encCardNumber.present
+        ? encCardNumber.value
+        : this.encCardNumber,
+    encCvv: encCvv.present ? encCvv.value : this.encCvv,
+    encPin: encPin.present ? encPin.value : this.encPin,
     creditLimit: creditLimit ?? this.creditLimit,
     currentOutstanding: currentOutstanding ?? this.currentOutstanding,
     statementDay: statementDay ?? this.statementDay,
@@ -3085,8 +3327,14 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
       colorPreset: data.colorPreset.present
           ? data.colorPreset.value
           : this.colorPreset,
+      colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       isVirtual: data.isVirtual.present ? data.isVirtual.value : this.isVirtual,
       notes: data.notes.present ? data.notes.value : this.notes,
+      encCardNumber: data.encCardNumber.present
+          ? data.encCardNumber.value
+          : this.encCardNumber,
+      encCvv: data.encCvv.present ? data.encCvv.value : this.encCvv,
+      encPin: data.encPin.present ? data.encPin.value : this.encPin,
       creditLimit: data.creditLimit.present
           ? data.creditLimit.value
           : this.creditLimit,
@@ -3121,8 +3369,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
           ..write('expiryMonth: $expiryMonth, ')
           ..write('expiryYear: $expiryYear, ')
           ..write('colorPreset: $colorPreset, ')
+          ..write('colorHex: $colorHex, ')
           ..write('isVirtual: $isVirtual, ')
           ..write('notes: $notes, ')
+          ..write('encCardNumber: $encCardNumber, ')
+          ..write('encCvv: $encCvv, ')
+          ..write('encPin: $encPin, ')
           ..write('creditLimit: $creditLimit, ')
           ..write('currentOutstanding: $currentOutstanding, ')
           ..write('statementDay: $statementDay, ')
@@ -3149,8 +3401,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
     expiryMonth,
     expiryYear,
     colorPreset,
+    colorHex,
     isVirtual,
     notes,
+    encCardNumber,
+    encCvv,
+    encPin,
     creditLimit,
     currentOutstanding,
     statementDay,
@@ -3176,8 +3432,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
           other.expiryMonth == this.expiryMonth &&
           other.expiryYear == this.expiryYear &&
           other.colorPreset == this.colorPreset &&
+          other.colorHex == this.colorHex &&
           other.isVirtual == this.isVirtual &&
           other.notes == this.notes &&
+          other.encCardNumber == this.encCardNumber &&
+          other.encCvv == this.encCvv &&
+          other.encPin == this.encPin &&
           other.creditLimit == this.creditLimit &&
           other.currentOutstanding == this.currentOutstanding &&
           other.statementDay == this.statementDay &&
@@ -3201,8 +3461,12 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
   final Value<int?> expiryMonth;
   final Value<int?> expiryYear;
   final Value<String> colorPreset;
+  final Value<String?> colorHex;
   final Value<bool> isVirtual;
   final Value<String?> notes;
+  final Value<String?> encCardNumber;
+  final Value<String?> encCvv;
+  final Value<String?> encPin;
   final Value<double> creditLimit;
   final Value<double> currentOutstanding;
   final Value<int> statementDay;
@@ -3225,8 +3489,12 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     this.expiryMonth = const Value.absent(),
     this.expiryYear = const Value.absent(),
     this.colorPreset = const Value.absent(),
+    this.colorHex = const Value.absent(),
     this.isVirtual = const Value.absent(),
     this.notes = const Value.absent(),
+    this.encCardNumber = const Value.absent(),
+    this.encCvv = const Value.absent(),
+    this.encPin = const Value.absent(),
     this.creditLimit = const Value.absent(),
     this.currentOutstanding = const Value.absent(),
     this.statementDay = const Value.absent(),
@@ -3250,8 +3518,12 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     this.expiryMonth = const Value.absent(),
     this.expiryYear = const Value.absent(),
     this.colorPreset = const Value.absent(),
+    this.colorHex = const Value.absent(),
     this.isVirtual = const Value.absent(),
     this.notes = const Value.absent(),
+    this.encCardNumber = const Value.absent(),
+    this.encCvv = const Value.absent(),
+    this.encPin = const Value.absent(),
     this.creditLimit = const Value.absent(),
     this.currentOutstanding = const Value.absent(),
     this.statementDay = const Value.absent(),
@@ -3278,8 +3550,12 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     Expression<int>? expiryMonth,
     Expression<int>? expiryYear,
     Expression<String>? colorPreset,
+    Expression<String>? colorHex,
     Expression<bool>? isVirtual,
     Expression<String>? notes,
+    Expression<String>? encCardNumber,
+    Expression<String>? encCvv,
+    Expression<String>? encPin,
     Expression<double>? creditLimit,
     Expression<double>? currentOutstanding,
     Expression<int>? statementDay,
@@ -3303,8 +3579,12 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
       if (expiryMonth != null) 'expiry_month': expiryMonth,
       if (expiryYear != null) 'expiry_year': expiryYear,
       if (colorPreset != null) 'color_preset': colorPreset,
+      if (colorHex != null) 'color_hex': colorHex,
       if (isVirtual != null) 'is_virtual': isVirtual,
       if (notes != null) 'notes': notes,
+      if (encCardNumber != null) 'enc_card_number': encCardNumber,
+      if (encCvv != null) 'enc_cvv': encCvv,
+      if (encPin != null) 'enc_pin': encPin,
       if (creditLimit != null) 'credit_limit': creditLimit,
       if (currentOutstanding != null) 'current_outstanding': currentOutstanding,
       if (statementDay != null) 'statement_day': statementDay,
@@ -3330,8 +3610,12 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     Value<int?>? expiryMonth,
     Value<int?>? expiryYear,
     Value<String>? colorPreset,
+    Value<String?>? colorHex,
     Value<bool>? isVirtual,
     Value<String?>? notes,
+    Value<String?>? encCardNumber,
+    Value<String?>? encCvv,
+    Value<String?>? encPin,
     Value<double>? creditLimit,
     Value<double>? currentOutstanding,
     Value<int>? statementDay,
@@ -3355,8 +3639,12 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
       expiryMonth: expiryMonth ?? this.expiryMonth,
       expiryYear: expiryYear ?? this.expiryYear,
       colorPreset: colorPreset ?? this.colorPreset,
+      colorHex: colorHex ?? this.colorHex,
       isVirtual: isVirtual ?? this.isVirtual,
       notes: notes ?? this.notes,
+      encCardNumber: encCardNumber ?? this.encCardNumber,
+      encCvv: encCvv ?? this.encCvv,
+      encPin: encPin ?? this.encPin,
       creditLimit: creditLimit ?? this.creditLimit,
       currentOutstanding: currentOutstanding ?? this.currentOutstanding,
       statementDay: statementDay ?? this.statementDay,
@@ -3404,11 +3692,23 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     if (colorPreset.present) {
       map['color_preset'] = Variable<String>(colorPreset.value);
     }
+    if (colorHex.present) {
+      map['color_hex'] = Variable<String>(colorHex.value);
+    }
     if (isVirtual.present) {
       map['is_virtual'] = Variable<bool>(isVirtual.value);
     }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
+    }
+    if (encCardNumber.present) {
+      map['enc_card_number'] = Variable<String>(encCardNumber.value);
+    }
+    if (encCvv.present) {
+      map['enc_cvv'] = Variable<String>(encCvv.value);
+    }
+    if (encPin.present) {
+      map['enc_pin'] = Variable<String>(encPin.value);
     }
     if (creditLimit.present) {
       map['credit_limit'] = Variable<double>(creditLimit.value);
@@ -3459,8 +3759,12 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
           ..write('expiryMonth: $expiryMonth, ')
           ..write('expiryYear: $expiryYear, ')
           ..write('colorPreset: $colorPreset, ')
+          ..write('colorHex: $colorHex, ')
           ..write('isVirtual: $isVirtual, ')
           ..write('notes: $notes, ')
+          ..write('encCardNumber: $encCardNumber, ')
+          ..write('encCvv: $encCvv, ')
+          ..write('encPin: $encPin, ')
           ..write('creditLimit: $creditLimit, ')
           ..write('currentOutstanding: $currentOutstanding, ')
           ..write('statementDay: $statementDay, ')
@@ -8374,6 +8678,8 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required String type,
       Value<String?> bank,
       Value<String?> accountNumberLast4,
+      Value<String?> encAccountNumber,
+      Value<String?> encIfsc,
       Value<double> openingBalance,
       Value<String> currency,
       Value<bool> isActive,
@@ -8390,6 +8696,8 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<String> type,
       Value<String?> bank,
       Value<String?> accountNumberLast4,
+      Value<String?> encAccountNumber,
+      Value<String?> encIfsc,
       Value<double> openingBalance,
       Value<String> currency,
       Value<bool> isActive,
@@ -8431,6 +8739,16 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<String> get accountNumberLast4 => $composableBuilder(
     column: $table.accountNumberLast4,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get encAccountNumber => $composableBuilder(
+    column: $table.encAccountNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get encIfsc => $composableBuilder(
+    column: $table.encIfsc,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8504,6 +8822,16 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get encAccountNumber => $composableBuilder(
+    column: $table.encAccountNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get encIfsc => $composableBuilder(
+    column: $table.encIfsc,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get openingBalance => $composableBuilder(
     column: $table.openingBalance,
     builder: (column) => ColumnOrderings(column),
@@ -8566,6 +8894,14 @@ class $$AccountsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get encAccountNumber => $composableBuilder(
+    column: $table.encAccountNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get encIfsc =>
+      $composableBuilder(column: $table.encIfsc, builder: (column) => column);
+
   GeneratedColumn<double> get openingBalance => $composableBuilder(
     column: $table.openingBalance,
     builder: (column) => column,
@@ -8626,6 +8962,8 @@ class $$AccountsTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<String?> bank = const Value.absent(),
                 Value<String?> accountNumberLast4 = const Value.absent(),
+                Value<String?> encAccountNumber = const Value.absent(),
+                Value<String?> encIfsc = const Value.absent(),
                 Value<double> openingBalance = const Value.absent(),
                 Value<String> currency = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -8640,6 +8978,8 @@ class $$AccountsTableTableManager
                 type: type,
                 bank: bank,
                 accountNumberLast4: accountNumberLast4,
+                encAccountNumber: encAccountNumber,
+                encIfsc: encIfsc,
                 openingBalance: openingBalance,
                 currency: currency,
                 isActive: isActive,
@@ -8656,6 +8996,8 @@ class $$AccountsTableTableManager
                 required String type,
                 Value<String?> bank = const Value.absent(),
                 Value<String?> accountNumberLast4 = const Value.absent(),
+                Value<String?> encAccountNumber = const Value.absent(),
+                Value<String?> encIfsc = const Value.absent(),
                 Value<double> openingBalance = const Value.absent(),
                 Value<String> currency = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
@@ -8670,6 +9012,8 @@ class $$AccountsTableTableManager
                 type: type,
                 bank: bank,
                 accountNumberLast4: accountNumberLast4,
+                encAccountNumber: encAccountNumber,
+                encIfsc: encIfsc,
                 openingBalance: openingBalance,
                 currency: currency,
                 isActive: isActive,
@@ -9449,8 +9793,12 @@ typedef $$CreditCardsTableCreateCompanionBuilder =
       Value<int?> expiryMonth,
       Value<int?> expiryYear,
       Value<String> colorPreset,
+      Value<String?> colorHex,
       Value<bool> isVirtual,
       Value<String?> notes,
+      Value<String?> encCardNumber,
+      Value<String?> encCvv,
+      Value<String?> encPin,
       Value<double> creditLimit,
       Value<double> currentOutstanding,
       Value<int> statementDay,
@@ -9475,8 +9823,12 @@ typedef $$CreditCardsTableUpdateCompanionBuilder =
       Value<int?> expiryMonth,
       Value<int?> expiryYear,
       Value<String> colorPreset,
+      Value<String?> colorHex,
       Value<bool> isVirtual,
       Value<String?> notes,
+      Value<String?> encCardNumber,
+      Value<String?> encCvv,
+      Value<String?> encPin,
       Value<double> creditLimit,
       Value<double> currentOutstanding,
       Value<int> statementDay,
@@ -9549,6 +9901,11 @@ class $$CreditCardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get colorHex => $composableBuilder(
+    column: $table.colorHex,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get isVirtual => $composableBuilder(
     column: $table.isVirtual,
     builder: (column) => ColumnFilters(column),
@@ -9556,6 +9913,21 @@ class $$CreditCardsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get encCardNumber => $composableBuilder(
+    column: $table.encCardNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get encCvv => $composableBuilder(
+    column: $table.encCvv,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get encPin => $composableBuilder(
+    column: $table.encPin,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9669,6 +10041,11 @@ class $$CreditCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get colorHex => $composableBuilder(
+    column: $table.colorHex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isVirtual => $composableBuilder(
     column: $table.isVirtual,
     builder: (column) => ColumnOrderings(column),
@@ -9676,6 +10053,21 @@ class $$CreditCardsTableOrderingComposer
 
   ColumnOrderings<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get encCardNumber => $composableBuilder(
+    column: $table.encCardNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get encCvv => $composableBuilder(
+    column: $table.encCvv,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get encPin => $composableBuilder(
+    column: $table.encPin,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -9777,11 +10169,25 @@ class $$CreditCardsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get colorHex =>
+      $composableBuilder(column: $table.colorHex, builder: (column) => column);
+
   GeneratedColumn<bool> get isVirtual =>
       $composableBuilder(column: $table.isVirtual, builder: (column) => column);
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get encCardNumber => $composableBuilder(
+    column: $table.encCardNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get encCvv =>
+      $composableBuilder(column: $table.encCvv, builder: (column) => column);
+
+  GeneratedColumn<String> get encPin =>
+      $composableBuilder(column: $table.encPin, builder: (column) => column);
 
   GeneratedColumn<double> get creditLimit => $composableBuilder(
     column: $table.creditLimit,
@@ -9863,8 +10269,12 @@ class $$CreditCardsTableTableManager
                 Value<int?> expiryMonth = const Value.absent(),
                 Value<int?> expiryYear = const Value.absent(),
                 Value<String> colorPreset = const Value.absent(),
+                Value<String?> colorHex = const Value.absent(),
                 Value<bool> isVirtual = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> encCardNumber = const Value.absent(),
+                Value<String?> encCvv = const Value.absent(),
+                Value<String?> encPin = const Value.absent(),
                 Value<double> creditLimit = const Value.absent(),
                 Value<double> currentOutstanding = const Value.absent(),
                 Value<int> statementDay = const Value.absent(),
@@ -9887,8 +10297,12 @@ class $$CreditCardsTableTableManager
                 expiryMonth: expiryMonth,
                 expiryYear: expiryYear,
                 colorPreset: colorPreset,
+                colorHex: colorHex,
                 isVirtual: isVirtual,
                 notes: notes,
+                encCardNumber: encCardNumber,
+                encCvv: encCvv,
+                encPin: encPin,
                 creditLimit: creditLimit,
                 currentOutstanding: currentOutstanding,
                 statementDay: statementDay,
@@ -9913,8 +10327,12 @@ class $$CreditCardsTableTableManager
                 Value<int?> expiryMonth = const Value.absent(),
                 Value<int?> expiryYear = const Value.absent(),
                 Value<String> colorPreset = const Value.absent(),
+                Value<String?> colorHex = const Value.absent(),
                 Value<bool> isVirtual = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> encCardNumber = const Value.absent(),
+                Value<String?> encCvv = const Value.absent(),
+                Value<String?> encPin = const Value.absent(),
                 Value<double> creditLimit = const Value.absent(),
                 Value<double> currentOutstanding = const Value.absent(),
                 Value<int> statementDay = const Value.absent(),
@@ -9937,8 +10355,12 @@ class $$CreditCardsTableTableManager
                 expiryMonth: expiryMonth,
                 expiryYear: expiryYear,
                 colorPreset: colorPreset,
+                colorHex: colorHex,
                 isVirtual: isVirtual,
                 notes: notes,
+                encCardNumber: encCardNumber,
+                encCvv: encCvv,
+                encPin: encPin,
                 creditLimit: creditLimit,
                 currentOutstanding: currentOutstanding,
                 statementDay: statementDay,

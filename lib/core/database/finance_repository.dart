@@ -7,6 +7,7 @@ import '../constants/app_constants.dart';
 import '../utils/currency_formatter.dart';
 import '../sync/cloud_mappers.dart';
 import '../sync/outbox_write_through.dart';
+import '../services/secret_cipher_service.dart';
 import '../../domain/models/models.dart';
 import 'app_database.dart';
 import 'finance_mappers.dart';
@@ -385,6 +386,10 @@ class FinanceNotifier extends StateNotifier<FinanceState> with OutboxWriteThroug
   /// settings (SharedPreferences) at startup so nothing is lost on restart.
   Future<void> _loadPersistedState() async {
     try {
+      // Bring the field-encryption DEK back from the OS keystore so sensitive
+      // card / bank values decrypt transparently after an app relaunch.
+      await SecretCipherService(_db).restoreFromCache();
+
       final accounts = (await (_db.select(_db.accounts)..where((t) => t.isDeleted.equals(false))).get())
           .map((e) => e.toModel())
           .toList();
@@ -733,6 +738,8 @@ if (creditCardId != null) {
     String? bank,
     String? accountNumberLast4,
     required double openingBalance,
+    String? encAccountNumber,
+    String? encIfsc,
   }) {
     final newAcc = AccountModel(
       id: _uuid.v4(),
@@ -743,6 +750,8 @@ if (creditCardId != null) {
       openingBalance: openingBalance,
       calculatedBalance: openingBalance,
       createdAt: DateTime.now(),
+      encAccountNumber: encAccountNumber,
+      encIfsc: encIfsc,
     );
 
     state = state.copyWith(
@@ -762,8 +771,13 @@ if (creditCardId != null) {
     int? expiryMonth,
     int? expiryYear,
     CardColorPreset colorPreset = CardColorPreset.midnight,
+    String? colorHex,
     bool isVirtual = false,
     String? notes,
+    // Encrypted sensitive details (AES-GCM ciphertext blobs, never plaintext).
+    String? encCardNumber,
+    String? encCvv,
+    String? encPin,
     // Credit-card fields
     double creditLimit = 0,
     int statementDay = 1,
@@ -784,8 +798,12 @@ if (creditCardId != null) {
       expiryMonth: expiryMonth,
       expiryYear: expiryYear,
       colorPreset: colorPreset,
+      colorHex: colorHex,
       isVirtual: isVirtual,
       notes: notes,
+      encCardNumber: encCardNumber,
+      encCvv: encCvv,
+      encPin: encPin,
       creditLimit: creditLimit,
       currentOutstanding: 0.0,
       statementDay: statementDay,
@@ -832,7 +850,11 @@ if (creditCardId != null) {
     int? expiryMonth,
     int? expiryYear,
     CardColorPreset? colorPreset,
+    String? colorHex,
     String? notes,
+    String? encCardNumber,
+    String? encCvv,
+    String? encPin,
     double? creditLimit,
     int? statementDay,
     int? dueDay,
@@ -853,7 +875,11 @@ if (creditCardId != null) {
           expiryMonth: expiryMonth,
           expiryYear: expiryYear,
           colorPreset: colorPreset,
+          colorHex: colorHex,
           notes: notes,
+          encCardNumber: encCardNumber,
+          encCvv: encCvv,
+          encPin: encPin,
           creditLimit: creditLimit,
           statementDay: statementDay,
           dueDay: dueDay,
@@ -1060,6 +1086,9 @@ if (creditCardId != null) {
     state = _emptyState();
     CurrencyFormatter.updateSymbol('₹'); // reset to default for the new user
     _fireAndForget(() async {
+      // Drop the previous user's field-encryption key material (in-memory,
+      // keystore, and the SyncMeta wrappers) before wiping the DB.
+      await SecretCipherService(_db).wipe();
       await _db.wipeAllData();
       // Reseed default categories without enqueuing outbox rows — the new user
       // gets their own copy from the cloud, or these become their local seed.
@@ -1187,12 +1216,12 @@ if (creditCardId != null) {
     _fireAndForget(() => deleteThrough('accounts', id, () => (_db.update(_db.accounts)..where((a) => a.id.equals(id))).write(AccountsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'account deletion');
   }
 
-  void updateAccount(String id, {String? name, AccountType? type, String? bank, String? accountNumberLast4, double? openingBalance}) {
+  void updateAccount(String id, {String? name, AccountType? type, String? bank, String? accountNumberLast4, double? openingBalance, String? encAccountNumber, String? encIfsc}) {
     AccountModel? updated;
     state = state.copyWith(
       accounts: state.accounts.map((a) {
         if (a.id != id) return a;
-        updated = a.copyWith(name: name, type: type, bank: bank, accountNumberLast4: accountNumberLast4, openingBalance: openingBalance);
+        updated = a.copyWith(name: name, type: type, bank: bank, accountNumberLast4: accountNumberLast4, openingBalance: openingBalance, encAccountNumber: encAccountNumber, encIfsc: encIfsc);
         return updated!;
       }).toList(),
     );
@@ -1545,6 +1574,25 @@ if (creditCardId != null) {
         await prefs.setBool(_kRoundUpEnabled, s.isRoundUpEnabled);
         await prefs.setBool(_kAutoBackupEnabled, s.isAutoBackupEnabled);
       });
+      // Adopt the cloud DEK key material only when this device has none yet
+      // (first-writer-wins: a device that already provisioned keeps its own).
+      _fireAndForget(() async {
+        Future<void> adopt(String key, String? value) async {
+          if (value == null) return;
+          final existing =
+              await (_db.select(_db.syncMeta)..where((m) => m.key.equals(key))).getSingleOrNull();
+          if (existing == null) {
+            await _db.into(_db.syncMeta).insertOnConflictUpdate(
+                  SyncMetaCompanion(key: Value(key), value: Value(value)),
+                );
+          }
+        }
+
+        await adopt('sec_wrapped_dek', s.secWrappedDek);
+        await adopt('sec_kek_salt', s.secKekSalt);
+        await adopt('sec_wrapped_dek_rc', s.secWrappedDekRc);
+        await adopt('sec_rc_salt', s.secRcSalt);
+      }, 'adopt cloud DEK key material');
     } finally {
       applyingRemote = false;
     }

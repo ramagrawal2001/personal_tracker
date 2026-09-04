@@ -22,6 +22,8 @@ void main() {
         createdAt: ts,
         updatedAt: ts,
         isDeleted: true,
+        encAccountNumber: 'aXY=:Zzz111==',
+        encIfsc: 'iv2=:ct2==',
       );
       final json = m.toCloudJson();
       final back = AccountCloud.fromCloud(json);
@@ -29,8 +31,12 @@ void main() {
       expect(json['type'], 'savingsAccount');
       expect(json['is_active'], false);
       expect(json['is_deleted'], true);
+      expect(json['enc_account_number'], 'aXY=:Zzz111==');
+      expect(json['enc_ifsc'], 'iv2=:ct2==');
       expect((json['updated_at'] as String).endsWith('Z'), isTrue);
       expect(back.type, AccountType.savingsAccount);
+      expect(back.encAccountNumber, 'aXY=:Zzz111==');
+      expect(back.encIfsc, 'iv2=:ct2==');
       expect(back.updatedAt.toUtc(), ts.toUtc());
     });
 
@@ -97,8 +103,12 @@ void main() {
         expiryMonth: 11,
         expiryYear: 2030,
         colorPreset: CardColorPreset.ocean,
+        colorHex: '0xFF3B82F6',
         isVirtual: true,
         notes: 'pin hint',
+        encCardNumber: 'ivA=:ctA==',
+        encCvv: 'ivB=:ctB==',
+        encPin: 'ivC=:ctC==',
         creditLimit: 50000,
         currentOutstanding: 1200.25,
         statementDay: 5,
@@ -114,6 +124,14 @@ void main() {
       expect(back.cardType, CardType.forex);
       expect(back.network, CardNetwork.amex);
       expect(back.colorPreset, CardColorPreset.ocean);
+      expect(json['color_hex'], '0xFF3B82F6');
+      expect(json['enc_card_number'], 'ivA=:ctA==');
+      expect(json['enc_cvv'], 'ivB=:ctB==');
+      expect(json['enc_pin'], 'ivC=:ctC==');
+      expect(back.colorHex, '0xFF3B82F6');
+      expect(back.encCardNumber, 'ivA=:ctA==');
+      expect(back.encCvv, 'ivB=:ctB==');
+      expect(back.encPin, 'ivC=:ctC==');
       expect(back.balance, 300.0);
     });
 

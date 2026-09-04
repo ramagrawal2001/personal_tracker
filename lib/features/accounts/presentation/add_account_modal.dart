@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../../core/services/secret_cipher_service.dart';
 import '../../../core/utils/responsive.dart';
 
 class AddAccountModal extends ConsumerStatefulWidget {
@@ -30,6 +32,8 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
   final TextEditingController _bankController = TextEditingController();
   final TextEditingController _last4Controller = TextEditingController();
   final TextEditingController _openingBalanceController = TextEditingController();
+  final TextEditingController _accountNumberController = TextEditingController();
+  final TextEditingController _ifscController = TextEditingController();
 
   AccountType _selectedType = AccountType.savingsAccount;
 
@@ -39,6 +43,8 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
     _bankController.dispose();
     _last4Controller.dispose();
     _openingBalanceController.dispose();
+    _accountNumberController.dispose();
+    _ifscController.dispose();
     super.dispose();
   }
 
@@ -143,6 +149,34 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
                 prefixText: '${CurrencyFormatter.symbol} ',
               ),
             ),
+            const SizedBox(height: 18),
+            Row(children: [
+              Icon(LucideIcons.lock, size: 13, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text('Sensitive details (encrypted on this device)',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+              ),
+            ]),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _accountNumberController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(
+                labelText: 'Full Account Number',
+                prefixIcon: Icon(LucideIcons.hash, size: 18),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _ifscController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'IFSC / Routing Number',
+                prefixIcon: Icon(LucideIcons.landmark, size: 18),
+              ),
+            ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -163,28 +197,52 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
     );
   }
 
-  void _saveAccount() {
+  Future<void> _saveAccount() async {
     final name = _nameController.text.trim();
     final openingBalanceText = _openingBalanceController.text.trim();
     final openingBalance = double.tryParse(openingBalanceText) ?? 0.0;
 
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Please enter an account name'), behavior: SnackBarBehavior.floating),
       );
       return;
+    }
+
+    final rawNumber = _accountNumberController.text.replaceAll(RegExp(r'\D'), '');
+    final ifsc = _ifscController.text.trim().toUpperCase();
+    var last4 = _last4Controller.text.trim();
+    if (rawNumber.length >= 4) last4 = rawNumber.substring(rawNumber.length - 4);
+
+    String? encAccountNumber, encIfsc;
+    if (rawNumber.isNotEmpty || ifsc.isNotEmpty) {
+      final cipher = ref.read(secretCipherServiceProvider);
+      if (!cipher.isReady) await cipher.restoreFromCache();
+      if (cipher.isReady) {
+        if (rawNumber.isNotEmpty) encAccountNumber = cipher.encryptField(rawNumber);
+        if (ifsc.isNotEmpty) encIfsc = cipher.encryptField(ifsc);
+      } else {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Secure storage is locked — account saved without encrypted details'), backgroundColor: AppColors.warning, behavior: SnackBarBehavior.floating),
+        );
+      }
     }
 
     ref.read(financeNotifierProvider.notifier).addAccount(
           name: name,
           type: _selectedType,
           bank: _bankController.text.trim().isNotEmpty ? _bankController.text.trim() : null,
-          accountNumberLast4: _last4Controller.text.trim().isNotEmpty ? _last4Controller.text.trim() : null,
+          accountNumberLast4: last4.isNotEmpty ? last4 : null,
           openingBalance: openingBalance,
+          encAccountNumber: encAccountNumber,
+          encIfsc: encIfsc,
         );
 
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
+    navigator.pop();
+    messenger.showSnackBar(
       SnackBar(content: Text('Account created successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
     );
   }

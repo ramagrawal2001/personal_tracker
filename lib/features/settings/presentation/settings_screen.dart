@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -8,6 +9,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/services/secret_cipher_service.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../../core/sync/sync_status.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -33,6 +35,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     _loadNotifState();
+    _maybeShowRecoveryCodeOnce();
+  }
+
+  /// Surfaces the one-time recovery code right after a fresh sign-up.
+  Future<void> _maybeShowRecoveryCodeOnce() async {
+    final code = await ref.read(secretCipherServiceProvider).takeRecoveryCodeForOneTimeDisplay();
+    if (code != null && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showRecoveryCodeDialog(code, firstTime: true));
+    }
+  }
+
+  Future<void> _showRecoveryCodeDialog(String? code, {bool firstTime = false}) async {
+    code ??= await ref.read(secretCipherServiceProvider).getRecoveryCode();
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Row(children: [
+          Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 20),
+          const SizedBox(width: 8),
+          Text('Recovery code', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              code == null
+                  ? 'This device was set up from a password or a recovery code, so it does not hold the recovery code itself. Check the device where you first signed up.'
+                  : firstTime
+                      ? 'Write this down and keep it safe. It is the only way to recover your encrypted card & bank details if you lose every signed-in device and forget your password.'
+                      : 'Keep this somewhere safe. It unlocks your encrypted card & bank details on a new device if you forget your password.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+            ),
+            if (code != null) ...[
+              const SizedBox(height: 14),
+              SelectableText(
+                code,
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2, fontFamily: 'monospace'),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          if (code != null)
+            TextButton(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: code!));
+                Navigator.pop(ctx);
+              },
+              child: Text('Copy', style: TextStyle(color: AppColors.primary)),
+            ),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Done')),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadNotifState() async {
@@ -326,6 +385,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       financeNotifier.toggleBiometric(false);
                     }
                   },
+                ),
+                Divider(color: AppColors.border, height: 1),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: AppDecorations.iconBadge(AppColors.primary),
+                    child: Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 18),
+                  ),
+                  title: Text('Encryption Recovery Code', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text('Recovers your encrypted card & bank details on a new device', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                  onTap: () => _showRecoveryCodeDialog(null),
                 ),
                 Divider(color: AppColors.border, height: 1),
                 SwitchListTile(

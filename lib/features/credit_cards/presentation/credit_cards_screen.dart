@@ -1,17 +1,57 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
+import '../../../core/services/secret_cipher_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/secret_reveal_sheet.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../domain/models/models.dart';
 import '../../transactions/presentation/quick_add_modal.dart';
+
+/// Parses a `0xAARRGGBB` / `#RRGGBB` / `RRGGBB` colour string.
+Color? parseCardHex(String? raw) {
+  if (raw == null) return null;
+  var s = raw.trim().replaceAll('#', '').replaceAll('0x', '').replaceAll('0X', '');
+  if (s.length == 6) s = 'FF$s';
+  final v = int.tryParse(s, radix: 16);
+  return v == null ? null : Color(v);
+}
+
+/// `0xAARRGGBB` string for a [Color], without touching the deprecated `.value`.
+String cardHexOf(Color c) {
+  int ch(double x) => (x * 255).round().clamp(0, 255);
+  final argb = (ch(c.a) << 24) | (ch(c.r) << 16) | (ch(c.g) << 8) | ch(c.b);
+  return '0x${argb.toRadixString(16).padLeft(8, '0').toUpperCase()}';
+}
+
+/// A 3-stop gradient built from the card's free-form [CardModel.colorHex] when
+/// set (hsl darken 12% → base → hsl lighten 10%), else the preset gradient.
+List<Color> cardGradientColors(CardModel card) {
+  final base = parseCardHex(card.colorHex);
+  if (base != null) {
+    final hsl = HSLColor.fromColor(base);
+    return [
+      hsl.withLightness((hsl.lightness - 0.12).clamp(0.0, 1.0)).toColor(),
+      base,
+      hsl.withLightness((hsl.lightness + 0.10).clamp(0.0, 1.0)).toColor(),
+    ];
+  }
+  return card.colorPreset.gradientColors.map((c) => Color(c)).toList();
+}
+
+/// White or near-black foreground for text laid over [gradient], by luminance.
+Color cardForeground(List<Color> gradient) {
+  final mid = gradient[gradient.length ~/ 2];
+  return mid.computeLuminance() > 0.55 ? const Color(0xFF14142B) : Colors.white;
+}
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 class CreditCardsScreen extends ConsumerStatefulWidget {
@@ -176,6 +216,7 @@ return SingleChildScrollView(
                   onPayBill: () => QuickAddModal.show(context, initialType: TransactionType.creditCardPayment, initialCreditCardId: c.id),
                   onEdit: () => _showEditCardSheet(c),
                   onDelete: () => _confirmDelete(c),
+                  onViewSecrets: () => _showCardSecrets(c),
                 )),
               ],
             ),
@@ -263,6 +304,16 @@ return SingleChildScrollView(
     );
   }
 
+  void _showCardSecrets(CardModel card) {
+    AdaptiveModal.show(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _CardSecretsSheet(card: card),
+    );
+  }
+
   void _showEditCardSheet(CardModel card) {
     final nameCtrl = TextEditingController(text: card.name);
     final bankCtrl = TextEditingController(text: card.bank);
@@ -270,7 +321,11 @@ return SingleChildScrollView(
     final limitCtrl = TextEditingController(text: card.creditLimit.toStringAsFixed(0));
     final statementDayCtrl = TextEditingController(text: '${card.statementDay}');
     final dueDayCtrl = TextEditingController(text: '${card.dueDay}');
+    final numCtrl = TextEditingController();
+    final cvvCtrl = TextEditingController();
+    final pinCtrl = TextEditingController();
     final isCredit = card.cardType == CardType.credit;
+    String? colorHex = card.colorHex;
     String? error;
 
     AdaptiveModal.show(
@@ -303,6 +358,62 @@ return SingleChildScrollView(
                   const SizedBox(height: 12),
                   TextField(controller: dueDayCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Due Day (1-31)')),
                 ],
+                const SizedBox(height: 16),
+                Row(children: [
+                  Icon(LucideIcons.lock, size: 13, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(card.encCardNumber != null ? 'Replace sensitive details' : 'Add sensitive details',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: numCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  maxLength: 19,
+                  decoration: const InputDecoration(labelText: 'Card Number (leave blank to keep)', counterText: ''),
+                ),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: TextField(controller: cvvCtrl, obscureText: true, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], maxLength: 4, decoration: const InputDecoration(labelText: 'CVV', counterText: ''))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: pinCtrl, obscureText: true, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], maxLength: 6, decoration: const InputDecoration(labelText: 'ATM PIN', counterText: ''))),
+                ]),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    icon: Icon(LucideIcons.palette, size: 15, color: AppColors.primary),
+                    label: Text(colorHex != null ? 'Custom colour set — change' : 'Pick a custom colour',
+                        style: TextStyle(color: AppColors.primary, fontSize: 13)),
+                    onPressed: () async {
+                      Color picked = parseCardHex(colorHex) ?? const Color(0xFF3B82F6);
+                      final result = await showDialog<Color>(
+                        context: context,
+                        builder: (dctx) => AlertDialog(
+                          backgroundColor: AppColors.surface,
+                          title: Text('Pick a card colour', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+                          content: SingleChildScrollView(
+                            child: ColorPicker(
+                              pickerColor: picked,
+                              onColorChanged: (c) => picked = c,
+                              enableAlpha: false,
+                              paletteType: PaletteType.hueWheel,
+                              labelTypes: const [],
+                            ),
+                          ),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(dctx), child: const Text('Cancel')),
+                            ElevatedButton(onPressed: () => Navigator.pop(dctx, picked), child: const Text('Use colour')),
+                          ],
+                        ),
+                      );
+                      if (result != null) setSheetState(() => colorHex = cardHexOf(result));
+                    },
+                  ),
+                ),
                 if (error != null) ...[
                   const SizedBox(height: 8),
                   Text(error!, style: TextStyle(color: AppColors.expense, fontSize: 12)),
@@ -311,7 +422,8 @@ return SingleChildScrollView(
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      final navigator = Navigator.of(context);
                       if (nameCtrl.text.trim().isEmpty || bankCtrl.text.trim().isEmpty) {
                         setSheetState(() => error = 'Name and bank are required');
                         return;
@@ -336,16 +448,38 @@ return SingleChildScrollView(
                           return;
                         }
                       }
+                      final rawNum = numCtrl.text.replaceAll(RegExp(r'\D'), '');
+                      String? encNum, encCvv, encPin, newLast4;
+                      if (rawNum.isNotEmpty || cvvCtrl.text.trim().isNotEmpty || pinCtrl.text.trim().isNotEmpty) {
+                        final cipher = ref.read(secretCipherServiceProvider);
+                        if (!cipher.isReady) await cipher.restoreFromCache();
+                        if (cipher.isReady) {
+                          if (rawNum.isNotEmpty) {
+                            encNum = cipher.encryptField(rawNum);
+                            if (rawNum.length >= 4) newLast4 = rawNum.substring(rawNum.length - 4);
+                          }
+                          if (cvvCtrl.text.trim().isNotEmpty) encCvv = cipher.encryptField(cvvCtrl.text.trim());
+                          if (pinCtrl.text.trim().isNotEmpty) encPin = cipher.encryptField(pinCtrl.text.trim());
+                        } else {
+                          setSheetState(() => error = 'Secure storage is locked — sign in again to edit encrypted details');
+                          return;
+                        }
+                      }
                       ref.read(financeNotifierProvider.notifier).updateCard(
                         card.id,
                         name: nameCtrl.text.trim(),
                         bank: bankCtrl.text.trim(),
                         cardholderName: holderCtrl.text.trim(),
+                        last4: newLast4,
+                        colorHex: colorHex,
+                        encCardNumber: encNum,
+                        encCvv: encCvv,
+                        encPin: encPin,
                         creditLimit: limit,
                         statementDay: statementDay,
                         dueDay: dueDay,
                       );
-                      Navigator.pop(context);
+                      navigator.pop();
                     },
                     child: const Text('Save Changes'),
                   ),
@@ -481,7 +615,9 @@ class _GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = card.colorPreset.gradientColors.map((c) => Color(c)).toList();
+    final colors = cardGradientColors(card);
+    final fg = cardForeground(colors);
+    final fgSoft = fg.withValues(alpha: 0.6);
 
     return Container(
       height: 200,
@@ -579,8 +715,8 @@ class _GlassCard extends StatelessWidget {
               children: [
                 Text(
                   '•••• •••• •••• ${card.last4}',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: fg,
                     fontSize: 16,
                     letterSpacing: 2.5,
                     fontWeight: FontWeight.w500,
@@ -596,11 +732,11 @@ class _GlassCard extends StatelessWidget {
                       children: [
                         Text(
                           'CARD HOLDER',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9, letterSpacing: 1),
+                          style: TextStyle(color: fgSoft, fontSize: 9, letterSpacing: 1),
                         ),
                         Text(
                           card.cardholderName.isEmpty ? card.bank : card.cardholderName.toUpperCase(),
-                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                          style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                         ),
                       ],
                     ),
@@ -609,12 +745,12 @@ class _GlassCard extends StatelessWidget {
                       children: [
                         Text(
                           'EXPIRES',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 9, letterSpacing: 1),
+                          style: TextStyle(color: fgSoft, fontSize: 9, letterSpacing: 1),
                         ),
                         Text(
                           card.expiryDisplay,
                           style: TextStyle(
-                            color: card.isExpired ? Colors.red[300] : Colors.white,
+                            color: card.isExpired ? Colors.red[300] : fg,
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
@@ -699,11 +835,14 @@ class _CardListTile extends StatelessWidget {
   final VoidCallback onPayBill;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  const _CardListTile({required this.card, required this.onPayBill, required this.onEdit, required this.onDelete});
+  final VoidCallback onViewSecrets;
+  const _CardListTile({required this.card, required this.onPayBill, required this.onEdit, required this.onDelete, required this.onViewSecrets});
+
+  bool get _hasSecrets => card.encCardNumber != null || card.encCvv != null || card.encPin != null;
 
   @override
   Widget build(BuildContext context) {
-    final colors = card.colorPreset.gradientColors.map((c) => Color(c)).toList();
+    final colors = cardGradientColors(card);
     final isCredit = card.cardType == CardType.credit;
     final hasFunds = (card.balance ?? 0) > 0;
 
@@ -791,6 +930,17 @@ class _CardListTile extends StatelessWidget {
                         ],
                       ),
                     ),
+                  if (_hasSecrets)
+                    PopupMenuItem(
+                      value: 'secrets',
+                      child: Row(
+                        children: [
+                          Icon(LucideIcons.lock, size: 14, color: AppColors.primary),
+                          SizedBox(width: 8),
+                          Text('Card details', style: TextStyle(color: AppColors.textPrimary)),
+                        ],
+                      ),
+                    ),
                   PopupMenuItem(
                     value: 'edit',
                     child: Row(
@@ -815,6 +965,8 @@ class _CardListTile extends StatelessWidget {
                 onSelected: (v) {
                   if (v == 'pay') {
                     onPayBill();
+                  } else if (v == 'secrets') {
+                    onViewSecrets();
                   } else if (v == 'edit') {
                     onEdit();
                   } else {
@@ -968,6 +1120,25 @@ class _SummaryItem extends StatelessWidget {
   );
 }
 
+// ─── Card Secrets Sheet ───────────────────────────────────────────────────────
+class _CardSecretsSheet extends StatelessWidget {
+  final CardModel card;
+  const _CardSecretsSheet({required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    return SecretRevealSheet(
+      title: '${card.name} details',
+      fields: [
+        SecretField('Card number', card.encCardNumber,
+            maskedFallback: '•••• •••• •••• ${card.last4}', groupDigits: true),
+        SecretField('CVV', card.encCvv, maskedFallback: '•••'),
+        SecretField('ATM PIN', card.encPin, maskedFallback: '••••'),
+      ],
+    );
+  }
+}
+
 // ─── Add Card Modal ───────────────────────────────────────────────────────────
 class _AddCardModal extends ConsumerStatefulWidget {
   const _AddCardModal();
@@ -979,6 +1150,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
   CardType _selectedType = CardType.credit;
   CardNetwork _selectedNetwork = CardNetwork.visa;
   CardColorPreset _selectedColor = CardColorPreset.midnight;
+  String? _customColorHex;
 
   final _nameCtrl = TextEditingController();
   final _bankCtrl = TextEditingController();
@@ -988,6 +1160,9 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
   final _balanceCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   final _currencyCtrl = TextEditingController(text: 'USD');
+  final _cardNumCtrl = TextEditingController();
+  final _cvvCtrl = TextEditingController();
+  final _pinCtrl = TextEditingController();
 
   int? _expiryMonth;
   int? _expiryYear;
@@ -998,7 +1173,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
 
   @override
   void dispose() {
-    for (final c in [_nameCtrl, _bankCtrl, _last4Ctrl, _holderCtrl, _limitCtrl, _balanceCtrl, _notesCtrl, _currencyCtrl]) {
+    for (final c in [_nameCtrl, _bankCtrl, _last4Ctrl, _holderCtrl, _limitCtrl, _balanceCtrl, _notesCtrl, _currencyCtrl, _cardNumCtrl, _cvvCtrl, _pinCtrl]) {
       c.dispose();
     }
     super.dispose();
@@ -1077,6 +1252,61 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(child: _field(_holderCtrl, 'Cardholder Name', hint: 'Your Name', icon: LucideIcons.user)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Sensitive details (encrypted on-device) ──
+                  Row(
+                    children: [
+                      Icon(LucideIcons.lock, size: 14, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text('Sensitive details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Encrypted on this device. The full number sets the last 4 automatically.',
+                      style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                  const SizedBox(height: 10),
+                  _field(
+                    _cardNumCtrl,
+                    'Card Number',
+                    hint: '•••• •••• •••• ••••',
+                    icon: LucideIcons.creditCard,
+                    inputType: TextInputType.number,
+                    formatter: FilteringTextInputFormatter.digitsOnly,
+                    maxLen: 19,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _field(
+                          _cvvCtrl,
+                          'CVV',
+                          hint: '•••',
+                          icon: LucideIcons.shield,
+                          inputType: TextInputType.number,
+                          formatter: FilteringTextInputFormatter.digitsOnly,
+                          maxLen: 4,
+                          obscure: true,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _field(
+                          _pinCtrl,
+                          'ATM PIN',
+                          hint: '••••',
+                          icon: LucideIcons.keyRound,
+                          inputType: TextInputType.number,
+                          formatter: FilteringTextInputFormatter.digitsOnly,
+                          maxLen: 6,
+                          obscure: true,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -1242,7 +1472,12 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
   }
 
   Widget _buildMiniPreview() {
-    final colors = _selectedColor.gradientColors.map((c) => Color(c)).toList();
+    final custom = parseCardHex(_customColorHex);
+    final colors = custom != null
+        ? cardGradientColors(CardModel(
+            id: '_', cardType: _selectedType, name: '', bank: '', last4: '',
+            cardholderName: '', colorHex: _customColorHex))
+        : _selectedColor.gradientColors.map((c) => Color(c)).toList();
     return Container(
       height: 80,
       decoration: BoxDecoration(
@@ -1350,34 +1585,91 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
   }
 
   Widget _buildColorSelector() {
+    final customColor = parseCardHex(_customColorHex);
     return SizedBox(
       height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        children: CardColorPreset.values.map((preset) {
-          final selected = preset == _selectedColor;
-          final colors = preset.gradientColors.map((c) => Color(c)).toList();
-          return GestureDetector(
-            onTap: () => setState(() => _selectedColor = preset),
+        children: [
+          ...CardColorPreset.values.map((preset) {
+            final selected = _customColorHex == null && preset == _selectedColor;
+            final colors = preset.gradientColors.map((c) => Color(c)).toList();
+            return GestureDetector(
+              onTap: () => setState(() {
+                _selectedColor = preset;
+                _customColorHex = null;
+              }),
+              child: Container(
+                margin: const EdgeInsets.only(right: 10),
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: selected ? Colors.white : Colors.transparent, width: 3),
+                  boxShadow: selected ? [BoxShadow(color: colors.last.withValues(alpha: 0.5), blurRadius: 8)] : null,
+                ),
+                child: selected ? const Icon(LucideIcons.check, color: Colors.white, size: 16) : null,
+              ),
+            );
+          }),
+          // Custom colour picker
+          GestureDetector(
+            onTap: _pickCustomColor,
             child: Container(
               margin: const EdgeInsets.only(right: 10),
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                color: customColor ?? AppColors.surfaceLight,
+                gradient: customColor == null
+                    ? const LinearGradient(
+                        colors: [Color(0xFFEF4444), Color(0xFF3B82F6), Color(0xFF10B981)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? Colors.white : Colors.transparent,
-                  width: 3,
-                ),
-                boxShadow: selected ? [BoxShadow(color: colors.last.withValues(alpha: 0.5), blurRadius: 8)] : null,
+                border: Border.all(color: _customColorHex != null ? Colors.white : AppColors.border, width: 3),
               ),
-              child: selected ? const Icon(LucideIcons.check, color: Colors.white, size: 16) : null,
+              child: Icon(
+                _customColorHex != null ? LucideIcons.check : LucideIcons.plus,
+                color: customColor != null ? cardForeground([customColor]) : Colors.white,
+                size: 16,
+              ),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _pickCustomColor() async {
+    Color picked = parseCardHex(_customColorHex) ?? const Color(0xFF3B82F6);
+    final result = await showDialog<Color>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Pick a card colour', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: picked,
+            onColorChanged: (c) => picked = c,
+            enableAlpha: false,
+            displayThumbColor: true,
+            paletteType: PaletteType.hueWheel,
+            labelTypes: const [],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: AppColors.textMuted))),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, picked), child: const Text('Use colour')),
+        ],
+      ),
+    );
+    if (result != null) {
+      setState(() => _customColorHex = cardHexOf(result));
+    }
   }
 
   Widget _buildDropdown<T>({
@@ -1422,12 +1714,14 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     TextInputFormatter? formatter,
     int maxLen = 200,
     int maxLines = 1,
+    bool obscure = false,
   }) {
     return TextField(
       controller: ctrl,
       keyboardType: inputType,
       maxLength: maxLen,
       maxLines: maxLines,
+      obscureText: obscure,
       inputFormatters: formatter != null ? [formatter] : null,
       onChanged: (_) => setState(() {}),
       style: TextStyle(color: AppColors.textPrimary),
@@ -1447,10 +1741,14 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     );
   }
 
-  void _save() {
-    if (_nameCtrl.text.trim().isEmpty || _bankCtrl.text.trim().isEmpty || _last4Ctrl.text.length != 4) {
+  Future<void> _save() async {
+    final rawNumber = _cardNumCtrl.text.replaceAll(RegExp(r'\D'), '');
+    var last4 = _last4Ctrl.text.trim();
+    if (rawNumber.length >= 12) last4 = rawNumber.substring(rawNumber.length - 4);
+
+    if (_nameCtrl.text.trim().isEmpty || _bankCtrl.text.trim().isEmpty || last4.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill card name, bank, and last 4 digits'), backgroundColor: AppColors.expense),
+        SnackBar(content: Text('Please fill card name, bank, and the card number (or last 4 digits)'), backgroundColor: AppColors.expense),
       );
       return;
     }
@@ -1470,18 +1768,42 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     }
     setState(() => _saving = true);
 
+    // Encrypt the sensitive fields transparently with the per-user DEK. Never
+    // persist plaintext — if the cipher is not ready, skip capture and warn.
+    String? encNumber, encCvv, encPin;
+    final cvv = _cvvCtrl.text.trim();
+    final pin = _pinCtrl.text.trim();
+    if (rawNumber.isNotEmpty || cvv.isNotEmpty || pin.isNotEmpty) {
+      final cipher = ref.read(secretCipherServiceProvider);
+      if (!cipher.isReady) await cipher.restoreFromCache();
+      if (cipher.isReady) {
+        if (rawNumber.isNotEmpty) encNumber = cipher.encryptField(rawNumber);
+        if (cvv.isNotEmpty) encCvv = cipher.encryptField(cvv);
+        if (pin.isNotEmpty) encPin = cipher.encryptField(pin);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Secure storage is locked — card saved without the encrypted details'), backgroundColor: AppColors.warning),
+        );
+      }
+    }
+    if (!mounted) return;
+
     ref.read(financeNotifierProvider.notifier).addCard(
       cardType: _selectedType,
       name: _nameCtrl.text.trim(),
       bank: _bankCtrl.text.trim(),
-      last4: _last4Ctrl.text.trim(),
+      last4: last4,
       cardholderName: _holderCtrl.text.trim(),
       network: _selectedNetwork,
       expiryMonth: _expiryMonth,
       expiryYear: _expiryYear,
       colorPreset: _selectedColor,
+      colorHex: _customColorHex,
       isVirtual: _isVirtual,
       notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+      encCardNumber: encNumber,
+      encCvv: encCvv,
+      encPin: encPin,
       creditLimit: double.tryParse(_limitCtrl.text) ?? 0,
       statementDay: _statementDay,
       dueDay: _dueDay,

@@ -35,7 +35,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -98,6 +98,32 @@ class AppDatabase extends _$AppDatabase {
 
             // Only `transactions` carries a `created_at` we can backfill from.
             await customStatement('UPDATE transactions SET updated_at = created_at');
+          }
+          if (from < 4) {
+            // v4: encrypted sensitive card/bank columns + free-form card colour.
+            // Added defensively (a synthetic upgrade path may have already
+            // created the tables from the current schema).
+            final v4Cache = <String, Set<String>>{};
+            Future<Set<String>> v4Cols(String table) async {
+              return v4Cache[table] ??= (await customSelect('PRAGMA table_info($table)').get())
+                  .map((row) => row.read<String>('name'))
+                  .toSet();
+            }
+
+            Future<void> addV4(TableInfo table, GeneratedColumn column) async {
+              final cols = await v4Cols(table.actualTableName);
+              if (!cols.contains(column.name)) {
+                await m.addColumn(table, column);
+                cols.add(column.name);
+              }
+            }
+
+            await addV4(creditCards, creditCards.encCardNumber);
+            await addV4(creditCards, creditCards.encCvv);
+            await addV4(creditCards, creditCards.encPin);
+            await addV4(creditCards, creditCards.colorHex);
+            await addV4(accounts, accounts.encAccountNumber);
+            await addV4(accounts, accounts.encIfsc);
           }
         },
       );

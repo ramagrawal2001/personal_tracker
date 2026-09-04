@@ -177,10 +177,11 @@ class OutboxDrainer {
 
   Future<Map<String, dynamic>> _buildSettingsRow(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    final metaRow = await (db.select(db.syncMeta)
-          ..where((m) => m.key.equals('settings_updated_at')))
-        .getSingleOrNull();
-    final updatedAt = metaRow == null ? DateTime.now() : DateTime.tryParse(metaRow.value) ?? DateTime.now();
+    Future<String?> meta(String key) async =>
+        (await (db.select(db.syncMeta)..where((m) => m.key.equals(key))).getSingleOrNull())?.value;
+
+    final updatedRaw = await meta('settings_updated_at');
+    final updatedAt = updatedRaw == null ? DateTime.now() : DateTime.tryParse(updatedRaw) ?? DateTime.now();
     return settingsToCloudJson(
       userId,
       emergencyBuffer: prefs.getDouble(kPrefEmergencyBuffer) ?? 20000.0,
@@ -188,6 +189,10 @@ class OutboxDrainer {
       isRoundUpEnabled: prefs.getBool(kPrefRoundUpEnabled) ?? false,
       isAutoBackupEnabled: prefs.getBool(kPrefAutoBackupEnabled) ?? false,
       updatedAt: updatedAt,
+      secWrappedDek: await meta('sec_wrapped_dek'),
+      secKekSalt: await meta('sec_kek_salt'),
+      secWrappedDekRc: await meta('sec_wrapped_dek_rc'),
+      secRcSalt: await meta('sec_rc_salt'),
     );
   }
 }
