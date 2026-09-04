@@ -156,6 +156,8 @@ extension CreditCardEntryMapper on CreditCardEntry {
       linkedAccountId: linkedAccountId,
       balance: balance,
       currency: currency,
+      lastPaymentDate: lastPaymentDate,
+      lastPaymentAmount: lastPaymentAmount,
       updatedAt: updatedAt,
       isDeleted: isDeleted,
     );
@@ -188,6 +190,8 @@ extension CardModelMapper on CardModel {
       linkedAccountId: Value(linkedAccountId),
       balance: Value(balance),
       currency: Value(currency),
+      lastPaymentDate: Value(lastPaymentDate),
+      lastPaymentAmount: Value(lastPaymentAmount),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: Value(isDeleted ? DateTime.now() : null),

@@ -352,6 +352,9 @@ class CardModel {
   final double? balance;        // Current balance (prepaid / forex cards)
   final String? currency;       // For forex cards (USD, EUR, etc.)
 
+  final DateTime? lastPaymentDate;
+  final double? lastPaymentAmount;
+
   final DateTime updatedAt;
   final bool isDeleted;
 
@@ -400,6 +403,8 @@ class CardModel {
     this.linkedAccountId,
     this.balance,
     this.currency,
+    this.lastPaymentDate,
+    this.lastPaymentAmount,
     DateTime? updatedAt,
     this.isDeleted = false,
   }) : updatedAt = updatedAt ?? DateTime.now();
@@ -427,6 +432,8 @@ class CardModel {
     String? linkedAccountId,
     double? balance,
     String? currency,
+    DateTime? lastPaymentDate,
+    double? lastPaymentAmount,
     DateTime? updatedAt,
     bool? isDeleted,
   }) {
@@ -454,6 +461,8 @@ class CardModel {
       linkedAccountId: linkedAccountId ?? this.linkedAccountId,
       balance: balance ?? this.balance,
       currency: currency ?? this.currency,
+      lastPaymentDate: lastPaymentDate ?? this.lastPaymentDate,
+      lastPaymentAmount: lastPaymentAmount ?? this.lastPaymentAmount,
       updatedAt: updatedAt ?? DateTime.now(),
       isDeleted: isDeleted ?? this.isDeleted,
     );

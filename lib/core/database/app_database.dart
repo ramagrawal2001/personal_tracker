@@ -35,7 +35,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -124,6 +124,15 @@ class AppDatabase extends _$AppDatabase {
             await addV4(creditCards, creditCards.colorHex);
             await addV4(accounts, accounts.encAccountNumber);
             await addV4(accounts, accounts.encIfsc);
+          }
+          if (from < 5) {
+            // v5: credit-card last-payment tracking (drives payment reminders).
+            final existing = (await customSelect('PRAGMA table_info(credit_cards)').get())
+                .map((row) => row.read<String>('name'))
+                .toSet();
+            for (final col in [creditCards.lastPaymentDate, creditCards.lastPaymentAmount]) {
+              if (!existing.contains(col.name)) await m.addColumn(creditCards, col);
+            }
           }
         },
       );

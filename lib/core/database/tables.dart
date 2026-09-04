@@ -91,6 +91,8 @@ class CreditCards extends Table {
   TextColumn get linkedAccountId => text().nullable()();
   RealColumn get balance => real().nullable()();
   TextColumn get currency => text().nullable()();
+  DateTimeColumn get lastPaymentDate => dateTime().nullable()();
+  RealColumn get lastPaymentAmount => real().nullable()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get deletedAt => dateTime().nullable()();

@@ -9,6 +9,7 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/services/notification_service.dart';
+import '../../../core/services/payment_reminders.dart';
 import '../../../core/services/secret_cipher_service.dart';
 import '../../../core/sync/sync_service.dart';
 import '../../../core/sync/sync_status.dart';
@@ -30,6 +31,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notifEnabled = false;
   int _notifHour = 21;
   int _notifMinute = 0;
+  bool _payRemindersEnabled = true;
 
   @override
   void initState() {
@@ -98,7 +100,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final enabled = await NotificationService.isEnabled();
     final hour = await NotificationService.getReminderHour();
     final min = await NotificationService.getReminderMinute();
-    if (mounted) setState(() { _notifEnabled = enabled; _notifHour = hour; _notifMinute = min; });
+    final payRem = await NotificationService.paymentRemindersEnabled();
+    if (mounted) setState(() { _notifEnabled = enabled; _notifHour = hour; _notifMinute = min; _payRemindersEnabled = payRem; });
   }
 
   Future<void> _toggleNotifications(bool val) async {
@@ -352,6 +355,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 ],
+                Divider(color: AppColors.border, height: 1),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  secondary: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: AppDecorations.iconBadge(AppColors.creditCard),
+                    child: Icon(LucideIcons.calendarClock, color: AppColors.creditCard, size: 18),
+                  ),
+                  title: Text('Payment Reminders', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text('Card statement & due dates, EMIs, recurring bills', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  value: _payRemindersEnabled,
+                  activeColor: AppColors.primary,
+                  onChanged: (v) async {
+                    setState(() => _payRemindersEnabled = v);
+                    await NotificationService.setPaymentRemindersEnabled(v);
+                    if (v) {
+                      await NotificationService.schedulePaymentReminders(
+                        PaymentReminders.compute(ref.read(financeNotifierProvider), DateTime.now()),
+                      );
+                    }
+                  },
+                ),
               ],
             ),
           ),

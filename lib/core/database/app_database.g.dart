@@ -2631,6 +2631,30 @@ class $CreditCardsTable extends CreditCards
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _lastPaymentDateMeta = const VerificationMeta(
+    'lastPaymentDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastPaymentDate =
+      GeneratedColumn<DateTime>(
+        'last_payment_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _lastPaymentAmountMeta = const VerificationMeta(
+    'lastPaymentAmount',
+  );
+  @override
+  late final GeneratedColumn<double> lastPaymentAmount =
+      GeneratedColumn<double>(
+        'last_payment_amount',
+        aliasedName,
+        true,
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -2694,6 +2718,8 @@ class $CreditCardsTable extends CreditCards
     linkedAccountId,
     balance,
     currency,
+    lastPaymentDate,
+    lastPaymentAmount,
     updatedAt,
     isDeleted,
     deletedAt,
@@ -2877,6 +2903,24 @@ class $CreditCardsTable extends CreditCards
         currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta),
       );
     }
+    if (data.containsKey('last_payment_date')) {
+      context.handle(
+        _lastPaymentDateMeta,
+        lastPaymentDate.isAcceptableOrUnknown(
+          data['last_payment_date']!,
+          _lastPaymentDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_payment_amount')) {
+      context.handle(
+        _lastPaymentAmountMeta,
+        lastPaymentAmount.isAcceptableOrUnknown(
+          data['last_payment_amount']!,
+          _lastPaymentAmountMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -2996,6 +3040,14 @@ class $CreditCardsTable extends CreditCards
         DriftSqlType.string,
         data['${effectivePrefix}currency'],
       ),
+      lastPaymentDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_payment_date'],
+      ),
+      lastPaymentAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}last_payment_amount'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -3041,6 +3093,8 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
   final String? linkedAccountId;
   final double? balance;
   final String? currency;
+  final DateTime? lastPaymentDate;
+  final double? lastPaymentAmount;
   final DateTime updatedAt;
   final bool isDeleted;
   final DateTime? deletedAt;
@@ -3068,6 +3122,8 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
     this.linkedAccountId,
     this.balance,
     this.currency,
+    this.lastPaymentDate,
+    this.lastPaymentAmount,
     required this.updatedAt,
     required this.isDeleted,
     this.deletedAt,
@@ -3117,6 +3173,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
     }
     if (!nullToAbsent || currency != null) {
       map['currency'] = Variable<String>(currency);
+    }
+    if (!nullToAbsent || lastPaymentDate != null) {
+      map['last_payment_date'] = Variable<DateTime>(lastPaymentDate);
+    }
+    if (!nullToAbsent || lastPaymentAmount != null) {
+      map['last_payment_amount'] = Variable<double>(lastPaymentAmount);
     }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['is_deleted'] = Variable<bool>(isDeleted);
@@ -3171,6 +3233,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
       currency: currency == null && nullToAbsent
           ? const Value.absent()
           : Value(currency),
+      lastPaymentDate: lastPaymentDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPaymentDate),
+      lastPaymentAmount: lastPaymentAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPaymentAmount),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: deletedAt == null && nullToAbsent
@@ -3210,6 +3278,10 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
       linkedAccountId: serializer.fromJson<String?>(json['linkedAccountId']),
       balance: serializer.fromJson<double?>(json['balance']),
       currency: serializer.fromJson<String?>(json['currency']),
+      lastPaymentDate: serializer.fromJson<DateTime?>(json['lastPaymentDate']),
+      lastPaymentAmount: serializer.fromJson<double?>(
+        json['lastPaymentAmount'],
+      ),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -3242,6 +3314,8 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
       'linkedAccountId': serializer.toJson<String?>(linkedAccountId),
       'balance': serializer.toJson<double?>(balance),
       'currency': serializer.toJson<String?>(currency),
+      'lastPaymentDate': serializer.toJson<DateTime?>(lastPaymentDate),
+      'lastPaymentAmount': serializer.toJson<double?>(lastPaymentAmount),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -3272,6 +3346,8 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
     Value<String?> linkedAccountId = const Value.absent(),
     Value<double?> balance = const Value.absent(),
     Value<String?> currency = const Value.absent(),
+    Value<DateTime?> lastPaymentDate = const Value.absent(),
+    Value<double?> lastPaymentAmount = const Value.absent(),
     DateTime? updatedAt,
     bool? isDeleted,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -3303,6 +3379,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
         : this.linkedAccountId,
     balance: balance.present ? balance.value : this.balance,
     currency: currency.present ? currency.value : this.currency,
+    lastPaymentDate: lastPaymentDate.present
+        ? lastPaymentDate.value
+        : this.lastPaymentDate,
+    lastPaymentAmount: lastPaymentAmount.present
+        ? lastPaymentAmount.value
+        : this.lastPaymentAmount,
     updatedAt: updatedAt ?? this.updatedAt,
     isDeleted: isDeleted ?? this.isDeleted,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -3350,6 +3432,12 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
           : this.linkedAccountId,
       balance: data.balance.present ? data.balance.value : this.balance,
       currency: data.currency.present ? data.currency.value : this.currency,
+      lastPaymentDate: data.lastPaymentDate.present
+          ? data.lastPaymentDate.value
+          : this.lastPaymentDate,
+      lastPaymentAmount: data.lastPaymentAmount.present
+          ? data.lastPaymentAmount.value
+          : this.lastPaymentAmount,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -3382,6 +3470,8 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
           ..write('linkedAccountId: $linkedAccountId, ')
           ..write('balance: $balance, ')
           ..write('currency: $currency, ')
+          ..write('lastPaymentDate: $lastPaymentDate, ')
+          ..write('lastPaymentAmount: $lastPaymentAmount, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt')
@@ -3414,6 +3504,8 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
     linkedAccountId,
     balance,
     currency,
+    lastPaymentDate,
+    lastPaymentAmount,
     updatedAt,
     isDeleted,
     deletedAt,
@@ -3445,6 +3537,8 @@ class CreditCardEntry extends DataClass implements Insertable<CreditCardEntry> {
           other.linkedAccountId == this.linkedAccountId &&
           other.balance == this.balance &&
           other.currency == this.currency &&
+          other.lastPaymentDate == this.lastPaymentDate &&
+          other.lastPaymentAmount == this.lastPaymentAmount &&
           other.updatedAt == this.updatedAt &&
           other.isDeleted == this.isDeleted &&
           other.deletedAt == this.deletedAt);
@@ -3474,6 +3568,8 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
   final Value<String?> linkedAccountId;
   final Value<double?> balance;
   final Value<String?> currency;
+  final Value<DateTime?> lastPaymentDate;
+  final Value<double?> lastPaymentAmount;
   final Value<DateTime> updatedAt;
   final Value<bool> isDeleted;
   final Value<DateTime?> deletedAt;
@@ -3502,6 +3598,8 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     this.linkedAccountId = const Value.absent(),
     this.balance = const Value.absent(),
     this.currency = const Value.absent(),
+    this.lastPaymentDate = const Value.absent(),
+    this.lastPaymentAmount = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -3531,6 +3629,8 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     this.linkedAccountId = const Value.absent(),
     this.balance = const Value.absent(),
     this.currency = const Value.absent(),
+    this.lastPaymentDate = const Value.absent(),
+    this.lastPaymentAmount = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -3563,6 +3663,8 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     Expression<String>? linkedAccountId,
     Expression<double>? balance,
     Expression<String>? currency,
+    Expression<DateTime>? lastPaymentDate,
+    Expression<double>? lastPaymentAmount,
     Expression<DateTime>? updatedAt,
     Expression<bool>? isDeleted,
     Expression<DateTime>? deletedAt,
@@ -3592,6 +3694,8 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
       if (linkedAccountId != null) 'linked_account_id': linkedAccountId,
       if (balance != null) 'balance': balance,
       if (currency != null) 'currency': currency,
+      if (lastPaymentDate != null) 'last_payment_date': lastPaymentDate,
+      if (lastPaymentAmount != null) 'last_payment_amount': lastPaymentAmount,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -3623,6 +3727,8 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     Value<String?>? linkedAccountId,
     Value<double?>? balance,
     Value<String?>? currency,
+    Value<DateTime?>? lastPaymentDate,
+    Value<double?>? lastPaymentAmount,
     Value<DateTime>? updatedAt,
     Value<bool>? isDeleted,
     Value<DateTime?>? deletedAt,
@@ -3652,6 +3758,8 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
       linkedAccountId: linkedAccountId ?? this.linkedAccountId,
       balance: balance ?? this.balance,
       currency: currency ?? this.currency,
+      lastPaymentDate: lastPaymentDate ?? this.lastPaymentDate,
+      lastPaymentAmount: lastPaymentAmount ?? this.lastPaymentAmount,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -3731,6 +3839,12 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
     if (currency.present) {
       map['currency'] = Variable<String>(currency.value);
     }
+    if (lastPaymentDate.present) {
+      map['last_payment_date'] = Variable<DateTime>(lastPaymentDate.value);
+    }
+    if (lastPaymentAmount.present) {
+      map['last_payment_amount'] = Variable<double>(lastPaymentAmount.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -3772,6 +3886,8 @@ class CreditCardsCompanion extends UpdateCompanion<CreditCardEntry> {
           ..write('linkedAccountId: $linkedAccountId, ')
           ..write('balance: $balance, ')
           ..write('currency: $currency, ')
+          ..write('lastPaymentDate: $lastPaymentDate, ')
+          ..write('lastPaymentAmount: $lastPaymentAmount, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt, ')
@@ -9806,6 +9922,8 @@ typedef $$CreditCardsTableCreateCompanionBuilder =
       Value<String?> linkedAccountId,
       Value<double?> balance,
       Value<String?> currency,
+      Value<DateTime?> lastPaymentDate,
+      Value<double?> lastPaymentAmount,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
@@ -9836,6 +9954,8 @@ typedef $$CreditCardsTableUpdateCompanionBuilder =
       Value<String?> linkedAccountId,
       Value<double?> balance,
       Value<String?> currency,
+      Value<DateTime?> lastPaymentDate,
+      Value<double?> lastPaymentAmount,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
@@ -9963,6 +10083,16 @@ class $$CreditCardsTableFilterComposer
 
   ColumnFilters<String> get currency => $composableBuilder(
     column: $table.currency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastPaymentDate => $composableBuilder(
+    column: $table.lastPaymentDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get lastPaymentAmount => $composableBuilder(
+    column: $table.lastPaymentAmount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10106,6 +10236,16 @@ class $$CreditCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get lastPaymentDate => $composableBuilder(
+    column: $table.lastPaymentDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get lastPaymentAmount => $composableBuilder(
+    column: $table.lastPaymentAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -10218,6 +10358,16 @@ class $$CreditCardsTableAnnotationComposer
   GeneratedColumn<String> get currency =>
       $composableBuilder(column: $table.currency, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get lastPaymentDate => $composableBuilder(
+    column: $table.lastPaymentDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get lastPaymentAmount => $composableBuilder(
+    column: $table.lastPaymentAmount,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -10282,6 +10432,8 @@ class $$CreditCardsTableTableManager
                 Value<String?> linkedAccountId = const Value.absent(),
                 Value<double?> balance = const Value.absent(),
                 Value<String?> currency = const Value.absent(),
+                Value<DateTime?> lastPaymentDate = const Value.absent(),
+                Value<double?> lastPaymentAmount = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -10310,6 +10462,8 @@ class $$CreditCardsTableTableManager
                 linkedAccountId: linkedAccountId,
                 balance: balance,
                 currency: currency,
+                lastPaymentDate: lastPaymentDate,
+                lastPaymentAmount: lastPaymentAmount,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,
@@ -10340,6 +10494,8 @@ class $$CreditCardsTableTableManager
                 Value<String?> linkedAccountId = const Value.absent(),
                 Value<double?> balance = const Value.absent(),
                 Value<String?> currency = const Value.absent(),
+                Value<DateTime?> lastPaymentDate = const Value.absent(),
+                Value<double?> lastPaymentAmount = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -10368,6 +10524,8 @@ class $$CreditCardsTableTableManager
                 linkedAccountId: linkedAccountId,
                 balance: balance,
                 currency: currency,
+                lastPaymentDate: lastPaymentDate,
+                lastPaymentAmount: lastPaymentAmount,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,

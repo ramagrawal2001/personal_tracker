@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,8 @@ import '../utils/currency_formatter.dart';
 import '../sync/cloud_mappers.dart';
 import '../sync/outbox_write_through.dart';
 import '../services/secret_cipher_service.dart';
+import '../services/notification_service.dart';
+import '../services/payment_reminders.dart';
 import '../../domain/models/models.dart';
 import 'app_database.dart';
 import 'finance_mappers.dart';
@@ -339,6 +343,16 @@ class FinanceNotifier extends StateNotifier<FinanceState> with OutboxWriteThroug
   @override
   AppDatabase get db => _db;
 
+  /// Fired after every state change (wired by `financeNotifierProvider` to
+  /// re-schedule payment reminders). Null in unit tests.
+  void Function(FinanceState state)? onStateChanged;
+
+  @override
+  set state(FinanceState value) {
+    super.state = value;
+    onStateChanged?.call(value);
+  }
+
   /// [autoLoad] is disabled in unit tests so state stays purely in-memory and
   /// synchronous, without racing an async DB read against the test body.
   FinanceNotifier(this._db, {bool autoLoad = true}) : super(_emptyState()) {
@@ -525,7 +539,13 @@ if (creditCardId != null) {
             newOutstanding = (card.currentOutstanding - amount).clamp(0.0, double.infinity);
           }
 
-          updatedCards[cardIdx] = card.copyWith(currentOutstanding: newOutstanding);
+          updatedCards[cardIdx] = card.copyWith(
+            currentOutstanding: newOutstanding,
+            // Recording the bill payment lets payment_reminders.dart suppress
+            // this cycle's due-date nudges.
+            lastPaymentDate: type == TransactionType.creditCardPayment ? date : null,
+            lastPaymentAmount: type == TransactionType.creditCardPayment ? amount : null,
+          );
         }
       }
 
@@ -856,11 +876,14 @@ if (creditCardId != null) {
     String? encCvv,
     String? encPin,
     double? creditLimit,
+    double? currentOutstanding,
     int? statementDay,
     int? dueDay,
     String? linkedAccountId,
     double? balance,
     String? currency,
+    DateTime? lastPaymentDate,
+    double? lastPaymentAmount,
   }) {
     CardModel? updated;
     state = state.copyWith(
@@ -881,11 +904,14 @@ if (creditCardId != null) {
           encCvv: encCvv,
           encPin: encPin,
           creditLimit: creditLimit,
+          currentOutstanding: currentOutstanding,
           statementDay: statementDay,
           dueDay: dueDay,
           linkedAccountId: linkedAccountId,
           balance: balance,
           currency: currency,
+          lastPaymentDate: lastPaymentDate,
+          lastPaymentAmount: lastPaymentAmount,
         );
         return updated!;
       }).toList(),
@@ -1607,5 +1633,31 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 
 final financeNotifierProvider = StateNotifierProvider<FinanceNotifier, FinanceState>((ref) {
   final db = ref.watch(appDatabaseProvider);
-  return FinanceNotifier(db);
+  final notifier = FinanceNotifier(db);
+
+  // Keep the card / loan / recurring payment reminders in sync with the data,
+  // debounced so a burst of edits schedules once. NotificationService no-ops
+  // before init() (web, `flutter test`), so this is inert there.
+  Timer? debounce;
+  String lastSig = '';
+  notifier.onStateChanged = (s) {
+    final sig = [
+      for (final c in s.creditCards)
+        if (!c.isDeleted) '${c.id}:${c.statementDay}:${c.dueDay}:${c.currentOutstanding}:${c.lastPaymentDate}',
+      for (final l in s.loans)
+        if (!l.isDeleted) 'L${l.id}:${l.dueDay}:${l.outstandingAmount}',
+      for (final r in s.recurringPayments)
+        if (!r.isDeleted) 'R${r.id}:${r.nextDueDate}:${r.amount}',
+    ].join('|');
+    if (sig == lastSig) return;
+    lastSig = sig;
+    debounce?.cancel();
+    debounce = Timer(const Duration(milliseconds: 600), () {
+      NotificationService.schedulePaymentReminders(
+        PaymentReminders.compute(s, DateTime.now()),
+      );
+    });
+  };
+  ref.onDispose(() => debounce?.cancel());
+  return notifier;
 });

@@ -212,6 +212,8 @@ extension CardCloud on CardModel {
         'linked_account_id': linkedAccountId,
         'balance': balance,
         'currency': currency,
+        'last_payment_date': _isoN(lastPaymentDate),
+        'last_payment_amount': lastPaymentAmount,
         'is_deleted': isDeleted,
         'deleted_at': _isoN(isDeleted ? updatedAt : null),
         'created_at': _iso(updatedAt),
@@ -242,6 +244,8 @@ extension CardCloud on CardModel {
         linkedAccountId: m['linked_account_id'] as String?,
         balance: _dN(m['balance']),
         currency: m['currency'] as String?,
+        lastPaymentDate: _dtN(m['last_payment_date']),
+        lastPaymentAmount: _dN(m['last_payment_amount']),
         updatedAt: _dt(m['updated_at']),
         isDeleted: _bool(m['is_deleted']),
       );
