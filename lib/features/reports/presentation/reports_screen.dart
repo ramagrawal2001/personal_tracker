@@ -180,16 +180,23 @@ class ReportsScreen extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           catName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         '$pct%',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                       ),
                       const SizedBox(width: 12),
                       Text(
                         CurrencyFormatter.format(e.value),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
                       ),
                     ],

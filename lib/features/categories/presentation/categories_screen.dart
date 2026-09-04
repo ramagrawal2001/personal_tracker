@@ -85,6 +85,8 @@ class CategoriesScreen extends ConsumerWidget {
               Expanded(
                 child: Text(
                   cat.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -92,6 +94,7 @@ class CategoriesScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
               IconButton(
                 icon: Icon(LucideIcons.pencil, color: AppColors.primary, size: 16),
                 onPressed: () => _showEditSheet(context, ref, cat),

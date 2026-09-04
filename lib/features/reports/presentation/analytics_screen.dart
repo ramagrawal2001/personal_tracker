@@ -186,17 +186,23 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                            const SizedBox(width: 10),
-                            Text(catName, style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-                          ],
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(catName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
                           CurrencyFormatter.format(cats[i].value),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                       ],
@@ -340,16 +346,22 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
             child: AppCard(
               padding: const EdgeInsets.all(14),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(b.label, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text('+${CurrencyFormatter.format(b.income)}', style: TextStyle(color: AppColors.income, fontSize: 13, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 2),
-                      Text('-${CurrencyFormatter.format(b.expenses)}', style: TextStyle(color: AppColors.expense, fontSize: 13, fontWeight: FontWeight.w600)),
-                    ],
+                  Expanded(
+                    child: Text(b.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('+${CurrencyFormatter.format(b.income)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.income, fontSize: 13, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        Text('-${CurrencyFormatter.format(b.expenses)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.expense, fontSize: 13, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -391,31 +403,38 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: AppDecorations.iconBadge(color, circle: true),
-                              child: Center(
-                                child: Text(
-                                  '${i + 1}',
-                                  style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 28,
+                                height: 28,
+                                decoration: AppDecorations.iconBadge(color, circle: true),
+                                child: Center(
+                                  child: Text(
+                                    '${i + 1}',
+                                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              merchants[i].key,
-                              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Text(
+                                  merchants[i].key,
+                                  maxLines: 1,
+                                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Text(
                           CurrencyFormatter.format(merchants[i].value),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 14),
                         ),
                       ],

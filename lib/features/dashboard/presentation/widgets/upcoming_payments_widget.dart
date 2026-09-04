@@ -63,22 +63,30 @@ class UpcomingPaymentsWidget extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             payment.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 14),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Due ${DateFormatter.formatRelative(payment.nextDueDate)}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 12),
                     Text(
                       CurrencyFormatter.format(payment.amount),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 14),
                     ),
                   ],

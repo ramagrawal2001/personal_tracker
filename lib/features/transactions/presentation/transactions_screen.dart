@@ -168,22 +168,30 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             const SizedBox(width: 14),
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     tx.merchant ?? tx.description ?? tx.type.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${DateFormatter.formatShort(tx.date)}${tx.description != null ? " • ${tx.description}" : ""}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 12),
             Text(
               '${isIncome ? '+' : '-'}${CurrencyFormatter.format(tx.amount)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 15),
             ),
           ],

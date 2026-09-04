@@ -67,9 +67,14 @@ class MoneySummaryCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text('MONTHLY FLOW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppColors.textSecondary)),
-                    Text(
-                      'Savings: ${CurrencyFormatter.format(remainingIncome > 0 ? remainingIncome : 0.0)}',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.income),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Savings: ${CurrencyFormatter.format(remainingIncome > 0 ? remainingIncome : 0.0)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.income),
+                      ),
                     ),
                   ],
                 ),
@@ -77,19 +82,30 @@ class MoneySummaryCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(LucideIcons.arrowDownLeft, color: AppColors.income, size: 15),
-                        const SizedBox(width: 4),
-                        Text('In: ${CurrencyFormatter.format(monthlyIncome)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                      ],
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.arrowDownLeft, color: AppColors.income, size: 15),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text('In: ${CurrencyFormatter.format(monthlyIncome)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                          ),
+                        ],
+                      ),
                     ),
-                    Row(
-                      children: [
-                        Icon(LucideIcons.arrowUpRight, color: AppColors.expense, size: 15),
-                        const SizedBox(width: 4),
-                        Text('Out: ${CurrencyFormatter.format(monthlyExpenses)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                      ],
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.arrowUpRight, color: AppColors.expense, size: 15),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text('Out: ${CurrencyFormatter.format(monthlyExpenses)}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

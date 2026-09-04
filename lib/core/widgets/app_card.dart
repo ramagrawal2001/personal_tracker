@@ -93,10 +93,13 @@ class AppListTile extends StatelessWidget {
           const SizedBox(width: 14),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
@@ -107,27 +110,28 @@ class AppListTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: AppColors.textMuted, fontSize: 12),
                   ),
                 ],
               ],
             ),
           ),
+          const SizedBox(width: 12),
           if (trailingWidget != null)
             trailingWidget!
           else if (trailing != null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  trailing!,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: trailingColor ?? AppColors.textPrimary,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
+            Text(
+              trailing!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: trailingColor ?? AppColors.textPrimary,
+                fontSize: 16,
+              ),
             ),
           if (menuButton != null) ...[
             const SizedBox(width: 4),

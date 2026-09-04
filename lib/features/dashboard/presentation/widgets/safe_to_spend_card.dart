@@ -42,22 +42,35 @@ class SafeToSpendCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Safe to Spend',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                     ),
                     Text(
                       'After upcoming bills & buffer',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                     ),
                   ],
                 ),
               ),
-              Text(
-                CurrencyFormatter.format(safeToSpend),
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.income),
+              const SizedBox(width: 12),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    CurrencyFormatter.format(safeToSpend),
+                    maxLines: 1,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.income),
+                  ),
+                ),
               ),
             ],
           ),
@@ -65,11 +78,13 @@ class SafeToSpendCard extends StatelessWidget {
           Divider(color: AppColors.border, height: 1),
           const SizedBox(height: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildMetric('Bank Liquid', CurrencyFormatter.format(liquidBalance)),
-              _buildMetric('Upcoming Bills', '- ${CurrencyFormatter.format(upcomingPayments)}', isNegative: true),
-              _buildMetric('Emergency Buffer', '- ${CurrencyFormatter.format(emergencyBuffer)}', isMuted: true),
+              Expanded(child: _buildMetric('Bank Liquid', CurrencyFormatter.format(liquidBalance))),
+              const SizedBox(width: 8),
+              Expanded(child: _buildMetric('Upcoming Bills', '- ${CurrencyFormatter.format(upcomingPayments)}', isNegative: true)),
+              const SizedBox(width: 8),
+              Expanded(child: _buildMetric('Emergency Buffer', '- ${CurrencyFormatter.format(emergencyBuffer)}', isMuted: true)),
             ],
           ),
         ],
@@ -79,12 +94,15 @@ class SafeToSpendCard extends StatelessWidget {
 
   Widget _buildMetric(String label, String value, {bool isNegative = false, bool isMuted = false}) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
         const SizedBox(height: 2),
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,

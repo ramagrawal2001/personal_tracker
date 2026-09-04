@@ -67,21 +67,23 @@ class LoansScreen extends ConsumerWidget {
                         children: [
                           Expanded(
                             child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(loan.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                                Text(loan.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                                 const SizedBox(height: 2),
-                                Text(loan.provider, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                                Text(loan.provider, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
                               ],
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.loan.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text('${loan.interestRate}% p.a.', style: TextStyle(color: AppColors.loan, fontSize: 12, fontWeight: FontWeight.w600)),
+                            child: Text('${loan.interestRate}% p.a.', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.loan, fontSize: 12, fontWeight: FontWeight.w600)),
                           ),
                           PopupMenuButton<String>(
                             icon: Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
@@ -100,10 +102,11 @@ class LoansScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _metric('Outstanding', CurrencyFormatter.format(loan.outstandingAmount)),
-                          _metric('Monthly EMI', CurrencyFormatter.format(loan.monthlyEmi), align: CrossAxisAlignment.end, color: AppColors.loan),
+                          Expanded(child: _metric('Outstanding', CurrencyFormatter.format(loan.outstandingAmount))),
+                          const SizedBox(width: 12),
+                          Expanded(child: _metric('Monthly EMI', CurrencyFormatter.format(loan.monthlyEmi), align: CrossAxisAlignment.end, color: AppColors.loan)),
                         ],
                       ),
                       const SizedBox(height: 14),
@@ -120,17 +123,20 @@ class LoansScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('${(progress * 100).toStringAsFixed(1)}% paid', style: TextStyle(fontSize: 11, color: AppColors.income, fontWeight: FontWeight.w600)),
-                          Text('${loan.remainingTenureMonths} months left', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                          Flexible(child: Text('${(progress * 100).toStringAsFixed(1)}% paid', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: AppColors.income, fontWeight: FontWeight.w600))),
+                          const SizedBox(width: 8),
+                          Flexible(child: Text('${loan.remainingTenureMonths} months left', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: AppColors.textMuted))),
                         ],
                       ),
                       const SizedBox(height: 16),
                       const Divider(),
                       const SizedBox(height: 10),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Due: ${loan.dueDay}th monthly', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          Expanded(
+                            child: Text('Due: ${loan.dueDay}th monthly', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          ),
+                          const SizedBox(width: 8),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.loan,
@@ -157,11 +163,16 @@ class LoansScreen extends ConsumerWidget {
 
   Widget _metric(String label, String value, {CrossAxisAlignment align = CrossAxisAlignment.start, Color? color}) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: align,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
         const SizedBox(height: 2),
-        Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color ?? AppColors.textPrimary)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: align == CrossAxisAlignment.end ? Alignment.centerRight : Alignment.centerLeft,
+          child: Text(value, maxLines: 1, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color ?? AppColors.textPrimary)),
+        ),
       ],
     );
   }

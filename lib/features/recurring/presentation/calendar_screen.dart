@@ -112,25 +112,32 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: AppDecorations.iconBadge(AppColors.accent, circle: true),
-                          child: Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          _monthLabel,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: AppDecorations.iconBadge(AppColors.accent, circle: true),
+                            child: Icon(LucideIcons.calendar, color: AppColors.accent, size: 18),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              _monthLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
                           icon: Icon(LucideIcons.chevronLeft, size: 18, color: AppColors.textPrimary),
@@ -202,9 +209,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       children: [
                         Icon(LucideIcons.alertCircle, color: AppColors.accent, size: 14),
                         const SizedBox(width: 6),
-                        Text(
-                          '${dueDays.length} payment${dueDays.length > 1 ? 's' : ''} scheduled in this period',
-                          style: TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.w600),
+                        Flexible(
+                          child: Text(
+                            '${dueDays.length} payment${dueDays.length > 1 ? 's' : ''} scheduled in this period',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ],
                     ),
@@ -259,10 +270,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               item.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textPrimary,
@@ -272,6 +286,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             const SizedBox(height: 2),
                             Text(
                               'Due ${DateFormatter.formatShort(dueDate)} • ${item.frequency.displayName}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: isOverdue ? AppColors.expense : AppColors.textMuted,
                                 fontSize: 12,
@@ -280,8 +296,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 12),
                       Text(
                         CurrencyFormatter.format(item.amount),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,

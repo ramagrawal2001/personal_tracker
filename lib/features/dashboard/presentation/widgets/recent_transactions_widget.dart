@@ -76,6 +76,7 @@ class RecentTransactionsWidget extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
@@ -87,13 +88,18 @@ class RecentTransactionsWidget extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             DateFormatter.formatRelative(tx.date),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: AppColors.textMuted, fontSize: 11),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 12),
                     Text(
                       '${isIncome ? '+' : '-'}${CurrencyFormatter.format(tx.amount)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 14),
                     ),
                   ],

@@ -240,26 +240,36 @@ return SingleChildScrollView(
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SummaryItem(
-                  label: 'Total Cards',
-                  value: '${cards.length}',
-                  icon: LucideIcons.creditCard,
-                  color: AppColors.primary,
+                Expanded(
+                  child: _SummaryItem(
+                    label: 'Total Cards',
+                    value: '${cards.length}',
+                    icon: LucideIcons.creditCard,
+                    color: AppColors.primary,
+                  ),
                 ),
-                if (creditCards.isNotEmpty) _SummaryItem(
-                  label: 'Credit Used',
-                  value: CurrencyFormatter.format(totalUsed),
-                  icon: LucideIcons.arrowUpRight,
-                  color: AppColors.expense,
-                ),
-                if (creditCards.isNotEmpty) _SummaryItem(
-                  label: 'Available',
-                  value: CurrencyFormatter.format(totalLimit - totalUsed),
-                  icon: LucideIcons.shieldCheck,
-                  color: AppColors.income,
-                ),
+                if (creditCards.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _SummaryItem(
+                      label: 'Credit Used',
+                      value: CurrencyFormatter.format(totalUsed),
+                      icon: LucideIcons.arrowUpRight,
+                      color: AppColors.expense,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _SummaryItem(
+                      label: 'Available',
+                      value: CurrencyFormatter.format(totalLimit - totalUsed),
+                      icon: LucideIcons.shieldCheck,
+                      color: AppColors.income,
+                    ),
+                  ),
+                ],
               ],
             ),
             if (creditCards.isNotEmpty && totalLimit > 0) ...[
@@ -725,22 +735,29 @@ class _GlassCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'CARD HOLDER',
-                          style: TextStyle(color: fgSoft, fontSize: 9, letterSpacing: 1),
-                        ),
-                        Text(
-                          card.cardholderName.isEmpty ? card.bank : card.cardholderName.toUpperCase(),
-                          style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
-                        ),
-                      ],
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'CARD HOLDER',
+                            style: TextStyle(color: fgSoft, fontSize: 9, letterSpacing: 1),
+                          ),
+                          Text(
+                            card.cardholderName.isEmpty ? card.bank : card.cardholderName.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 12),
                     Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
@@ -749,6 +766,8 @@ class _GlassCard extends StatelessWidget {
                         ),
                         Text(
                           card.expiryDisplay,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: card.isExpired ? Colors.red[300] : fg,
                             fontSize: 13,
@@ -871,6 +890,7 @@ class _CardListTile extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -880,6 +900,8 @@ class _CardListTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             card.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -887,7 +909,8 @@ class _CardListTile extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (card.isExpired)
+                        if (card.isExpired) ...[
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
@@ -904,16 +927,20 @@ class _CardListTile extends StatelessWidget {
                               ),
                             ),
                           ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 3),
                     Text(
                       '${card.bank}  •  ${card.network.displayName}  •  •••• ${card.last4}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 12, color: AppColors.textMuted),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               PopupMenuButton<String>(
                 icon: Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
                 color: AppColors.surface,
@@ -982,22 +1009,30 @@ class _CardListTile extends StatelessWidget {
             Divider(color: AppColors.border, height: 1),
             const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _InfoChip(
-                  label: 'Outstanding',
-                  value: CurrencyFormatter.format(card.currentOutstanding),
-                  valueColor: AppColors.expense,
+                Expanded(
+                  child: _InfoChip(
+                    label: 'Outstanding',
+                    value: CurrencyFormatter.format(card.currentOutstanding),
+                    valueColor: AppColors.expense,
+                  ),
                 ),
-                _InfoChip(
-                  label: 'Available',
-                  value: CurrencyFormatter.format(card.availableLimit),
-                  valueColor: AppColors.income,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _InfoChip(
+                    label: 'Available',
+                    value: CurrencyFormatter.format(card.availableLimit),
+                    valueColor: AppColors.income,
+                  ),
                 ),
-                _InfoChip(
-                  label: 'Limit',
-                  value: CurrencyFormatter.format(card.creditLimit),
-                  valueColor: AppColors.textPrimary,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _InfoChip(
+                    label: 'Limit',
+                    value: CurrencyFormatter.format(card.creditLimit),
+                    valueColor: AppColors.textPrimary,
+                  ),
                 ),
               ],
             ),
@@ -1013,12 +1048,16 @@ class _CardListTile extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Stmt: ${card.statementDay}th  •  Due: ${card.dueDay}th',
-                  style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                Expanded(
+                  child: Text(
+                    'Stmt: ${card.statementDay}th  •  Due: ${card.dueDay}th',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 GestureDetector(
                   onTap: onPayBill,
                   child: Container(
@@ -1047,11 +1086,15 @@ class _CardListTile extends StatelessWidget {
                 Icon(LucideIcons.wallet, size: 14, color: AppColors.income),
                 const SizedBox(width: 6),
                 Text('Balance: ', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                Text(
-                  card.currency != null && card.currency != 'INR'
-                      ? '${card.currency} ${card.balance!.toStringAsFixed(2)}'
-                      : CurrencyFormatter.format(card.balance!),
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.income),
+                Expanded(
+                  child: Text(
+                    card.currency != null && card.currency != 'INR'
+                        ? '${card.currency} ${card.balance!.toStringAsFixed(2)}'
+                        : CurrencyFormatter.format(card.balance!),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.income),
+                  ),
                 ),
               ],
             ),
@@ -1090,11 +1133,16 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+      Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
       const SizedBox(height: 2),
-      Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: valueColor)),
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(value, maxLines: 1, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: valueColor)),
+      ),
     ],
   );
 }
@@ -1107,6 +1155,7 @@ class _SummaryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
     children: [
       Container(
         padding: const EdgeInsets.all(8),
@@ -1114,8 +1163,11 @@ class _SummaryItem extends StatelessWidget {
         child: Icon(icon, size: 16, color: color),
       ),
       const SizedBox(height: 6),
-      Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-      Text(label, style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(value, maxLines: 1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+      ),
+      Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
     ],
   );
 }

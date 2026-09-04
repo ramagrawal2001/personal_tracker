@@ -61,13 +61,18 @@ class NetWorthCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            Text(
-              CurrencyFormatter.format(netWorth),
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: -0.5,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                CurrencyFormatter.format(netWorth),
+                maxLines: 1,
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -90,6 +95,8 @@ class NetWorthCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           CurrencyFormatter.format(totalAssets),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                       ],
@@ -109,6 +116,8 @@ class NetWorthCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             CurrencyFormatter.format(totalLiabilities),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Color(0xFFFECDD3), fontWeight: FontWeight.bold, fontSize: 15),
                           ),
                         ],

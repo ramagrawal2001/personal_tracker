@@ -33,30 +33,48 @@ class NetWorthScreen extends ConsumerWidget {
             valueColor: AppColors.income,
             gradient: true,
             footer: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Total Assets', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                    const SizedBox(height: 2),
-                    Text(
-                      CurrencyFormatter.format(financeState.totalAssets),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Total Assets', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          CurrencyFormatter.format(financeState.totalAssets),
+                          maxLines: 1,
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
                 Container(height: 30, width: 1, color: AppColors.border),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('Total Liabilities', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                    const SizedBox(height: 2),
-                    Text(
-                      CurrencyFormatter.format(financeState.totalLiabilities),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.expense),
-                    ),
-                  ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('Total Liabilities', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          CurrencyFormatter.format(financeState.totalLiabilities),
+                          maxLines: 1,
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.expense),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -81,9 +99,13 @@ class NetWorthScreen extends ConsumerWidget {
                         child: Icon(LucideIcons.trendingUp, color: AppColors.income, size: 14),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Liquid Balance Trend — Last 6 Months (Lakhs ₹)',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                      Expanded(
+                        child: Text(
+                          'Liquid Balance Trend — Last 6 Months (Lakhs ₹)',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ],
                   ),

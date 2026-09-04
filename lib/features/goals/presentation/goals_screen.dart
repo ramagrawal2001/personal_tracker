@@ -48,13 +48,22 @@ class GoalsScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Target: ${CurrencyFormatter.format(totalTarget)}',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    Flexible(
+                      child: Text(
+                        'Target: ${CurrencyFormatter.format(totalTarget)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      ),
                     ),
-                    Text(
-                      '${CurrencyFormatter.format(totalTarget - totalSaved > 0 ? totalTarget - totalSaved : 0)} left',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '${CurrencyFormatter.format(totalTarget - totalSaved > 0 ? totalTarget - totalSaved : 0)} left',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ],
                 ),
@@ -108,43 +117,52 @@ class GoalsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: AppDecorations.iconBadge(
-                      isCompleted ? AppColors.income : AppColors.primary,
-                      circle: true,
-                    ),
-                    child: Icon(
-                      isCompleted ? LucideIcons.checkCircle : LucideIcons.target,
-                      color: isCompleted ? AppColors.income : AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        goal.name,
-                        style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: AppDecorations.iconBadge(
+                        isCompleted ? AppColors.income : AppColors.primary,
+                        circle: true,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isCompleted ? 'Goal Completed 🎉' : '$pct% completed',
-                        style: TextStyle(
-                          color: isCompleted ? AppColors.income : AppColors.textMuted,
-                          fontSize: 12,
-                          fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
-                        ),
+                      child: Icon(
+                        isCompleted ? LucideIcons.checkCircle : LucideIcons.target,
+                        color: isCompleted ? AppColors.income : AppColors.primary,
+                        size: 20,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            goal.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isCompleted ? 'Goal Completed 🎉' : '$pct% completed',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: isCompleted ? AppColors.income : AppColors.textMuted,
+                              fontSize: 12,
+                              fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -165,13 +183,22 @@ class GoalsScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Saved: ${CurrencyFormatter.format(goal.currentSavedAmount)}',
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.income, fontSize: 14),
+              Flexible(
+                child: Text(
+                  'Saved: ${CurrencyFormatter.format(goal.currentSavedAmount)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.income, fontSize: 14),
+                ),
               ),
-              Text(
-                'Target: ${CurrencyFormatter.format(goal.targetAmount)}',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Target: ${CurrencyFormatter.format(goal.targetAmount)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                ),
               ),
             ],
           ),

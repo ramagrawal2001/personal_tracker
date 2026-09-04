@@ -68,11 +68,13 @@ class InvestmentsScreen extends ConsumerWidget {
                 const Divider(),
                 const SizedBox(height: 12),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _stat('Invested', CurrencyFormatter.format(totalInvested)),
-                    _stat('Net Gain', '${totalGain >= 0 ? "+" : ""}${CurrencyFormatter.format(totalGain)}', color: totalGain >= 0 ? AppColors.income : AppColors.expense),
-                    _stat('Monthly SIP', CurrencyFormatter.format(monthlySipTotal), color: AppColors.transfer, align: CrossAxisAlignment.end),
+                    Expanded(child: _stat('Invested', CurrencyFormatter.format(totalInvested))),
+                    const SizedBox(width: 12),
+                    Expanded(child: _stat('Net Gain', '${totalGain >= 0 ? "+" : ""}${CurrencyFormatter.format(totalGain)}', color: totalGain >= 0 ? AppColors.income : AppColors.expense, align: CrossAxisAlignment.center)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _stat('Monthly SIP', CurrencyFormatter.format(monthlySipTotal), color: AppColors.transfer, align: CrossAxisAlignment.end)),
                   ],
                 ),
               ],
@@ -104,11 +106,12 @@ class InvestmentsScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text(inv.name, style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15))),
+                          Expanded(child: Text(inv.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15))),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: AppDecorations.iconBadge(AppColors.primary),
-                            child: Text(inv.type.displayName, style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w600)),
+                            child: Text(inv.type.displayName, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w600)),
                           ),
                           PopupMenuButton<String>(
                             icon: Icon(LucideIcons.moreVertical, color: AppColors.textMuted, size: 18),
@@ -127,25 +130,35 @@ class InvestmentsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _stat('Current Value', CurrencyFormatter.format(inv.currentValue)),
-                          _stat('Invested', CurrencyFormatter.format(inv.investedAmount), align: CrossAxisAlignment.end),
+                          Expanded(child: _stat('Current Value', CurrencyFormatter.format(inv.currentValue))),
+                          const SizedBox(width: 12),
+                          Expanded(child: _stat('Invested', CurrencyFormatter.format(inv.investedAmount), align: CrossAxisAlignment.end)),
                         ],
                       ),
                       const SizedBox(height: 10),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Returns: ${isGain ? "+" : ""}${CurrencyFormatter.format(inv.netReturns)} (${inv.returnsPercentage.toStringAsFixed(1)}%)',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isGain ? AppColors.income : AppColors.expense),
-                          ),
-                          if (inv.monthlySipAmount > 0)
-                            Text(
-                              'SIP: ${CurrencyFormatter.format(inv.monthlySipAmount)}/mo',
-                              style: TextStyle(fontSize: 12, color: AppColors.transfer, fontWeight: FontWeight.w600),
+                          Expanded(
+                            child: Text(
+                              'Returns: ${isGain ? "+" : ""}${CurrencyFormatter.format(inv.netReturns)} (${inv.returnsPercentage.toStringAsFixed(1)}%)',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isGain ? AppColors.income : AppColors.expense),
                             ),
+                          ),
+                          if (inv.monthlySipAmount > 0) ...[
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                'SIP: ${CurrencyFormatter.format(inv.monthlySipAmount)}/mo',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 12, color: AppColors.transfer, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ],
@@ -160,12 +173,22 @@ class InvestmentsScreen extends ConsumerWidget {
   }
 
   Widget _stat(String label, String value, {Color? color, CrossAxisAlignment align = CrossAxisAlignment.start}) {
+    final Alignment boxAlign = align == CrossAxisAlignment.end
+        ? Alignment.centerRight
+        : align == CrossAxisAlignment.center
+            ? Alignment.center
+            : Alignment.centerLeft;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: align,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
         const SizedBox(height: 2),
-        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color ?? AppColors.textPrimary)),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: boxAlign,
+          child: Text(value, maxLines: 1, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color ?? AppColors.textPrimary)),
+        ),
       ],
     );
   }

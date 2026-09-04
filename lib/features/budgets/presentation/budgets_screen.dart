@@ -86,17 +86,27 @@ class BudgetsScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Expanded(
+                            flex: 3,
                             child: Text(
                               cat.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary, fontSize: 15),
                             ),
                           ),
-                          Text(
-                            '${CurrencyFormatter.format(budget.spentAmount)} / ${CurrencyFormatter.format(budget.monthlyLimit)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isWarning ? AppColors.expense : AppColors.textSecondary,
-                              fontSize: 13,
+                          const SizedBox(width: 8),
+                          Flexible(
+                            flex: 4,
+                            child: Text(
+                              '${CurrencyFormatter.format(budget.spentAmount)} / ${CurrencyFormatter.format(budget.monthlyLimit)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isWarning ? AppColors.expense : AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                           PopupMenuButton<String>(
@@ -128,13 +138,22 @@ class BudgetsScreen extends ConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '${(pct * 100).toInt()}% used',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isWarning ? AppColors.expense : AppColors.income),
+                          Flexible(
+                            child: Text(
+                              '${(pct * 100).toInt()}% used',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isWarning ? AppColors.expense : AppColors.income),
+                            ),
                           ),
-                          Text(
-                            'Remaining: ${CurrencyFormatter.format(budget.remaining > 0 ? budget.remaining : 0.0)}',
-                            style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'Remaining: ${CurrencyFormatter.format(budget.remaining > 0 ? budget.remaining : 0.0)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            ),
                           ),
                         ],
                       ),
