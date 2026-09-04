@@ -396,6 +396,24 @@ class FinanceNotifier extends StateNotifier<FinanceState> with OutboxWriteThroug
     ];
   }
 
+  /// Ensures the local `categories` table isn't empty, seeding the default
+  /// set if so. Idempotent. Called both lazily from [_loadPersistedState]
+  /// (on first widget-tree read of `financeNotifierProvider`) and eagerly
+  /// from `SyncService._seedBackfillIfNeeded` (on auth, from the app root) —
+  /// the latter must not race the former, otherwise a brand-new user's
+  /// backfill can query an as-yet-unseeded categories table and enqueue zero
+  /// rows for it.
+  static Future<void> ensureDefaultCategoriesSeeded(AppDatabase db) async {
+    final existing = await (db.select(db.categories)
+          ..where((t) => t.isDeleted.equals(false))
+          ..limit(1))
+        .getSingleOrNull();
+    if (existing != null) return;
+    for (final cat in _defaultCategories()) {
+      await db.into(db.categories).insertOnConflictUpdate(cat.toCompanion());
+    }
+  }
+
   /// Clean empty state — used before persisted data has loaded
   static FinanceState _emptyState() {
     return FinanceState(
@@ -456,10 +474,8 @@ class FinanceNotifier extends StateNotifier<FinanceState> with OutboxWriteThroug
           .toList();
 
       if (categories.isEmpty) {
+        await ensureDefaultCategoriesSeeded(_db);
         categories = _defaultCategories();
-        for (final cat in categories) {
-          await _db.into(_db.categories).insertOnConflictUpdate(cat.toCompanion());
-        }
       }
 
       final prefs = await SharedPreferences.getInstance();

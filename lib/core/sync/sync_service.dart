@@ -5,7 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../database/app_database.dart';
-import '../database/finance_repository.dart' show appDatabaseProvider, financeNotifierProvider;
+import '../database/finance_repository.dart'
+    show appDatabaseProvider, financeNotifierProvider, FinanceNotifier;
 import '../services/supabase_service.dart';
 import '../../features/auth/presentation/auth_repository.dart';
 import 'cloud_gateway.dart';
@@ -407,6 +408,13 @@ class SyncService {
     try {
       final key = 'backfill:$userId';
       if (await _meta(key) != null) return;
+      // Default categories are otherwise seeded lazily the first time
+      // something reads `financeNotifierProvider` (e.g. the Dashboard
+      // screen). That read is not guaranteed to have happened yet when
+      // auth flips to authenticated and this eager backfill runs — without
+      // this, a brand-new user's categories table can still be empty here
+      // and zero category rows get enqueued.
+      await FinanceNotifier.ensureDefaultCategoriesSeeded(db);
       await db.transaction(() async {
         await _enqueueAllLive(userId, DateTime.now().microsecondsSinceEpoch);
       });
