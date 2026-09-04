@@ -134,6 +134,28 @@ void main() {
     expect(gateway.row('accounts', 'a1'), isNotNull);
   });
 
+  test('forceFullResync() re-applies a remote row a stale watermark was hiding', () async {
+    await svc.start('user-1'); // empty local + empty remote; sets bound_user/bootstrap
+    sink.tables.clear();
+
+    // A row exists in the cloud that this device never applied locally (e.g.
+    // edited directly server-side) — its updated_at predates a watermark this
+    // device already advanced past, so an ordinary delta pull would never
+    // see it again.
+    gateway.seed('accounts', {'id': 'ghost', 'updated_at': '2026-01-01T00:00:00.000Z', 'is_deleted': false});
+    await db.into(db.syncMeta).insertOnConflictUpdate(
+          SyncMetaCompanion(
+            key: const Value('watermark:accounts'),
+            value: const Value('2026-06-01T00:00:00.000Z'),
+          ),
+        );
+
+    await svc.forceFullResync();
+
+    expect(sink.tables, contains('accounts'));
+    expect(await meta('bootstrap:user-1'), 'true');
+  });
+
   test('flushNow() drains rows queued after start', () async {
     await svc.start('user-1');
     gateway.store.clear();

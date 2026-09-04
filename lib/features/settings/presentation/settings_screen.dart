@@ -219,6 +219,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                   ],
+                  Divider(color: AppColors.border, height: 1),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Missing something that exists on another device? Force a full re-download from the cloud.',
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: sync.isSyncing
+                              ? null
+                              : () async {
+                                  await ref.read(syncServiceProvider).forceFullResync();
+                                  if (!context.mounted) return;
+                                  final now = ref.read(syncStatusProvider);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(now.lastError == null
+                                          ? 'Full re-sync complete'
+                                          : 'Re-sync failed: ${now.lastError}'),
+                                      backgroundColor: now.lastError == null ? AppColors.income : AppColors.expense,
+                                    ),
+                                  );
+                                },
+                          child: Text('Force full re-sync',
+                              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             );

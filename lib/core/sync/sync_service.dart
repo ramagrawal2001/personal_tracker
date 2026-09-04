@@ -476,6 +476,32 @@ class SyncService {
     await enqueueOutboxRow(db, 'user_settings', userId, 'upsert', seq: seqBase + (i++));
   }
 
+  /// Wipes local pull bookkeeping (per-table watermarks + the bootstrap flag)
+  /// and re-runs a full initial pull from the cloud. Unlike
+  /// [_wipeForUserSwitch] this leaves the outbox alone, so any genuinely
+  /// pending local pushes survive — this is for the case where the *pull*
+  /// side has drifted (e.g. a watermark advanced past a row that never
+  /// actually landed locally, often from data edited directly in the cloud
+  /// out from under this device), not a user switch. Exposed as "Force full
+  /// re-sync" in Settings.
+  Future<void> forceFullResync() async {
+    if (!gateway.isAvailable) return;
+    final uid = _startedUser ?? await _meta('bound_user');
+    if (uid == null) return;
+    status.setSyncing(true);
+    try {
+      await (db.delete(db.syncMeta)
+            ..where((m) => m.key.like('watermark:%') | m.key.equals('bootstrap:$uid')))
+          .go();
+      final pulledOk = await _pullAll(initial: true);
+      if (pulledOk) {
+        await _setMeta('bootstrap:$uid', 'true');
+      }
+    } finally {
+      status.setSyncing(false);
+    }
+  }
+
   Future<void> _wipeForUserSwitch() async {
     await db.transaction(() async {
       await db.delete(db.syncOutbox).go();
