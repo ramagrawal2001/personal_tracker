@@ -2,31 +2,13 @@ name: Build Android APK
 
 # Builds a release APK on every push to main (and on demand) and publishes it
 # to a GitHub Release so it can be side-loaded straight onto a phone.
-#
-#   Latest build:  https://github.com/ramagrawal2001/personal_tracker/releases/latest
-#
-# The release build is currently signed with the debug key (see
-# android/app/build.gradle.kts). That is fine for side-loading; it is NOT
-# suitable for the Play Store. If a real upload key is added later, previously
-# installed debug-signed builds must be uninstalled first (signature mismatch).
+# Latest build: https://github.com/ramagrawal2001/personal_tracker/releases/latest
 
 on:
   push:
-    branches: [main]
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - ".gitignore"
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      skip_tests:
-        description: "Skip flutter test (faster, use only for a hotfix build)"
-        type: boolean
-        default: false
-
-concurrency:
-  group: apk-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -60,38 +42,29 @@ jobs:
         run: flutter analyze
 
       - name: Test
-        if: ${{ github.event.inputs.skip_tests != 'true' }}
         run: flutter test
 
-      - name: Build release APK (universal)
+      - name: Build release APK
         run: flutter build apk --release
 
-      - name: Name the artifact
-        id: name
+      - name: Rename APK
+        id: rename
         run: |
           VERSION=$(grep -E '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' \r')
-          SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
+          SHORT_SHA=${GITHUB_SHA::7}
           APK_NAME="aspyric-v${VERSION}-b${GITHUB_RUN_NUMBER}-${SHORT_SHA}.apk"
           cp build/app/outputs/flutter-apk/app-release.apk "build/${APK_NAME}"
-          {
-            echo "apk_path=build/${APK_NAME}"
-            echo "apk_name=${APK_NAME}"
-            echo "version=${VERSION}"
-            echo "short_sha=${SHORT_SHA}"
-          } >> "$GITHUB_OUTPUT"
+          echo "apk_path=build/${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: "Aspyric v${{ steps.name.outputs.version }} (build ${{ github.run_number }})"
-          body: |
-            Automated release build.
-
-            - Commit: ${{ github.sha }}
-            - Branch: ${{ github.ref_name }}
-            - Built: ${{ github.event.head_commit.message && github.event.head_commit.message || 'manual dispatch' }}
-
-            **Install:** open this page on your phone, download the `.apk` below, tap it, allow "install unknown apps" if prompted.
-          files: ${{ steps.name.outputs.apk_path }}
+          name: Aspyric v${{ steps.rename.outputs.version }} (build ${{ github.run_number }})
+          body: >
+            Automated release build from commit ${{ github.sha }} on ${{ github.ref_name }}.
+            Install: open this page on your phone, download the .apk below, tap it,
+            allow "install unknown apps" if prompted.
+          files: ${{ steps.rename.outputs.apk_path }}
           make_latest: true
