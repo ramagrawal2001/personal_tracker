@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/database/finance_repository.dart';
-import '../../../core/sync/sync_service.dart';
+import '../../../core/providers/notes_provider.dart';
 import '../../../core/services/backup_service.dart';
 import '../../../core/services/biometric_service.dart';
 import '../../../core/providers/user_profile_provider.dart';
@@ -139,9 +139,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final db = ref.read(appDatabaseProvider);
       await db.importSnapshot(snapshot);
       await ref.read(financeNotifierProvider.notifier).reloadFromDb();
-      // The restore wrote rows straight to Drift, bypassing the sync outbox —
-      // re-enqueue everything so the cloud copy converges.
-      await ref.read(syncServiceProvider).reseedFromLocal();
+      await ref.read(notesProvider.notifier).reloadFromDb();
+      // The restore wrote rows straight to Drift, bypassing every mutator —
+      // push everything straight to the cloud so it converges too.
+      await ref.read(financeNotifierProvider.notifier).pushAllToCloud();
+      await ref.read(notesProvider.notifier).pushAllToCloud();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Vault restored ✓'), backgroundColor: AppColors.income),

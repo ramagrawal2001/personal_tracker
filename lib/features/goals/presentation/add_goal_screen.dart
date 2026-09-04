@@ -149,7 +149,7 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
     );
   }
 
-  void _saveGoal() {
+  Future<void> _saveGoal() async {
     final name = _nameController.text.trim();
     final target = double.tryParse(_targetController.text.trim()) ?? 0.0;
     final saved = double.tryParse(_savedController.text.trim()) ?? 0.0;
@@ -161,16 +161,23 @@ class _AddGoalScreenState extends ConsumerState<AddGoalScreen> {
       return;
     }
 
-    ref.read(financeNotifierProvider.notifier).addGoal(
-          name: name,
-          targetAmount: target,
-          currentSavedAmount: saved,
-          targetDate: _targetDate,
-        );
-
-    context.pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Savings Goal created!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
-    );
+    try {
+      await ref.read(financeNotifierProvider.notifier).addGoal(
+            name: name,
+            targetAmount: target,
+            currentSavedAmount: saved,
+            targetDate: _targetDate,
+          );
+      if (!mounted) return;
+      context.pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Savings Goal created!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save goal: $e'), backgroundColor: AppColors.expense, behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 }

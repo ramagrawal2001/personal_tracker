@@ -226,7 +226,7 @@ class LoansScreen extends ConsumerWidget {
               ],
               const SizedBox(height: 24),
               SizedBox(width: double.infinity, child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   final p = double.tryParse(principalCtrl.text);
                   final r = double.tryParse(rateCtrl.text);
                   final e = double.tryParse(emiCtrl.text);
@@ -256,11 +256,16 @@ class LoansScreen extends ConsumerWidget {
                     setSheetState(() => error = 'Due day must be between 1 and 31');
                     return;
                   }
-                  ref.read(financeNotifierProvider.notifier).addLoan(
-                    name: nameCtrl.text.trim(), provider: providerCtrl.text.trim(),
-                    principalAmount: p, interestRate: r, monthlyEmi: e, dueDay: d, tenureMonths: t,
-                  );
-                  Navigator.pop(ctx);
+                  try {
+                    await ref.read(financeNotifierProvider.notifier).addLoan(
+                      name: nameCtrl.text.trim(), provider: providerCtrl.text.trim(),
+                      principalAmount: p, interestRate: r, monthlyEmi: e, dueDay: d, tenureMonths: t,
+                    );
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                  } catch (e2) {
+                    setSheetState(() => error = 'Failed to save: $e2');
+                  }
                 },
                 child: const Text('Add Loan'),
               )),
@@ -311,7 +316,7 @@ class LoansScreen extends ConsumerWidget {
               ],
               const SizedBox(height: 24),
               SizedBox(width: double.infinity, child: ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   final outstanding = double.tryParse(outCtrl.text);
                   final emi = double.tryParse(emiCtrl.text);
                   final dueDay = int.tryParse(dueDayCtrl.text);
@@ -331,14 +336,19 @@ class LoansScreen extends ConsumerWidget {
                     setSheetState(() => error = 'Due day must be between 1 and 31');
                     return;
                   }
-                  ref.read(financeNotifierProvider.notifier).updateLoan(loan.id,
-                    name: nameCtrl.text.trim(),
-                    provider: providerCtrl.text.trim(),
-                    outstandingAmount: outstanding,
-                    monthlyEmi: emi,
-                    dueDay: dueDay,
-                  );
-                  Navigator.pop(ctx);
+                  try {
+                    await ref.read(financeNotifierProvider.notifier).updateLoan(loan.id,
+                      name: nameCtrl.text.trim(),
+                      provider: providerCtrl.text.trim(),
+                      outstandingAmount: outstanding,
+                      monthlyEmi: emi,
+                      dueDay: dueDay,
+                    );
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                  } catch (e) {
+                    setSheetState(() => error = 'Failed to save: $e');
+                  }
                 },
                 child: const Text('Save Changes'),
               )),
@@ -358,14 +368,22 @@ class LoansScreen extends ConsumerWidget {
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense),
-          onPressed: () {
-            ref.read(financeNotifierProvider.notifier).deleteLoan(loan.id);
+          onPressed: () async {
             Navigator.pop(ctx);
-            showUndoDeleteSnackBar(
-              context,
-              message: '"${loan.name}" deleted',
-              onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('loans', loan.id),
-            );
+            try {
+              await ref.read(financeNotifierProvider.notifier).deleteLoan(loan.id);
+              if (!context.mounted) return;
+              showUndoDeleteSnackBar(
+                context,
+                message: '"${loan.name}" deleted',
+                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('loans', loan.id),
+              );
+            } catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.expense),
+              );
+            }
           },
           child: const Text('Delete'),
         ),

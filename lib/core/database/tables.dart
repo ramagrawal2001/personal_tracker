@@ -208,34 +208,14 @@ class Notes extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// Durable write-ahead queue for cloud sync. Each entity mutation writes an
-/// entity row and (in the same Drift transaction) one of these rows; the
-/// [SyncService] drains them independently. Repeated edits to the same
-/// entity coalesce onto one row via the {entityTable, entityId} unique key.
-@DataClassName('SyncOutboxEntry')
-class SyncOutbox extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get entityTable => text()();
-  TextColumn get entityId => text()();
-  TextColumn get op => text()(); // 'upsert' | 'delete'
-  TextColumn get payload => text().nullable()(); // diagnostic only
-  IntColumn get seq => integer()(); // DateTime.now().microsecondsSinceEpoch at enqueue
-  IntColumn get attempts => integer().withDefault(const Constant(0))();
-  TextColumn get lastError => text().nullable()();
-  DateTimeColumn get nextRetryAt => dateTime().withDefault(currentDateAndTime)();
-  BoolColumn get deadLettered => boolean().withDefault(const Constant(false))();
-  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
-  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
-
-  @override
-  List<Set<Column>> get uniqueKeys => [
-        {entityTable, entityId}
-      ];
-}
-
-/// Small key/value store for sync bookkeeping:
-/// `watermark:<table>`, `bound_user`, `bootstrap:<uid>`, `backfill:<uid>`,
-/// `settings_updated_at`.
+/// Small local key/value store. Historically also held the outbox/pull
+/// bookkeeping for the (now-removed) sync engine — that usage is gone, along
+/// with the `SyncOutbox` table it worked alongside (see the v6 migration in
+/// `app_database.dart`, which drops `sync_outbox` and the stale sync-only
+/// keys here). What remains load-bearing: `SecretCipherService` stores the
+/// field-encryption key-wrapping material under it (`sec_wrapped_dek`,
+/// `sec_kek_salt`, `sec_wrapped_dek_rc`, `sec_rc_salt`) — that is *not*
+/// sync bookkeeping, so this table itself is kept rather than dropped.
 @DataClassName('SyncMetaEntry')
 class SyncMeta extends Table {
   TextColumn get key => text()();

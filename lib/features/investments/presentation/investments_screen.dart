@@ -227,7 +227,7 @@ class InvestmentsScreen extends ConsumerWidget {
                 ],
                 const SizedBox(height: 24),
                 SizedBox(width: double.infinity, child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final invested = double.tryParse(investedCtrl.text);
                     final current = double.tryParse(currentCtrl.text);
                     final sip = double.tryParse(sipCtrl.text) ?? 0;
@@ -247,13 +247,18 @@ class InvestmentsScreen extends ConsumerWidget {
                       setSheetState(() => error = 'Monthly SIP cannot be negative');
                       return;
                     }
-                    ref.read(financeNotifierProvider.notifier).updateInvestment(inv.id,
-                      name: nameCtrl.text.trim(),
-                      investedAmount: invested,
-                      currentValue: current,
-                      monthlySipAmount: sip,
-                    );
-                    Navigator.pop(ctx);
+                    try {
+                      await ref.read(financeNotifierProvider.notifier).updateInvestment(inv.id,
+                        name: nameCtrl.text.trim(),
+                        investedAmount: invested,
+                        currentValue: current,
+                        monthlySipAmount: sip,
+                      );
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                    } catch (e) {
+                      setSheetState(() => error = 'Failed to save: $e');
+                    }
                   },
                   child: const Text('Save Changes'),
                 )),
@@ -273,14 +278,22 @@ class InvestmentsScreen extends ConsumerWidget {
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense),
-          onPressed: () {
-            ref.read(financeNotifierProvider.notifier).deleteInvestment(inv.id);
+          onPressed: () async {
             Navigator.pop(ctx);
-            showUndoDeleteSnackBar(
-              context,
-              message: '"${inv.name}" removed',
-              onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('investments', inv.id),
-            );
+            try {
+              await ref.read(financeNotifierProvider.notifier).deleteInvestment(inv.id);
+              if (!context.mounted) return;
+              showUndoDeleteSnackBar(
+                context,
+                message: '"${inv.name}" removed',
+                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('investments', inv.id),
+              );
+            } catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.expense),
+              );
+            }
           },
           child: const Text('Remove'),
         ),

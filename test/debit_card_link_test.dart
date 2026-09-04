@@ -21,9 +21,9 @@ void main() {
     double cardOutstanding(String id) =>
         notifier.state.creditCards.firstWhere((c) => c.id == id).currentOutstanding;
 
-    setUp(() {
+    setUp(() async {
       notifier = createTestFinanceNotifier();
-      notifier.addAccount(
+      await notifier.addAccount(
         name: 'HDFC Savings',
         type: AccountType.savingsAccount,
         bank: 'HDFC',
@@ -32,7 +32,7 @@ void main() {
       );
       accountId = notifier.state.accounts.first.id;
 
-      notifier.addCard(
+      await notifier.addCard(
         cardType: CardType.debit,
         name: 'HDFC Debit',
         bank: 'HDFC',
@@ -42,7 +42,7 @@ void main() {
       );
       debitCardId = notifier.state.creditCards.firstWhere((c) => c.cardType == CardType.debit).id;
 
-      notifier.addCard(
+      await notifier.addCard(
         cardType: CardType.credit,
         name: 'HDFC Regalia',
         bank: 'HDFC',
@@ -53,10 +53,10 @@ void main() {
       creditCardId = notifier.state.creditCards.firstWhere((c) => c.cardType == CardType.credit).id;
     });
 
-    test('debit-card expense deducts from the linked account balance', () {
+    test('debit-card expense deducts from the linked account balance', () async {
       expect(accountBalance(accountId), 50000.0);
 
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: accountId, // == linkedAccountId
         type: TransactionType.expense,
         amount: 1200.0,
@@ -67,10 +67,10 @@ void main() {
       expect(accountBalance(accountId), 48800.0);
     });
 
-    test('debit-card expense does NOT change the card outstanding', () {
+    test('debit-card expense does NOT change the card outstanding', () async {
       expect(cardOutstanding(debitCardId), 0.0);
 
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: accountId,
         type: TransactionType.expense,
         amount: 1200.0,
@@ -81,8 +81,8 @@ void main() {
       expect(cardOutstanding(debitCardId), 0.0);
     });
 
-    test('deleting a debit-card expense restores the balance and leaves outstanding untouched', () {
-      notifier.addTransaction(
+    test('deleting a debit-card expense restores the balance and leaves outstanding untouched', () async {
+      await notifier.addTransaction(
         accountId: accountId,
         type: TransactionType.expense,
         amount: 1200.0,
@@ -92,16 +92,16 @@ void main() {
       final txId = notifier.state.transactions.first.id;
       expect(accountBalance(accountId), 48800.0);
 
-      notifier.deleteTransaction(txId);
+      await notifier.deleteTransaction(txId);
 
       expect(accountBalance(accountId), 50000.0);
       expect(cardOutstanding(debitCardId), 0.0);
     });
 
-    test('regression: a credit-card expense still adds to currentOutstanding', () {
+    test('regression: a credit-card expense still adds to currentOutstanding', () async {
       expect(cardOutstanding(creditCardId), 0.0);
 
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: accountId,
         type: TransactionType.expense,
         amount: 3000.0,
@@ -113,15 +113,15 @@ void main() {
 
       // ...and deleting it reverses the outstanding.
       final txId = notifier.state.transactions.first.id;
-      notifier.deleteTransaction(txId);
+      await notifier.deleteTransaction(txId);
       expect(cardOutstanding(creditCardId), 0.0);
     });
 
-    test('regression: credit-card expense does not touch the source account balance path differently', () {
+    test('regression: credit-card expense does not touch the source account balance path differently', () async {
       // A credit-card charge is still recorded with accountId; the existing
       // engine subtracts it from that account (unchanged behaviour). This test
       // just pins that the debit gating did not alter the credit path.
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: accountId,
         type: TransactionType.expense,
         amount: 3000.0,

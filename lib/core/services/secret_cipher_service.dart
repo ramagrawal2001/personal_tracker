@@ -9,9 +9,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../database/app_database.dart';
 import '../database/finance_repository.dart' show appDatabaseProvider;
-import '../sync/outbox_write_through.dart';
+import '../sync/cloud_mappers.dart';
 import 'supabase_service.dart';
 
 /// ─── Secret cipher (transparent per-user field encryption) ───────────────────
@@ -220,12 +222,33 @@ class SecretCipherService {
     }
   }
 
+  /// Pushes the (now re-wrapped) DEK key material straight to the cloud
+  /// `user_settings` row — there is no outbox any more, so this is a direct
+  /// upsert instead of an enqueue. Best-effort: a failure here just means the
+  /// next settings push (or `refreshFromCloud` adopting a device that *did*
+  /// succeed) catches it up; the DEK itself is already safe in this device's
+  /// keystore regardless.
   Future<void> _enqueueKeySync(String userId) async {
     try {
-      await _writeMeta('settings_updated_at', DateTime.now().toIso8601String());
-      await enqueueOutboxRow(_db, 'user_settings', userId, 'upsert');
+      final now = DateTime.now();
+      await _writeMeta('settings_updated_at', now.toIso8601String());
+      if (!SupabaseService.isInitialized || SupabaseService.client.auth.currentSession == null) return;
+      final prefs = await SharedPreferences.getInstance();
+      final row = settingsToCloudJson(
+        userId,
+        emergencyBuffer: prefs.getDouble(kPrefEmergencyBuffer) ?? 20000.0,
+        currencySymbol: prefs.getString(kPrefCurrencySymbol) ?? '₹',
+        isRoundUpEnabled: prefs.getBool(kPrefRoundUpEnabled) ?? false,
+        isAutoBackupEnabled: prefs.getBool(kPrefAutoBackupEnabled) ?? false,
+        updatedAt: now,
+        secWrappedDek: await _readMeta(_metaWrappedDek),
+        secKekSalt: await _readMeta(_metaKekSalt),
+        secWrappedDekRc: await _readMeta(_metaWrappedDekRc),
+        secRcSalt: await _readMeta(_metaRcSalt),
+      );
+      await SupabaseService.client.from('user_settings').upsert(row, onConflict: 'user_id');
     } catch (e) {
-      debugPrint('SecretCipherService: could not enqueue key sync: $e');
+      debugPrint('SecretCipherService: could not push key sync: $e');
     }
   }
 

@@ -20,7 +20,6 @@ part 'app_database.g.dart';
   Investments,
   Goals,
   Notes,
-  SyncOutbox,
   SyncMeta,
 ])
 class AppDatabase extends _$AppDatabase {
@@ -35,7 +34,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -93,7 +92,9 @@ class AppDatabase extends _$AppDatabase {
               await addColumnIfMissing(entry[0] as TableInfo, entry[2] as GeneratedColumn);
             }
 
-            await m.createTable(syncOutbox);
+            // `sync_outbox` used to be created here too — it's gone (see the
+            // v6 step below), so a device jumping straight from v<3 to the
+            // current schema simply never gets one.
             await m.createTable(syncMeta);
 
             // Only `transactions` carries a `created_at` we can backfill from.
@@ -134,6 +135,24 @@ class AppDatabase extends _$AppDatabase {
               if (!existing.contains(col.name)) await m.addColumn(creditCards, col);
             }
           }
+          if (from < 6) {
+            // v6: the outbox/pull sync engine is gone — direct Supabase calls
+            // replaced it (see `FinanceNotifier`/`NotesNotifier`). `sync_outbox`
+            // is dropped outright (nothing else ever read it). `sync_meta` is
+            // KEPT — `SecretCipherService` reuses it as a plain local key/value
+            // store for field-encryption key material — but its now-dead
+            // sync-only rows (watermarks, bootstrap/backfill flags, the bound
+            // user, the settings clock, confirmed-delete markers) are pruned so
+            // they don't linger forever. `IF EXISTS` guards both statements
+            // because a synthetic upgrade path in tests may already be on the
+            // current schema.
+            await customStatement('DROP TABLE IF EXISTS sync_outbox');
+            await customStatement(
+              "DELETE FROM sync_meta WHERE key LIKE 'watermark:%' OR key LIKE 'bootstrap:%' "
+              "OR key LIKE 'backfill:%' OR key LIKE 'deleted:%' OR key = 'bound_user' "
+              "OR key = 'settings_updated_at'",
+            );
+          }
         },
       );
 
@@ -149,7 +168,6 @@ class AppDatabase extends _$AppDatabase {
       await delete(accounts).go();
       await delete(categories).go();
       await delete(notes).go();
-      await delete(syncOutbox).go();
       await delete(syncMeta).go();
     });
   }

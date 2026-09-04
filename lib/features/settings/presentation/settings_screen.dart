@@ -11,8 +11,7 @@ import '../../../core/database/finance_repository.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/services/payment_reminders.dart';
 import '../../../core/services/secret_cipher_service.dart';
-import '../../../core/sync/sync_service.dart';
-import '../../../core/sync/sync_status.dart';
+import '../../../core/providers/notes_provider.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
@@ -167,93 +166,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 18),
 
           // ── Cloud Sync ───────────────────────────────────────────────
+          // There is no background sync engine any more (see CLAUDE.md /
+          // the "direct writes" architecture note): every add/edit/delete
+          // hits Supabase immediately, and this card is the manual "pull the
+          // latest from the cloud" affordance for the rare case another
+          // device changed something and this one hasn't reconciled yet
+          // (next launch/resume also does this automatically).
           const SectionLabel(label: 'Cloud Sync'),
           Consumer(builder: (context, ref, _) {
-            final sync = ref.watch(syncStatusProvider);
-            final online = sync.isOnline;
-            final parts = <String>[
-              online ? 'Online' : 'Offline',
-              '${sync.pendingCount} pending',
-            ];
-            if (sync.lastSyncTime != null) {
-              final t = sync.lastSyncTime!;
-              parts.add('last ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}');
-            }
+            final finance = ref.watch(financeNotifierProvider);
+            final last = finance.lastRefreshedAt;
+            final subtitle = finance.lastRefreshError != null
+                ? "Couldn't refresh: ${finance.lastRefreshError}"
+                : last == null
+                    ? 'Not refreshed yet this session'
+                    : 'Last refreshed ${last.hour.toString().padLeft(2, '0')}:${last.minute.toString().padLeft(2, '0')}';
             return AppCard(
-              child: Column(
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: AppDecorations.iconBadge(online ? AppColors.income : AppColors.textMuted),
-                      child: Icon(LucideIcons.refreshCw,
-                          color: online ? AppColors.income : AppColors.textMuted, size: 18),
-                    ),
-                    title: Text('Sync Status',
-                        style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                    subtitle: Text(parts.join(' • '),
-                        style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                    trailing: sync.isSyncing
-                        ? const SizedBox(
-                            width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : TextButton(
-                            onPressed: () => ref.read(syncServiceProvider).flushNow(),
-                            child: Text('Sync now',
-                                style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
-                          ),
-                  ),
-                  if (sync.deadLetterCount > 0) ...[
-                    Divider(color: AppColors.border, height: 1),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          Icon(LucideIcons.alertTriangle, color: AppColors.expense, size: 14),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text('${sync.deadLetterCount} item(s) failed to sync and were parked',
-                                style: TextStyle(color: AppColors.expense, fontSize: 12)),
-                          ),
-                        ],
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: AppDecorations.iconBadge(
+                      finance.lastRefreshError != null ? AppColors.expense : AppColors.income),
+                  child: Icon(LucideIcons.refreshCw,
+                      color: finance.lastRefreshError != null ? AppColors.expense : AppColors.income, size: 18),
+                ),
+                title: Text('Cloud Data',
+                    style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: Text(subtitle, style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                trailing: finance.isRefreshing
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : TextButton(
+                        onPressed: () async {
+                          await ref.read(financeNotifierProvider.notifier).refreshFromCloud();
+                          await ref.read(notesProvider.notifier).refreshFromCloud();
+                          if (!context.mounted) return;
+                          final err = ref.read(financeNotifierProvider).lastRefreshError;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(err == null ? 'Refreshed from the cloud' : "Couldn't refresh: $err"),
+                              backgroundColor: err == null ? AppColors.income : AppColors.expense,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
+                        child: Text('Refresh now',
+                            style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
                       ),
-                    ),
-                  ],
-                  Divider(color: AppColors.border, height: 1),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Missing something that exists on another device? Force a full re-download from the cloud.',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 11),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: sync.isSyncing
-                              ? null
-                              : () async {
-                                  await ref.read(syncServiceProvider).forceFullResync();
-                                  if (!context.mounted) return;
-                                  final now = ref.read(syncStatusProvider);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(now.lastError == null
-                                          ? 'Full re-sync complete'
-                                          : 'Re-sync failed: ${now.lastError}'),
-                                      backgroundColor: now.lastError == null ? AppColors.income : AppColors.expense,
-                                    ),
-                                  );
-                                },
-                          child: Text('Force full re-sync',
-                              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ),
             );
           }),

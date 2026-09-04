@@ -42,7 +42,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     List<NoteChecklistItem> items = [];
     if (_note.isChecklist) {
       for (int i = 0; i < _checkCtrl.length; i++) {
@@ -62,7 +62,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       body: _bodyCtrl.text.trim(),
       checklistItems: items,
     );
-    ref.read(notesProvider.notifier).saveNote(updated);
+    await ref.read(notesProvider.notifier).saveNote(updated);
   }
 
   void _addCheckItem() {
@@ -106,7 +106,15 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        _save();
+        // Save-on-exit stays fire-and-forget so leaving the screen is instant
+        // (matches the pre-existing UX) — a failure is surfaced as a SnackBar
+        // on the screen underneath rather than blocking the pop.
+        final messenger = ScaffoldMessenger.of(context);
+        _save().catchError((Object e) {
+          messenger.showSnackBar(
+            SnackBar(content: Text('Failed to save note: $e'), backgroundColor: AppColors.expense),
+          );
+        });
         Navigator.of(context).pop();
       },
       child: Scaffold(

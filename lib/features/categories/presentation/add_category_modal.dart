@@ -201,7 +201,7 @@ class _AddCategoryModalState extends ConsumerState<AddCategoryModal> {
     );
   }
 
-  void _saveCategory() {
+  Future<void> _saveCategory() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       setState(() => _error = 'Please enter a category name');
@@ -215,15 +215,20 @@ class _AddCategoryModalState extends ConsumerState<AddCategoryModal> {
       return;
     }
 
-    ref.read(financeNotifierProvider.notifier).addCategory(
-          name: name,
-          type: _type,
-          icon: _selectedIcon,
-        );
-
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Category added successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
-    );
+    try {
+      await ref.read(financeNotifierProvider.notifier).addCategory(
+            name: name,
+            type: _type,
+            icon: _selectedIcon,
+          );
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Category added successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'Failed to save: $e');
+    }
   }
 }

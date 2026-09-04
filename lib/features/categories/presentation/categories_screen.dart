@@ -157,7 +157,7 @@ class CategoriesScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 SizedBox(width: double.infinity, child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final name = nameCtrl.text.trim();
                     if (name.isEmpty) {
                       setSheetState(() => error = 'Enter a category name');
@@ -169,8 +169,13 @@ class CategoriesScreen extends ConsumerWidget {
                       setSheetState(() => error = 'A category with this name already exists');
                       return;
                     }
-                    ref.read(financeNotifierProvider.notifier).updateCategory(cat.id, name: name, icon: selectedIcon);
-                    Navigator.pop(ctx);
+                    try {
+                      await ref.read(financeNotifierProvider.notifier).updateCategory(cat.id, name: name, icon: selectedIcon);
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                    } catch (e) {
+                      setSheetState(() => error = 'Failed to save: $e');
+                    }
                   },
                   child: const Text('Save'),
                 )),
@@ -192,14 +197,22 @@ class CategoriesScreen extends ConsumerWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
-            onPressed: () {
-              ref.read(financeNotifierProvider.notifier).deleteCategory(cat.id);
+            onPressed: () async {
               Navigator.pop(ctx);
-              showUndoDeleteSnackBar(
-                context,
-                message: '"${cat.name}" deleted',
-                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('categories', cat.id),
-              );
+              try {
+                await ref.read(financeNotifierProvider.notifier).deleteCategory(cat.id);
+                if (!context.mounted) return;
+                showUndoDeleteSnackBar(
+                  context,
+                  message: '"${cat.name}" deleted',
+                  onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('categories', cat.id),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.expense),
+                );
+              }
             },
             child: Text('Delete', style: TextStyle(color: AppColors.expense)),
           ),

@@ -208,14 +208,19 @@ class BudgetsScreen extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final limit = double.tryParse(limitCtrl.text);
                     if (limit == null || limit <= 0) {
                       setSheetState(() => error = 'Enter a limit greater than 0');
                       return;
                     }
-                    ref.read(financeNotifierProvider.notifier).updateBudget(budget.id, limitAmount: limit);
-                    Navigator.pop(ctx);
+                    try {
+                      await ref.read(financeNotifierProvider.notifier).updateBudget(budget.id, limitAmount: limit);
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                    } catch (e) {
+                      setSheetState(() => error = 'Failed to save: $e');
+                    }
                   },
                   child: const Text('Save'),
                 ),
@@ -283,14 +288,20 @@ class BudgetsScreen extends ConsumerWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final limit = double.tryParse(limitCtrl.text);
                     if (limit == null || limit <= 0) {
                       setSheetState(() => error = 'Enter a limit greater than 0');
                       return;
                     }
-                    ref.read(financeNotifierProvider.notifier).addBudget(categoryId: selectedCategoryId, monthlyLimit: limit, monthYear: monthYear);
-                    Navigator.pop(ctx);
+                    try {
+                      await ref.read(financeNotifierProvider.notifier)
+                          .addBudget(categoryId: selectedCategoryId, monthlyLimit: limit, monthYear: monthYear);
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                    } catch (e) {
+                      setSheetState(() => error = 'Failed to save: $e');
+                    }
                   },
                   child: const Text('Create Budget'),
                 ),
@@ -313,14 +324,22 @@ class BudgetsScreen extends ConsumerWidget {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense),
-            onPressed: () {
-              ref.read(financeNotifierProvider.notifier).deleteBudget(budget.id);
+            onPressed: () async {
               Navigator.pop(ctx);
-              showUndoDeleteSnackBar(
-                context,
-                message: 'Budget deleted',
-                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('budgets', budget.id),
-              );
+              try {
+                await ref.read(financeNotifierProvider.notifier).deleteBudget(budget.id);
+                if (!context.mounted) return;
+                showUndoDeleteSnackBar(
+                  context,
+                  message: 'Budget deleted',
+                  onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('budgets', budget.id),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.expense),
+                );
+              }
             },
             child: const Text('Delete'),
           ),

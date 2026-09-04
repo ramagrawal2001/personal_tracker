@@ -510,7 +510,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
     );
   }
 
-  void _saveTransaction() {
+  Future<void> _saveTransaction() async {
     final amountText = _amountController.text.trim();
     final amount = double.tryParse(amountText);
 
@@ -573,30 +573,39 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
     }
 
     final notifier = ref.read(financeNotifierProvider.notifier);
-    if (_isEditing) {
-      notifier.updateTransaction(
-        widget.existing!.id,
-        amount: amount,
-        categoryId: _selectedCategoryId,
-        merchant: _merchantController.text.trim().isNotEmpty ? _merchantController.text.trim() : null,
-        date: _selectedDate,
-        description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+    try {
+      if (_isEditing) {
+        await notifier.updateTransaction(
+          widget.existing!.id,
+          amount: amount,
+          categoryId: _selectedCategoryId,
+          merchant: _merchantController.text.trim().isNotEmpty ? _merchantController.text.trim() : null,
+          date: _selectedDate,
+          description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+        );
+      } else {
+        await notifier.addTransaction(
+          accountId: effectiveAccountId,
+          toAccountId: _selectedType == TransactionType.transfer ? _selectedToAccountId : null,
+          type: _selectedType,
+          amount: amount,
+          categoryId: _selectedCategoryId,
+          merchant: _merchantController.text.trim().isNotEmpty ? _merchantController.text.trim() : null,
+          date: _selectedDate,
+          description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+          creditCardId: _selectedType == TransactionType.creditCardPayment ? _selectedCardId : debitCardId,
+          loanId: _selectedType == TransactionType.loanPayment ? _selectedLoanId : null,
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save transaction: $e'), backgroundColor: AppColors.expense, behavior: SnackBarBehavior.floating),
       );
-    } else {
-      notifier.addTransaction(
-        accountId: effectiveAccountId,
-        toAccountId: _selectedType == TransactionType.transfer ? _selectedToAccountId : null,
-        type: _selectedType,
-        amount: amount,
-        categoryId: _selectedCategoryId,
-        merchant: _merchantController.text.trim().isNotEmpty ? _merchantController.text.trim() : null,
-        date: _selectedDate,
-        description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
-        creditCardId: _selectedType == TransactionType.creditCardPayment ? _selectedCardId : debitCardId,
-        loanId: _selectedType == TransactionType.loanPayment ? _selectedLoanId : null,
-      );
+      return;
     }
 
+    if (!mounted) return;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

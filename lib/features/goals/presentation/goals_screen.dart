@@ -259,15 +259,21 @@ class GoalsScreen extends ConsumerWidget {
             child: Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final amt = double.tryParse(controller.text.trim()) ?? 0.0;
-              if (amt > 0) {
-                ref.read(financeNotifierProvider.notifier).addFundsToGoal(goal.id, amt);
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Funds added to goal!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
-                );
+              if (amt <= 0) return;
+              Object? failure;
+              try {
+                await ref.read(financeNotifierProvider.notifier).addFundsToGoal(goal.id, amt);
+              } catch (e) {
+                failure = e;
               }
+              if (!ctx.mounted) return;
+              if (failure == null) Navigator.pop(ctx);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(failure == null
+                  ? SnackBar(content: Text('Funds added to goal!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating)
+                  : SnackBar(content: Text('Failed to add funds: $failure'), backgroundColor: AppColors.expense, behavior: SnackBarBehavior.floating));
             },
             child: const Text('Deposit'),
           ),
@@ -330,7 +336,7 @@ class GoalsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
                 SizedBox(width: double.infinity, child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     final name = nameCtrl.text.trim();
                     final target = double.tryParse(targetCtrl.text);
                     if (name.isEmpty) {
@@ -341,13 +347,18 @@ class GoalsScreen extends ConsumerWidget {
                       setSheetState(() => error = 'Enter a target amount greater than 0');
                       return;
                     }
-                    ref.read(financeNotifierProvider.notifier).updateGoal(
-                      goal.id,
-                      name: name,
-                      targetAmount: target,
-                      targetDate: targetDate,
-                    );
-                    Navigator.pop(ctx);
+                    try {
+                      await ref.read(financeNotifierProvider.notifier).updateGoal(
+                        goal.id,
+                        name: name,
+                        targetAmount: target,
+                        targetDate: targetDate,
+                      );
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                    } catch (e) {
+                      setSheetState(() => error = 'Failed to save: $e');
+                    }
                   },
                   child: const Text('Save Changes'),
                 )),
@@ -369,14 +380,22 @@ class GoalsScreen extends ConsumerWidget {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
-            onPressed: () {
-              ref.read(financeNotifierProvider.notifier).deleteGoal(goal.id);
+            onPressed: () async {
               Navigator.pop(ctx);
-              showUndoDeleteSnackBar(
-                context,
-                message: '"${goal.name}" deleted',
-                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('goals', goal.id),
-              );
+              try {
+                await ref.read(financeNotifierProvider.notifier).deleteGoal(goal.id);
+                if (!context.mounted) return;
+                showUndoDeleteSnackBar(
+                  context,
+                  message: '"${goal.name}" deleted',
+                  onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('goals', goal.id),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.expense),
+                );
+              }
             },
             child: Text('Delete', style: TextStyle(color: AppColors.expense)),
           ),

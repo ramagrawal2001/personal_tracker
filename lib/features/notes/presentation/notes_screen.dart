@@ -22,14 +22,22 @@ void _confirmDelete(BuildContext context, NotesNotifier notifier, String noteId)
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         TextButton(
-          onPressed: () {
-            notifier.deleteNote(noteId);
+          onPressed: () async {
             Navigator.pop(ctx);
-            showUndoDeleteSnackBar(
-              context,
-              message: 'Note deleted',
-              onUndo: () => notifier.undoDelete(noteId),
-            );
+            try {
+              await notifier.deleteNote(noteId);
+              if (!context.mounted) return;
+              showUndoDeleteSnackBar(
+                context,
+                message: 'Note deleted',
+                onUndo: () => notifier.undoDelete(noteId),
+              );
+            } catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.expense),
+              );
+            }
           },
           child: Text('Delete', style: TextStyle(color: AppColors.expense)),
         ),

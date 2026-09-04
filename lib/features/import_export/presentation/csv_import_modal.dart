@@ -120,27 +120,40 @@ class _CsvImportModalState extends ConsumerState<CsvImportModal> {
     });
   }
 
-  void _importAll() {
+  Future<void> _importAll() async {
     if (_selectedAccountId == null || _previewRows.isEmpty) return;
 
     final notifier = ref.read(financeNotifierProvider.notifier);
+    var imported = 0;
+    var failed = 0;
+    // Sequential + best-effort: each row is its own direct cloud write, so
+    // one failing row (e.g. a mid-import network drop) doesn't lose the rows
+    // that already succeeded — it's just reported in the summary.
     for (var row in _previewRows) {
-      notifier.addTransaction(
-        accountId: _selectedAccountId!,
-        type: row.type,
-        amount: row.amount,
-        categoryId: row.categoryId,
-        merchant: row.merchantName,
-        date: row.date,
-        description: 'CSV Import: ${row.rawDescription}',
-      );
+      try {
+        await notifier.addTransaction(
+          accountId: _selectedAccountId!,
+          type: row.type,
+          amount: row.amount,
+          categoryId: row.categoryId,
+          merchant: row.merchantName,
+          date: row.date,
+          description: 'CSV Import: ${row.rawDescription}',
+        );
+        imported++;
+      } catch (e) {
+        failed++;
+      }
     }
 
+    if (!mounted) return;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Successfully imported ${_previewRows.length} transactions!'),
-        backgroundColor: AppColors.income,
+        content: Text(failed == 0
+            ? 'Successfully imported $imported transactions!'
+            : 'Imported $imported transactions — $failed failed (check your connection and retry those).'),
+        backgroundColor: failed == 0 ? AppColors.income : AppColors.warning,
         behavior: SnackBarBehavior.floating,
       ),
     );

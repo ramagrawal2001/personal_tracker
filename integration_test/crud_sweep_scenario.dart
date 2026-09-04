@@ -44,16 +44,20 @@ Future<List<String>> runCrudSweep(WidgetTester tester) async {
 
   bool present(String s) => find.text(s).evaluate().isNotEmpty;
 
-  FinanceNotifier seeded(AppDatabase db) {
-    final n = FinanceNotifier(db, autoLoad: false);
-    n.addAccount(
+  // Constructs synchronously (used as the provider override's create
+  // callback); seeding itself is async — every mutator is now a direct-write
+  // `Future` (see CLAUDE.md's "direct writes" architecture note) — and is
+  // awaited separately via [seedInto] right after `pumpWidget`.
+  FinanceNotifier freshNotifier(AppDatabase db) => FinanceNotifier(db, autoLoad: false);
+
+  Future<void> seedInto(FinanceNotifier n) async {
+    await n.addAccount(
         name: 'HDFC Savings',
         type: AccountType.savingsAccount,
         bank: 'HDFC',
         openingBalance: 100000);
-    n.addAccount(
+    await n.addAccount(
         name: 'Cash Wallet', type: AccountType.cash, openingBalance: 20000);
-    return n;
   }
 
   // Plugin stubs so the real app can boot under a plain `flutter test` binding
@@ -83,15 +87,22 @@ Future<List<String>> runCrudSweep(WidgetTester tester) async {
   final failures = <String>[];
   final db = AppDatabase.forTesting(NativeDatabase.memory());
 
+  late final FinanceNotifier seededNotifier;
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         appDatabaseProvider.overrideWithValue(db),
-        financeNotifierProvider.overrideWith((ref) => seeded(db)),
+        financeNotifierProvider.overrideWith((ref) => seededNotifier = freshNotifier(db)),
       ],
       child: const AspyricApp(),
     ),
   );
+  // Providers construct lazily on first read — force that now (BiometricGate
+  // etc. would otherwise be the first reader, mid-build) so `seededNotifier`
+  // is assigned before we await the seeding below.
+  ProviderScope.containerOf(tester.element(find.byType(AspyricApp)))
+      .read(financeNotifierProvider);
+  await seedInto(seededNotifier);
   await pumpUntil(
       () => present('Sign In to Aspyric') && find.byType(TextField).evaluate().length >= 2,
       frames: 400);
@@ -297,7 +308,7 @@ Future<List<String>> runCrudSweep(WidgetTester tester) async {
       failures.add(
           'transaction-transfer: source balance did not drop by 3000 (before=$before after=$after)');
     }
-    finance.deleteTransaction(txs.first.id);
+    await finance.deleteTransaction(txs.first.id);
     await settle();
   });
 

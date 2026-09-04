@@ -13,7 +13,6 @@ import 'core/providers/locale_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/services/supabase_service.dart';
 import 'core/services/notification_service.dart';
-import 'core/sync/sync_service.dart';
 
 void main() {
   runZonedGuarded(() async {
@@ -77,10 +76,6 @@ class AspyricApp extends ConsumerWidget {
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeProvider);
     final router = ref.watch(appRouterProvider);
-
-    // Eagerly instantiate the sync service so it attaches its auth listener
-    // and starts draining the outbox once a session exists.
-    ref.watch(syncServiceProvider);
 
     return MaterialApp.router(
       title: 'Aspyric',

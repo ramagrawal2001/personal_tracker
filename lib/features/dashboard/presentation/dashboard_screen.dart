@@ -100,9 +100,7 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ],
       body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(financeNotifierProvider);
-        },
+        onRefresh: () => ref.read(financeNotifierProvider.notifier).refreshFromCloud(),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(

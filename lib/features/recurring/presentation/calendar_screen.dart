@@ -417,7 +417,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       if (titleCtrl.text.trim().isEmpty) {
                         ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Enter a title'), backgroundColor: AppColors.expense));
                         return;
@@ -428,29 +428,34 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         return;
                       }
                       final notifier = ref.read(financeNotifierProvider.notifier);
-                      if (existing == null) {
-                        notifier.addRecurringPayment(
-                          title: titleCtrl.text.trim(),
-                          amount: amount,
-                          frequency: frequency,
-                          nextDueDate: dueDate,
-                          categoryId: categoryId,
-                          accountId: accountId,
-                          isAutoPay: isAutoPay,
-                        );
-                      } else {
-                        notifier.updateRecurringPayment(
-                          existing.id,
-                          title: titleCtrl.text.trim(),
-                          amount: amount,
-                          frequency: frequency,
-                          nextDueDate: dueDate,
-                          categoryId: categoryId,
-                          accountId: accountId,
-                          isAutoPay: isAutoPay,
-                        );
+                      try {
+                        if (existing == null) {
+                          await notifier.addRecurringPayment(
+                            title: titleCtrl.text.trim(),
+                            amount: amount,
+                            frequency: frequency,
+                            nextDueDate: dueDate,
+                            categoryId: categoryId,
+                            accountId: accountId,
+                            isAutoPay: isAutoPay,
+                          );
+                        } else {
+                          await notifier.updateRecurringPayment(
+                            existing.id,
+                            title: titleCtrl.text.trim(),
+                            amount: amount,
+                            frequency: frequency,
+                            nextDueDate: dueDate,
+                            categoryId: categoryId,
+                            accountId: accountId,
+                            isAutoPay: isAutoPay,
+                          );
+                        }
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                      } catch (e) {
+                        setSheetState(() => error = 'Failed to save: $e');
                       }
-                      Navigator.pop(ctx);
                     },
                     child: Text(existing == null ? 'Add Payment' : 'Save Changes'),
                   ),
@@ -473,16 +478,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
-            onPressed: () {
-              ref.read(financeNotifierProvider.notifier).deleteRecurringPayment(item.id);
+            onPressed: () async {
               Navigator.pop(ctx);
-              showUndoDeleteSnackBar(
-                context,
-                message: '"${item.title}" deleted',
-                onUndo: () => ref
-                    .read(financeNotifierProvider.notifier)
-                    .undoDelete('recurring_payments', item.id),
-              );
+              try {
+                await ref.read(financeNotifierProvider.notifier).deleteRecurringPayment(item.id);
+                if (!context.mounted) return;
+                showUndoDeleteSnackBar(
+                  context,
+                  message: '"${item.title}" deleted',
+                  onUndo: () => ref
+                      .read(financeNotifierProvider.notifier)
+                      .undoDelete('recurring_payments', item.id),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.expense),
+                );
+              }
             },
             child: Text('Delete', style: TextStyle(color: AppColors.expense)),
           ),

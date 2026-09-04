@@ -9,24 +9,24 @@ void main() {
   group('Comprehensive Financial Engine Edge Cases Matrix', () {
     late FinanceNotifier notifier;
 
-    setUp(() {
+    setUp(() async {
       notifier = createTestFinanceNotifier();
       // Set up test accounts, credit cards, and loans fresh for each test
-      notifier.addAccount(
+      await notifier.addAccount(
         name: 'HDFC Test Account',
         type: AccountType.savingsAccount,
         bank: 'HDFC Bank',
         accountNumberLast4: '5421',
         openingBalance: 52430.0,
       );
-      notifier.addAccount(
+      await notifier.addAccount(
         name: 'SBI Test Account',
         type: AccountType.savingsAccount,
         bank: 'SBI',
         accountNumberLast4: '8812',
         openingBalance: 21820.0,
       );
-      notifier.addCreditCard(
+      await notifier.addCreditCard(
         name: 'SBI Cashback Card',
         bank: 'SBI Card',
         last4: '4321',
@@ -34,7 +34,7 @@ void main() {
         statementDay: 2,
         dueDay: 22,
       );
-      notifier.addLoan(
+      await notifier.addLoan(
         name: 'Home Loan',
         provider: 'SBI',
         principalAmount: 3500000.0,
@@ -45,12 +45,12 @@ void main() {
       );
     });
 
-    test('Edge Case 1: Account to Account Transfer maintains total liquid wealth invariant', () {
+    test('Edge Case 1: Account to Account Transfer maintains total liquid wealth invariant', () async {
       final initialLiquid = notifier.state.totalLiquidBalance;
       final hdfcAcc = notifier.state.accounts.firstWhere((a) => a.name.contains('HDFC'));
       final sbiAcc = notifier.state.accounts.firstWhere((a) => a.name.contains('SBI'));
 
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: hdfcAcc.id,
         toAccountId: sbiAcc.id,
         type: TransactionType.transfer,
@@ -66,11 +66,11 @@ void main() {
       expect(notifier.state.safeToSpend, equals(0.0));
     });
 
-    test('Edge Case 3: Credit Card Repayment does not double-count as expense', () {
+    test('Edge Case 3: Credit Card Repayment does not double-count as expense', () async {
       final card = notifier.state.creditCards.first;
       final account = notifier.state.accounts.first;
 
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: account.id,
         type: TransactionType.creditCardPayment,
         amount: 10000.0,
@@ -84,11 +84,11 @@ void main() {
       expect(monthlyExpenses >= 0, isTrue);
     });
 
-    test('Edge Case 4: Loan EMI Repayment reduces loan principal liability', () {
+    test('Edge Case 4: Loan EMI Repayment reduces loan principal liability', () async {
       final loan = notifier.state.loans.first;
       final initialLoanDebt = notifier.state.totalLoanDebt;
 
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: notifier.state.accounts.first.id,
         type: TransactionType.loanPayment,
         amount: 30000.0,
@@ -142,10 +142,10 @@ void main() {
       expect(MerchantCategorizer.categorize('UNKNOWN SHOP')?.categoryId, isNull);
     });
 
-    test('Edge Case 8: Dynamic Custom Category creation and deletion', () {
+    test('Edge Case 8: Dynamic Custom Category creation and deletion', () async {
       final initialCount = notifier.state.categories.length;
 
-      notifier.addCategory(
+      await notifier.addCategory(
         name: 'Pet Care',
         type: 'expense',
         icon: 'tag',
@@ -153,7 +153,7 @@ void main() {
       expect(notifier.state.categories.length, equals(initialCount + 1));
 
       final addedCat = notifier.state.categories.firstWhere((c) => c.name == 'Pet Care');
-      notifier.deleteCategory(addedCat.id);
+      await notifier.deleteCategory(addedCat.id);
       expect(notifier.state.categories.length, equals(initialCount));
     });
   });

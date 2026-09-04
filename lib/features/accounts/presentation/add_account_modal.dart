@@ -231,19 +231,24 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
       }
     }
 
-    ref.read(financeNotifierProvider.notifier).addAccount(
-          name: name,
-          type: _selectedType,
-          bank: _bankController.text.trim().isNotEmpty ? _bankController.text.trim() : null,
-          accountNumberLast4: last4.isNotEmpty ? last4 : null,
-          openingBalance: openingBalance,
-          encAccountNumber: encAccountNumber,
-          encIfsc: encIfsc,
-        );
-
-    navigator.pop();
-    messenger.showSnackBar(
-      SnackBar(content: Text('Account created successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
-    );
+    try {
+      await ref.read(financeNotifierProvider.notifier).addAccount(
+            name: name,
+            type: _selectedType,
+            bank: _bankController.text.trim().isNotEmpty ? _bankController.text.trim() : null,
+            accountNumberLast4: last4.isNotEmpty ? last4 : null,
+            openingBalance: openingBalance,
+            encAccountNumber: encAccountNumber,
+            encIfsc: encIfsc,
+          );
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(content: Text('Account created successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to save account: $e'), backgroundColor: AppColors.expense, behavior: SnackBarBehavior.floating),
+      );
+    }
   }
 }

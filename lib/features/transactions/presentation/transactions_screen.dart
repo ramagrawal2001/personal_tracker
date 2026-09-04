@@ -148,9 +148,24 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ) ??
             false;
       },
-      onDismissed: (_) {
-        ref.read(financeNotifierProvider.notifier).deleteTransaction(tx.id);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction deleted')));
+      onDismissed: (_) async {
+        // The swipe animation has already removed this row from view; on a
+        // failed delete the transaction stays in state and reappears on the
+        // next rebuild — surfaced via the error SnackBar below.
+        // Captured as a local so the `mounted` narrowing below actually
+        // applies — `context` is `State.context`, a getter, and the
+        // analyzer can't promote across separate getter reads.
+        final screenContext = context;
+        Object? failure;
+        try {
+          await ref.read(financeNotifierProvider.notifier).deleteTransaction(tx.id);
+        } catch (e) {
+          failure = e;
+        }
+        if (!screenContext.mounted) return;
+        ScaffoldMessenger.of(screenContext).showSnackBar(failure == null
+            ? const SnackBar(content: Text('Transaction deleted'))
+            : SnackBar(content: Text('Delete failed: $failure'), backgroundColor: AppColors.expense));
       },
       child: InkWell(
       borderRadius: BorderRadius.circular(14),

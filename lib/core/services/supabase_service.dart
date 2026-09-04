@@ -46,7 +46,10 @@ class SupabaseService {
 
   static bool get hasValidSession => currentSession != null;
 
-  // Cloud sync now lives in lib/core/sync/ (SyncService + the offline outbox).
-  // The old fire-and-forget syncLocalDataToCloud / EdgeFunctionService /
-  // SyncEngineNotifier paths were removed in the Phase 4 cleanup.
+  // There is no separate sync engine any more — `FinanceNotifier` /
+  // `NotesNotifier` call this client directly for every mutation and for the
+  // periodic `refreshFromCloud()` full fetch (see `lib/core/sync/
+  // cloud_direct_write.dart` and CLAUDE.md's "direct writes" architecture
+  // note). The old outbox / LWW-merge / realtime `SyncService` this comment
+  // used to describe was removed.
 }

@@ -52,9 +52,9 @@ void main() {
       expect(goal.remainingAmount, equals(50000.0));
     });
 
-    test('Add Funds to Savings Goal', () {
+    test('Add Funds to Savings Goal', () async {
       // Create a fresh goal directly via the notifier
-      notifier.addGoal(
+      await notifier.addGoal(
         name: 'Emergency Fund',
         targetAmount: 100000.0,
         currentSavedAmount: 50000.0,
@@ -64,7 +64,7 @@ void main() {
       final targetGoal = notifier.state.goals.first;
       final initialSaved = targetGoal.currentSavedAmount;
 
-      notifier.addFundsToGoal(targetGoal.id, 10000.0);
+      await notifier.addFundsToGoal(targetGoal.id, 10000.0);
 
       final updatedGoal = notifier.state.goals.firstWhere((g) => g.id == targetGoal.id);
       expect(updatedGoal.currentSavedAmount, equals(initialSaved + 10000.0));

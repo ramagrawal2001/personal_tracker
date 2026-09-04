@@ -31,7 +31,7 @@ void main() {
     addTearDown(notifier.dispose);
 
     final encNumber = cipher.encryptField(fullNumber);
-    notifier.addCard(
+    await notifier.addCard(
       cardType: CardType.credit,
       name: 'Test Card',
       bank: 'Test Bank',
@@ -42,9 +42,6 @@ void main() {
       encPin: cipher.encryptField(pin),
       notes: 'portal: example.com',
     );
-
-    // addCard's Drift write is fire-and-forget.
-    await Future<void>.delayed(const Duration(milliseconds: 150));
 
     final row = await db.select(db.creditCards).getSingle();
 
@@ -71,11 +68,5 @@ void main() {
     final cloudJson = row.toModel().toCloudJson();
     expect(cloudJson['enc_card_number'], encNumber);
     expect(cloudJson.toString().contains(fullNumber), isFalse);
-
-    // And the diagnostic outbox payload never carries plaintext.
-    final outbox = await db.select(db.syncOutbox).get();
-    for (final o in outbox) {
-      expect((o.payload ?? '').contains(fullNumber), isFalse);
-    }
   });
 }

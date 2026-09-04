@@ -10,24 +10,24 @@ void main() {
     late String sbiId;
     late String cardId;
 
-    setUp(() {
+    setUp(() async {
       notifier = createTestFinanceNotifier();
       // Create test accounts
-      notifier.addAccount(
+      await notifier.addAccount(
         name: 'HDFC Test',
         type: AccountType.savingsAccount,
         bank: 'HDFC',
         accountNumberLast4: '5421',
         openingBalance: 52430.0,
       );
-      notifier.addAccount(
+      await notifier.addAccount(
         name: 'SBI Test',
         type: AccountType.savingsAccount,
         bank: 'SBI',
         accountNumberLast4: '8812',
         openingBalance: 21820.0,
       );
-      notifier.addCreditCard(
+      await notifier.addCreditCard(
         name: 'SBI Card',
         bank: 'SBI Card',
         last4: '4321',
@@ -41,13 +41,13 @@ void main() {
       cardId = notifier.state.creditCards.first.id;
     });
 
-    test('Calculated balance respects income and expense transactions', () {
+    test('Calculated balance respects income and expense transactions', () async {
       final initialBalance = notifier.state.accountsWithCalculatedBalances
           .firstWhere((a) => a.id == hdfcId)
           .calculatedBalance;
 
       // Add ₹10,000 Income to HDFC
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: hdfcId,
         type: TransactionType.income,
         amount: 10000.0,
@@ -61,9 +61,9 @@ void main() {
       expect(newBalance, equals(initialBalance + 10000.0));
     });
 
-    test('Credit Card Repayment reduces card outstanding without adding expense', () {
+    test('Credit Card Repayment reduces card outstanding without adding expense', () async {
       // First add some charges to the card
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: sbiId,
         type: TransactionType.expense,
         amount: 47700.0,
@@ -77,7 +77,7 @@ void main() {
           .currentOutstanding;
 
       // Pay ₹10,000 towards the card
-      notifier.addTransaction(
+      await notifier.addTransaction(
         accountId: sbiId,
         type: TransactionType.creditCardPayment,
         amount: 10000.0,

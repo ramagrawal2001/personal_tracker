@@ -193,17 +193,21 @@ class AccountsScreen extends ConsumerWidget {
                         return;
                       }
                     }
-                    ref.read(financeNotifierProvider.notifier).updateAccount(
-                      acc.id,
-                      name: nameCtrl.text.trim(),
-                      type: selectedType,
-                      bank: bankCtrl.text.trim().isEmpty ? null : bankCtrl.text.trim(),
-                      accountNumberLast4: newLast4 ?? (last4Ctrl.text.trim().isEmpty ? null : last4Ctrl.text.trim()),
-                      openingBalance: opening,
-                      encAccountNumber: encNum,
-                      encIfsc: encIfsc,
-                    );
-                    navigator.pop();
+                    try {
+                      await ref.read(financeNotifierProvider.notifier).updateAccount(
+                        acc.id,
+                        name: nameCtrl.text.trim(),
+                        type: selectedType,
+                        bank: bankCtrl.text.trim().isEmpty ? null : bankCtrl.text.trim(),
+                        accountNumberLast4: newLast4 ?? (last4Ctrl.text.trim().isEmpty ? null : last4Ctrl.text.trim()),
+                        openingBalance: opening,
+                        encAccountNumber: encNum,
+                        encIfsc: encIfsc,
+                      );
+                      navigator.pop();
+                    } catch (e) {
+                      setSheetState(() => error = 'Failed to save: $e');
+                    }
                   },
                   child: const Text('Save Changes'),
                 )),
@@ -223,14 +227,22 @@ class AccountsScreen extends ConsumerWidget {
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense),
-          onPressed: () {
-            ref.read(financeNotifierProvider.notifier).deleteAccount(acc.id);
+          onPressed: () async {
             Navigator.pop(ctx);
-            showUndoDeleteSnackBar(
-              context,
-              message: '"${acc.name}" deleted',
-              onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('accounts', acc.id),
-            );
+            try {
+              await ref.read(financeNotifierProvider.notifier).deleteAccount(acc.id);
+              if (!context.mounted) return;
+              showUndoDeleteSnackBar(
+                context,
+                message: '"${acc.name}" deleted',
+                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('accounts', acc.id),
+              );
+            } catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Delete failed: $e'), backgroundColor: AppColors.expense),
+              );
+            }
           },
           child: const Text('Delete'),
         ),

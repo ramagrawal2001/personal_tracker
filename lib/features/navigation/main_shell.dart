@@ -3,7 +3,9 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../core/database/finance_repository.dart';
 import '../../core/l10n/app_localizations.dart';
+import '../../core/providers/notes_provider.dart';
 import '../../core/services/secret_cipher_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_decorations.dart';
@@ -44,7 +46,7 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends ConsumerState<MainShell> {
+class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserver {
   AppModule _activeModule = AppModule.finance;
   int _notesNavIndex = 0;
   bool _recoveryPromptOpen = false;
@@ -57,12 +59,26 @@ class _MainShellState extends ConsumerState<MainShell> {
     // state flips later (e.g. an interactive login on this device).
     SecretCipherService.needsRecoveryListenable.addListener(_maybeShowRecoveryPrompt);
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowRecoveryPrompt());
+    // There is no realtime subscription any more (see CLAUDE.md's "direct
+    // writes" note) — a resume from background is one of the few points
+    // convergence with another device happens, alongside launch and the
+    // manual "Refresh now" in Settings.
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     SecretCipherService.needsRecoveryListenable.removeListener(_maybeShowRecoveryPrompt);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(financeNotifierProvider.notifier).refreshFromCloud();
+      ref.read(notesProvider.notifier).refreshFromCloud();
+    }
   }
 
   void _maybeShowRecoveryPrompt() {

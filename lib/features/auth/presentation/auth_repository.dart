@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/supabase_service.dart';
 import '../../../core/services/secret_cipher_service.dart';
+import '../../../core/database/finance_repository.dart';
+import '../../../core/providers/notes_provider.dart';
 
 const _kSessionIsLoggedIn = 'aspyric_session_logged_in';
 const _kSessionUserId     = 'aspyric_session_user_id';
@@ -289,6 +291,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         name: normalised.split('@').first.toUpperCase(),
       );
       await _initSecretCipher(demoUid, password, isDemo: true);
+      // No-op for demo accounts (no cloud session) — kept for symmetry with
+      // the real sign-in path below.
+      _triggerCloudRefresh();
       return true;
     }
     // ───────────────────────────────────────────────────────────────────────
@@ -314,6 +319,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
           isLoading: false,
         );
         await _initSecretCipher(response.session!.user.id, password);
+        // Replaces what `SyncService.start(userId)` used to trigger on
+        // auth — pulls this device's local cache in line with the cloud.
+        _triggerCloudRefresh();
         return true;
       }
       state = state.copyWith(
@@ -355,6 +363,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           isLoading: false,
         );
         await _initSecretCipher(response.session!.user.id, password, isSignup: true);
+        _triggerCloudRefresh();
         return true;
       }
 
@@ -383,7 +392,31 @@ class AuthNotifier extends StateNotifier<AuthState> {
     // same user re-logging-in on this device restores it automatically.
     await SecretCipherService.clearCachedDek();
     await _clearPersistedSession();
+    // Local Drift is just a read cache of the signed-in user's cloud data now
+    // (no outbox to drain, nothing pending) — clear it so a different user
+    // signing in next on this device never briefly sees someone else's rows
+    // before the next `refreshFromCloud` replaces them.
+    try {
+      _ref.read(financeNotifierProvider.notifier).clearForNewUser('');
+      _ref.read(notesProvider.notifier).clearLocal();
+    } catch (e) {
+      debugPrint('AuthNotifier: clearing local cache on sign-out failed: $e');
+    }
     state = AuthState(isAuthenticated: false, isRestored: true);
+  }
+
+  /// Kicks off a background full refresh of both notifiers from the cloud —
+  /// replaces what `SyncService.start(userId)` used to trigger on auth.
+  /// Fire-and-forget: both notifiers' `refreshFromCloud` have their own error
+  /// handling and never throw, and no-op instantly when there is no cloud
+  /// session (debug demo accounts).
+  void _triggerCloudRefresh() {
+    try {
+      unawaited(_ref.read(financeNotifierProvider.notifier).refreshFromCloud());
+      unawaited(_ref.read(notesProvider.notifier).refreshFromCloud());
+    } catch (e) {
+      debugPrint('AuthNotifier: triggering cloud refresh failed: $e');
+    }
   }
 
   /// Bootstraps [SecretCipherService] with the plaintext password that is

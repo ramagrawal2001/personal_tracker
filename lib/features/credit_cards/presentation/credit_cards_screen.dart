@@ -541,22 +541,26 @@ return SingleChildScrollView(
                           return;
                         }
                       }
-                      ref.read(financeNotifierProvider.notifier).updateCard(
-                        card.id,
-                        name: nameCtrl.text.trim(),
-                        bank: bankCtrl.text.trim(),
-                        cardholderName: holderCtrl.text.trim(),
-                        last4: newLast4,
-                        colorHex: colorHex,
-                        encCardNumber: encNum,
-                        encCvv: encCvv,
-                        encPin: encPin,
-                        creditLimit: limit,
-                        statementDay: statementDay,
-                        dueDay: dueDay,
-                        linkedAccountId: isDebit ? linkedAccountId : null,
-                      );
-                      navigator.pop();
+                      try {
+                        await ref.read(financeNotifierProvider.notifier).updateCard(
+                          card.id,
+                          name: nameCtrl.text.trim(),
+                          bank: bankCtrl.text.trim(),
+                          cardholderName: holderCtrl.text.trim(),
+                          last4: newLast4,
+                          colorHex: colorHex,
+                          encCardNumber: encNum,
+                          encCvv: encCvv,
+                          encPin: encPin,
+                          creditLimit: limit,
+                          statementDay: statementDay,
+                          dueDay: dueDay,
+                          linkedAccountId: isDebit ? linkedAccountId : null,
+                        );
+                        navigator.pop();
+                      } catch (e) {
+                        setSheetState(() => error = 'Failed to save: $e');
+                      }
                     },
                     child: const Text('Save Changes'),
                   ),
@@ -591,14 +595,30 @@ return SingleChildScrollView(
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            onPressed: () {
-              ref.read(financeNotifierProvider.notifier).deleteCard(card.id);
+            onPressed: () async {
               Navigator.pop(ctx);
-              showUndoDeleteSnackBar(
-                context,
-                message: '${card.name} removed',
-                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('credit_cards', card.id),
-              );
+              // Captured as a local so the `mounted` narrowing below actually
+              // applies — `context` is `State.context`, a getter, and the
+              // analyzer can't promote across separate getter reads.
+              final screenContext = context;
+              Object? failure;
+              try {
+                await ref.read(financeNotifierProvider.notifier).deleteCard(card.id);
+              } catch (e) {
+                failure = e;
+              }
+              if (!screenContext.mounted) return;
+              if (failure == null) {
+                showUndoDeleteSnackBar(
+                  screenContext,
+                  message: '${card.name} removed',
+                  onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('credit_cards', card.id),
+                );
+              } else {
+                ScaffoldMessenger.of(screenContext).showSnackBar(
+                  SnackBar(content: Text('Delete failed: $failure'), backgroundColor: AppColors.expense),
+                );
+              }
             },
             child: const Text('Remove'),
           ),
@@ -2050,44 +2070,53 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     }
     if (!mounted) return;
 
-    ref.read(financeNotifierProvider.notifier).addCard(
-      cardType: _selectedType,
-      name: _nameCtrl.text.trim(),
-      bank: _bankCtrl.text.trim(),
-      last4: last4,
-      cardholderName: _holderCtrl.text.trim(),
-      network: _selectedNetwork,
-      expiryMonth: _expiryMonth,
-      expiryYear: _expiryYear,
-      colorPreset: _selectedColor,
-      colorHex: _customColorHex,
-      isVirtual: _isVirtual,
-      notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-      encCardNumber: encNumber,
-      encCvv: encCvv,
-      encPin: encPin,
-      creditLimit: double.tryParse(_limitCtrl.text) ?? 0,
-      statementDay: _statementDay,
-      dueDay: _dueDay,
-      linkedAccountId: _selectedType == CardType.debit ? _linkedAccountId : null,
-      balance: double.tryParse(_balanceCtrl.text),
-      currency: _selectedType == CardType.forex ? _currencyCtrl.text.trim().toUpperCase() : null,
-    );
+    try {
+      await ref.read(financeNotifierProvider.notifier).addCard(
+        cardType: _selectedType,
+        name: _nameCtrl.text.trim(),
+        bank: _bankCtrl.text.trim(),
+        last4: last4,
+        cardholderName: _holderCtrl.text.trim(),
+        network: _selectedNetwork,
+        expiryMonth: _expiryMonth,
+        expiryYear: _expiryYear,
+        colorPreset: _selectedColor,
+        colorHex: _customColorHex,
+        isVirtual: _isVirtual,
+        notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        encCardNumber: encNumber,
+        encCvv: encCvv,
+        encPin: encPin,
+        creditLimit: double.tryParse(_limitCtrl.text) ?? 0,
+        statementDay: _statementDay,
+        dueDay: _dueDay,
+        linkedAccountId: _selectedType == CardType.debit ? _linkedAccountId : null,
+        balance: double.tryParse(_balanceCtrl.text),
+        currency: _selectedType == CardType.forex ? _currencyCtrl.text.trim().toUpperCase() : null,
+      );
 
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(LucideIcons.checkCircle, color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Text('${_nameCtrl.text} added to vault!'),
-          ],
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(LucideIcons.checkCircle, color: Colors.white, size: 18),
+              const SizedBox(width: 10),
+              Text('${_nameCtrl.text} added to vault!'),
+            ],
+          ),
+          backgroundColor: AppColors.income,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        backgroundColor: AppColors.income,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save card: $e'), backgroundColor: AppColors.expense),
+      );
+    }
   }
 }

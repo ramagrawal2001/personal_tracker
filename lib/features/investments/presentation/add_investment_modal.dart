@@ -181,7 +181,7 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
     );
   }
 
-  void _saveInvestment() {
+  Future<void> _saveInvestment() async {
     final name = _nameController.text.trim();
     final invested = double.tryParse(_investedController.text.trim()) ?? 0.0;
     final current = double.tryParse(_currentValController.text.trim()) ?? invested;
@@ -195,15 +195,24 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
       return;
     }
 
-    ref.read(financeNotifierProvider.notifier).addInvestment(
-          name: name,
-          type: _selectedType,
-          investedAmount: invested,
-          currentValue: current,
-          monthlySipAmount: sip,
-          sipDay: day,
-        );
+    try {
+      await ref.read(financeNotifierProvider.notifier).addInvestment(
+            name: name,
+            type: _selectedType,
+            investedAmount: invested,
+            currentValue: current,
+            monthlySipAmount: sip,
+            sipDay: day,
+          );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save investment: $e'), backgroundColor: AppColors.expense, behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
 
+    if (!mounted) return;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Investment saved successfully!'), backgroundColor: AppColors.income, behavior: SnackBarBehavior.floating),

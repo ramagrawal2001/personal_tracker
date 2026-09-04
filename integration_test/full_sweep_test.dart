@@ -165,24 +165,32 @@ List<_Violation> _auditText(WidgetTester tester, String route, String mode, Colo
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-FinanceNotifier _seededNotifier() {
-  final n = FinanceNotifier(
-    AppDatabase.forTesting(NativeDatabase.memory()),
-    autoLoad: false,
-  );
-  n.addAccount(name: 'HDFC Savings', type: AccountType.savingsAccount, bank: 'HDFC', openingBalance: 125000);
-  n.addAccount(name: 'Cash Wallet', type: AccountType.cash, openingBalance: 4200);
-  n.addAccount(name: 'SBI Current', type: AccountType.currentAccount, bank: 'SBI', openingBalance: 60000);
+/// Builds a fresh, disconnected [FinanceNotifier] synchronously (no cloud
+/// session, so every mutator resolves locally on the next microtask) — used
+/// as the `financeNotifierProvider` override so it constructs at the same
+/// point in the widget lifecycle the real provider would. Seeding itself is
+/// async (every mutator is now a direct-write `Future`, see CLAUDE.md's
+/// "direct writes" architecture note) and happens separately via
+/// [_seedNotifier], awaited before the test starts asserting on state.
+FinanceNotifier _freshTestNotifier() => FinanceNotifier(
+      AppDatabase.forTesting(NativeDatabase.memory()),
+      autoLoad: false,
+    );
+
+Future<void> _seedNotifier(FinanceNotifier n) async {
+  await n.addAccount(name: 'HDFC Savings', type: AccountType.savingsAccount, bank: 'HDFC', openingBalance: 125000);
+  await n.addAccount(name: 'Cash Wallet', type: AccountType.cash, openingBalance: 4200);
+  await n.addAccount(name: 'SBI Current', type: AccountType.currentAccount, bank: 'SBI', openingBalance: 60000);
   final acc = n.state.accounts.first.id;
   final acc2 = n.state.accounts[2].id;
-  n.addCreditCard(name: 'Amazon Pay ICICI', bank: 'ICICI', last4: '4417', creditLimit: 200000, statementDay: 3, dueDay: 20);
-  n.addLoan(name: 'Car Loan', provider: 'Kotak', principalAmount: 800000, interestRate: 9.2, monthlyEmi: 16500, dueDay: 5, tenureMonths: 60);
-  n.addInvestment(name: 'Nifty 50 Index', type: InvestmentType.mutualFundSip, investedAmount: 300000, currentValue: 361000, monthlySipAmount: 15000, sipDay: 1);
-  n.addGoal(name: 'Japan Trip', targetAmount: 400000, currentSavedAmount: 145000, targetDate: DateTime.now().add(const Duration(days: 300)));
-  n.addBudget(categoryId: 'cat_food', monthlyLimit: 20000);
-  n.addRecurringPayment(title: 'Netflix', amount: 649, frequency: PaymentFrequency.monthly, nextDueDate: DateTime.now().add(const Duration(days: 6)));
+  await n.addCreditCard(name: 'Amazon Pay ICICI', bank: 'ICICI', last4: '4417', creditLimit: 200000, statementDay: 3, dueDay: 20);
+  await n.addLoan(name: 'Car Loan', provider: 'Kotak', principalAmount: 800000, interestRate: 9.2, monthlyEmi: 16500, dueDay: 5, tenureMonths: 60);
+  await n.addInvestment(name: 'Nifty 50 Index', type: InvestmentType.mutualFundSip, investedAmount: 300000, currentValue: 361000, monthlySipAmount: 15000, sipDay: 1);
+  await n.addGoal(name: 'Japan Trip', targetAmount: 400000, currentSavedAmount: 145000, targetDate: DateTime.now().add(const Duration(days: 300)));
+  await n.addBudget(categoryId: 'cat_food', monthlyLimit: 20000);
+  await n.addRecurringPayment(title: 'Netflix', amount: 649, frequency: PaymentFrequency.monthly, nextDueDate: DateTime.now().add(const Duration(days: 6)));
   for (var i = 0; i < 8; i++) {
-    n.addTransaction(
+    await n.addTransaction(
       accountId: acc,
       type: i.isEven ? TransactionType.expense : TransactionType.income,
       amount: (i + 1) * 730.0,
@@ -191,8 +199,7 @@ FinanceNotifier _seededNotifier() {
       date: DateTime.now().subtract(Duration(days: i * 3)),
     );
   }
-  n.addTransaction(accountId: acc, toAccountId: acc2, type: TransactionType.transfer, amount: 5000, date: DateTime.now());
-  return n;
+  await n.addTransaction(accountId: acc, toAccountId: acc2, type: TransactionType.transfer, amount: 5000, date: DateTime.now());
 }
 
 const _routes = <String>[
@@ -230,14 +237,22 @@ void main() {
     final allViolations = <_Violation>[];
     final failures = <String>[];
 
+    late final FinanceNotifier seededNotifier;
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          financeNotifierProvider.overrideWith((ref) => _seededNotifier()),
+          financeNotifierProvider.overrideWith((ref) => seededNotifier = _freshTestNotifier()),
         ],
         child: const AspyricApp(),
       ),
     );
+    // Providers construct lazily on first read — force that now (BiometricGate
+    // etc. would otherwise be the first reader, mid-build) so `seededNotifier`
+    // is assigned before we await the seeding below.
+    ProviderScope.containerOf(tester.element(find.byType(AspyricApp)))
+        .read(financeNotifierProvider);
+    await _seedNotifier(seededNotifier);
+    await settle(tester);
     await pumpUntil(tester, () => present('Sign In to Aspyric'));
 
     // Sign in (debug demo bypass)
