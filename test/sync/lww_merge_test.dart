@@ -123,12 +123,26 @@ void main() {
     expect(outcome, MergeOutcome.applyDelete);
   });
 
-  test('resurrection guard: an older edit loses to a newer delete', () async {
-    // Local row was deleted at T2; a stale device pushes an edit stamped T1.
+  test('resurrection guard: an older edit loses to a CONFIRMED newer delete', () async {
+    // Local row was deleted at T2 AND that delete was successfully pushed to the
+    // cloud (marker present); a stale device pushes an edit stamped T1.
     await putLocalAccount('a', DateTime(2026, 7, 1), isDeleted: true);
+    await db.into(db.syncMeta).insertOnConflictUpdate(SyncMetaCompanion(
+          key: const Value('deleted:accounts:a'),
+          value: Value(DateTime(2026, 7, 1).toUtc().toIso8601String()),
+        ));
     final outcome = await svc.mergeRemoteForTest('accounts', remoteAccount('a', DateTime(2026, 6, 1)));
     expect(outcome, MergeOutcome.skipStale);
     expect(sink.calls, isEmpty);
+  });
+
+  test('unconfirmed local delete does NOT block an alive cloud row — it restores', () async {
+    // Local tombstone stamped "now", cloud row still alive with an OLDER
+    // updated_at, and no confirmed-delete marker (the delete never synced).
+    await putLocalAccount('a', DateTime(2026, 9, 9), isDeleted: true);
+    final outcome = await svc.mergeRemoteForTest('accounts', remoteAccount('a', DateTime(2026, 1, 1)));
+    expect(outcome, MergeOutcome.apply);
+    expect(sink.calls.single.table, 'accounts');
   });
 
   test('settings: newer remote applies and advances the watermark', () async {

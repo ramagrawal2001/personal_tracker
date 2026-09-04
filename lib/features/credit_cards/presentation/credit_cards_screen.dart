@@ -13,6 +13,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/secret_reveal_sheet.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../../../domain/models/models.dart';
 import '../../transactions/presentation/quick_add_modal.dart';
 
@@ -593,8 +594,10 @@ return SingleChildScrollView(
             onPressed: () {
               ref.read(financeNotifierProvider.notifier).deleteCard(card.id);
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${card.name} removed'), backgroundColor: AppColors.expense),
+              showUndoDeleteSnackBar(
+                context,
+                message: '${card.name} removed',
+                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('credit_cards', card.id),
               );
             },
             child: const Text('Remove'),

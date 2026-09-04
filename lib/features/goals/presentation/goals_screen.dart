@@ -11,6 +11,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/summary_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../../../domain/models/models.dart';
 import '../../../core/utils/responsive.dart';
 
@@ -371,8 +372,10 @@ class GoalsScreen extends ConsumerWidget {
             onPressed: () {
               ref.read(financeNotifierProvider.notifier).deleteGoal(goal.id);
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Goal deleted'), behavior: SnackBarBehavior.floating),
+              showUndoDeleteSnackBar(
+                context,
+                message: '"${goal.name}" deleted',
+                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('goals', goal.id),
               );
             },
             child: Text('Delete', style: TextStyle(color: AppColors.expense)),

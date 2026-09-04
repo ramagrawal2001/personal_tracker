@@ -9,6 +9,7 @@ import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import 'add_investment_modal.dart';
 
 class InvestmentsScreen extends ConsumerWidget {
@@ -272,7 +273,15 @@ class InvestmentsScreen extends ConsumerWidget {
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense),
-          onPressed: () { ref.read(financeNotifierProvider.notifier).deleteInvestment(inv.id); Navigator.pop(ctx); },
+          onPressed: () {
+            ref.read(financeNotifierProvider.notifier).deleteInvestment(inv.id);
+            Navigator.pop(ctx);
+            showUndoDeleteSnackBar(
+              context,
+              message: '"${inv.name}" removed',
+              onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('investments', inv.id),
+            );
+          },
           child: const Text('Remove'),
         ),
       ],

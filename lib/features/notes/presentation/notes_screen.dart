@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/providers/notes_provider.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../../../domain/models/note_model.dart';
 import 'widgets/note_card_widget.dart';
 import 'note_editor_screen.dart';
@@ -24,6 +25,11 @@ void _confirmDelete(BuildContext context, NotesNotifier notifier, String noteId)
           onPressed: () {
             notifier.deleteNote(noteId);
             Navigator.pop(ctx);
+            showUndoDeleteSnackBar(
+              context,
+              message: 'Note deleted',
+              onUndo: () => notifier.undoDelete(noteId),
+            );
           },
           child: Text('Delete', style: TextStyle(color: AppColors.expense)),
         ),

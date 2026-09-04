@@ -65,6 +65,12 @@ class OutboxDrainer {
           continue;
         }
         final serverTs = await gateway.upsertRow(row.entityTable, cloudRow);
+        if (row.op == 'delete') {
+          // Record that this delete was accepted by the cloud so a later pull
+          // can tell a confirmed local delete apart from one that never synced
+          // (which must yield to a still-alive cloud row — Bug 1).
+          await _recordConfirmedDelete(row.entityTable, row.entityId, serverTs);
+        }
         try {
           onPushed?.call(row.entityTable, row.entityId, serverTs);
         } catch (e) {
@@ -108,6 +114,15 @@ class OutboxDrainer {
 
   Future<void> _deleteRow(int id, int seq) async {
     await (db.delete(db.syncOutbox)..where((r) => r.id.equals(id) & r.seq.equals(seq))).go();
+  }
+
+  Future<void> _recordConfirmedDelete(String table, String id, DateTime serverTs) async {
+    await db.into(db.syncMeta).insertOnConflictUpdate(
+          SyncMetaCompanion(
+            key: Value('deleted:$table:$id'),
+            value: Value(serverTs.toUtc().toIso8601String()),
+          ),
+        );
   }
 
   Future<void> _markDead(int id, String error) async {

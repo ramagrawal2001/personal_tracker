@@ -13,6 +13,7 @@ import '../../../core/widgets/secret_reveal_sheet.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/summary_card.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import 'add_account_modal.dart';
 
 class AccountsScreen extends ConsumerWidget {
@@ -222,7 +223,15 @@ class AccountsScreen extends ConsumerWidget {
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense),
-          onPressed: () { ref.read(financeNotifierProvider.notifier).deleteAccount(acc.id); Navigator.pop(ctx); },
+          onPressed: () {
+            ref.read(financeNotifierProvider.notifier).deleteAccount(acc.id);
+            Navigator.pop(ctx);
+            showUndoDeleteSnackBar(
+              context,
+              message: '"${acc.name}" deleted',
+              onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('accounts', acc.id),
+            );
+          },
           child: const Text('Delete'),
         ),
       ],

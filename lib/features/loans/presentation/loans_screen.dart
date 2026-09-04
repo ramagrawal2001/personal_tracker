@@ -11,6 +11,7 @@ import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/summary_card.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../../transactions/presentation/quick_add_modal.dart';
 import '../../../core/utils/responsive.dart';
 
@@ -357,7 +358,15 @@ class LoansScreen extends ConsumerWidget {
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.expense),
-          onPressed: () { ref.read(financeNotifierProvider.notifier).deleteLoan(loan.id); Navigator.pop(ctx); },
+          onPressed: () {
+            ref.read(financeNotifierProvider.notifier).deleteLoan(loan.id);
+            Navigator.pop(ctx);
+            showUndoDeleteSnackBar(
+              context,
+              message: '"${loan.name}" deleted',
+              onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('loans', loan.id),
+            );
+          },
           child: const Text('Delete'),
         ),
       ],

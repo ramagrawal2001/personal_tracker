@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show Value, BooleanExpressionOperators;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -481,6 +481,59 @@ class FinanceNotifier extends StateNotifier<FinanceState> with OutboxWriteThroug
     }
   }
 
+  // ── Undo-delete window ─────────────────────────────────────────────────────
+  // A just-deleted entity is soft-deleted (tombstoned) locally and its delete
+  // is queued for the cloud. For a short window we keep the last serialized
+  // copy so an "Undo" on the confirmation SnackBar can fully reverse it —
+  // un-tombstone locally, drop the queued cloud delete, and re-enqueue an
+  // upsert so the resurrection propagates. Entries are pruned by age (no
+  // timers, so nothing outlives a test).
+  static const Duration _undoWindow = Duration(seconds: 8);
+  final Map<String, ({Map<String, dynamic> row, DateTime at})> _recentlyDeleted = {};
+
+  void _stashDeleted(String table, Map<String, dynamic> cloudRow) {
+    final now = DateTime.now();
+    _recentlyDeleted.removeWhere((_, v) => now.difference(v.at) > _undoWindow);
+    _recentlyDeleted['$table:${cloudRow['id']}'] = (row: cloudRow, at: now);
+  }
+
+  /// True while an "Undo" is still offerable for `(table, id)`.
+  bool canUndoDelete(String table, String id) {
+    final s = _recentlyDeleted['$table:$id'];
+    return s != null && DateTime.now().difference(s.at) <= _undoWindow;
+  }
+
+  /// Reverses a just-performed entity delete. Wired to the "Undo" action on the
+  /// post-delete SnackBar. No-op once the window has passed.
+  Future<void> undoDelete(String table, String id) async {
+    final key = '$table:$id';
+    final stash = _recentlyDeleted.remove(key);
+    if (stash == null || DateTime.now().difference(stash.at) > _undoWindow) return;
+    try {
+      await _db.transaction(() async {
+        await (_db.delete(_db.syncOutbox)
+              ..where((o) => o.entityTable.equals(table) & o.entityId.equals(id)))
+            .go();
+        await (_db.delete(_db.syncMeta)..where((m) => m.key.equals('deleted:$table:$id'))).go();
+      });
+    } catch (e) {
+      debugPrint('FinanceNotifier.undoDelete cleanup failed: $e');
+    }
+    final row = Map<String, dynamic>.from(stash.row)
+      ..['is_deleted'] = false
+      ..['deleted_at'] = null
+      ..['updated_at'] = DateTime.now().toUtc().toIso8601String();
+    // Reuse the remote-apply path: writes Drift + splices state, guarded so it
+    // does not itself enqueue.
+    applyRemoteUpsert(table, row);
+    // Propagate the un-delete to the cloud.
+    try {
+      await enqueueOutbox(table, id, 'upsert');
+    } catch (e) {
+      debugPrint('FinanceNotifier.undoDelete re-enqueue failed: $e');
+    }
+  }
+
   // --- Actions & State Modifiers ---
 
   void addTransaction({
@@ -682,7 +735,9 @@ if (creditCardId != null) {
     String? notes,
     List<String>? tags,
   }) {
-    final original = state.transactions.firstWhere((t) => t.id == id);
+    final match = state.transactions.where((t) => t.id == id).toList();
+    if (match.isEmpty) return; // nothing to update — treat as a no-op
+    final original = match.first;
     final newAmount = amount ?? original.amount;
     final delta = newAmount - original.amount;
 
@@ -928,9 +983,11 @@ if (creditCardId != null) {
   }
 
   void deleteCard(String cardId) {
+    final gone = state.creditCards.where((c) => c.id == cardId).toList();
     state = state.copyWith(
       creditCards: state.creditCards.where((c) => c.id != cardId).toList(),
     );
+    if (gone.isNotEmpty) _stashDeleted('credit_cards', gone.first.toCloudJson());
     _fireAndForget(() => deleteThrough('credit_cards', cardId, () => (_db.update(_db.creditCards)..where((c) => c.id.equals(cardId))).write(CreditCardsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'credit card deletion');
   }
 
@@ -1028,9 +1085,11 @@ if (creditCardId != null) {
   }
 
   void deleteGoal(String id) {
+    final gone = state.goals.where((g) => g.id == id).toList();
     state = state.copyWith(
       goals: state.goals.where((g) => g.id != id).toList(),
     );
+    if (gone.isNotEmpty) _stashDeleted('goals', gone.first.toCloudJson());
     _fireAndForget(() => deleteThrough('goals', id, () => (_db.update(_db.goals)..where((g) => g.id.equals(id))).write(GoalsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'goal deletion');
   }
 
@@ -1093,9 +1152,11 @@ if (creditCardId != null) {
   }
 
   void deleteCategory(String id) {
+    final gone = state.categories.where((c) => c.id == id).toList();
     state = state.copyWith(
       categories: state.categories.where((c) => c.id != id).toList(),
     );
+    if (gone.isNotEmpty) _stashDeleted('categories', gone.first.toCloudJson());
     _fireAndForget(() => deleteThrough('categories', id, () => (_db.update(_db.categories)..where((c) => c.id.equals(id))).write(CategoriesCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'category deletion');
   }
 
@@ -1245,9 +1306,11 @@ if (creditCardId != null) {
 
   // ── Accounts ───────────────────────────────────────────────────────────────
   void deleteAccount(String id) {
+    final gone = state.accounts.where((a) => a.id == id).toList();
     state = state.copyWith(
       accounts: state.accounts.where((a) => a.id != id).toList(),
     );
+    if (gone.isNotEmpty) _stashDeleted('accounts', gone.first.toCloudJson());
     _fireAndForget(() => deleteThrough('accounts', id, () => (_db.update(_db.accounts)..where((a) => a.id.equals(id))).write(AccountsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'account deletion');
   }
 
@@ -1267,7 +1330,9 @@ if (creditCardId != null) {
 
   // ── Loans ──────────────────────────────────────────────────────────────────
   void deleteLoan(String id) {
+    final gone = state.loans.where((l) => l.id == id).toList();
     state = state.copyWith(loans: state.loans.where((l) => l.id != id).toList());
+    if (gone.isNotEmpty) _stashDeleted('loans', gone.first.toCloudJson());
     _fireAndForget(() => deleteThrough('loans', id, () => (_db.update(_db.loans)..where((l) => l.id.equals(id))).write(LoansCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'loan deletion');
   }
 
@@ -1312,7 +1377,9 @@ if (creditCardId != null) {
   }
 
   void deleteBudget(String id) {
+    final gone = state.budgets.where((b) => b.id == id).toList();
     state = state.copyWith(budgets: state.budgets.where((b) => b.id != id).toList());
+    if (gone.isNotEmpty) _stashDeleted('budgets', gone.first.toCloudJson());
     _fireAndForget(() => deleteThrough('budgets', id, () => (_db.update(_db.budgets)..where((b) => b.id.equals(id))).write(BudgetsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'budget deletion');
   }
 
@@ -1392,13 +1459,17 @@ if (creditCardId != null) {
   }
 
   void deleteRecurringPayment(String id) {
+    final gone = state.recurringPayments.where((p) => p.id == id).toList();
     state = state.copyWith(recurringPayments: state.recurringPayments.where((p) => p.id != id).toList());
+    if (gone.isNotEmpty) _stashDeleted('recurring_payments', gone.first.toCloudJson());
     _fireAndForget(() => deleteThrough('recurring_payments', id, () => (_db.update(_db.recurringPayments)..where((p) => p.id.equals(id))).write(RecurringPaymentsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'recurring payment deletion');
   }
 
   // ── Investments ────────────────────────────────────────────────────────────
   void deleteInvestment(String id) {
+    final gone = state.investments.where((i) => i.id == id).toList();
     state = state.copyWith(investments: state.investments.where((i) => i.id != id).toList());
+    if (gone.isNotEmpty) _stashDeleted('investments', gone.first.toCloudJson());
     _fireAndForget(() => deleteThrough('investments', id, () => (_db.update(_db.investments)..where((i) => i.id.equals(id))).write(InvestmentsCompanion(isDeleted: const Value(true), deletedAt: Value(DateTime.now()), updatedAt: Value(DateTime.now())))), 'investment deletion');
   }
 

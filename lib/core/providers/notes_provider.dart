@@ -1,4 +1,4 @@
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart' show Value, BooleanExpressionOperators;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -72,14 +72,55 @@ class NotesNotifier extends StateNotifier<NotesState> with OutboxWriteThrough {
     _persist(note);
   }
 
+  // ── Undo-delete window (see FinanceNotifier for the rationale) ──────────────
+  static const Duration _undoWindow = Duration(seconds: 8);
+  final Map<String, ({Map<String, dynamic> row, DateTime at})> _recentlyDeleted = {};
+
+  bool canUndoDelete(String id) {
+    final s = _recentlyDeleted['notes:$id'];
+    return s != null && DateTime.now().difference(s.at) <= _undoWindow;
+  }
+
   void deleteNote(String id) async {
+    final gone = state.notes.where((n) => n.id == id).toList();
     state = state.copyWith(notes: state.notes.where((n) => n.id != id).toList());
+    if (gone.isNotEmpty) {
+      final now = DateTime.now();
+      _recentlyDeleted.removeWhere((_, v) => now.difference(v.at) > _undoWindow);
+      _recentlyDeleted['notes:$id'] = (row: gone.first.toCloudJson(), at: now);
+    }
     try {
       final now = DateTime.now();
       await deleteThrough('notes', id, () => (_db.update(_db.notes)..where((n) => n.id.equals(id)))
           .write(NotesCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now))));
     } catch (e) {
       debugPrint('NotesNotifier: failed to delete note: $e');
+    }
+  }
+
+  /// Reverses a just-performed [deleteNote]. Wired to the "Undo" SnackBar action.
+  Future<void> undoDelete(String id) async {
+    final stash = _recentlyDeleted.remove('notes:$id');
+    if (stash == null || DateTime.now().difference(stash.at) > _undoWindow) return;
+    try {
+      await _db.transaction(() async {
+        await (_db.delete(_db.syncOutbox)
+              ..where((o) => o.entityTable.equals('notes') & o.entityId.equals(id)))
+            .go();
+        await (_db.delete(_db.syncMeta)..where((m) => m.key.equals('deleted:notes:$id'))).go();
+      });
+    } catch (e) {
+      debugPrint('NotesNotifier.undoDelete cleanup failed: $e');
+    }
+    final row = Map<String, dynamic>.from(stash.row)
+      ..['is_deleted'] = false
+      ..['deleted_at'] = null
+      ..['updated_at'] = DateTime.now().toUtc().toIso8601String();
+    applyRemoteUpsert(row); // writes Drift + state, guarded (no enqueue)
+    try {
+      await enqueueOutbox('notes', id, 'upsert');
+    } catch (e) {
+      debugPrint('NotesNotifier.undoDelete re-enqueue failed: $e');
     }
   }
 

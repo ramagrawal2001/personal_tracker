@@ -10,6 +10,7 @@ import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../../../domain/models/models.dart';
 import '../../../core/utils/responsive.dart';
 
@@ -315,6 +316,11 @@ class BudgetsScreen extends ConsumerWidget {
             onPressed: () {
               ref.read(financeNotifierProvider.notifier).deleteBudget(budget.id);
               Navigator.pop(ctx);
+              showUndoDeleteSnackBar(
+                context,
+                message: 'Budget deleted',
+                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('budgets', budget.id),
+              );
             },
             child: const Text('Delete'),
           ),

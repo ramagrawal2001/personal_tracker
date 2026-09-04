@@ -8,6 +8,7 @@ import '../../../core/utils/category_icons.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import 'add_category_modal.dart';
 
 class CategoriesScreen extends ConsumerWidget {
@@ -194,8 +195,10 @@ class CategoriesScreen extends ConsumerWidget {
             onPressed: () {
               ref.read(financeNotifierProvider.notifier).deleteCategory(cat.id);
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Category deleted'), behavior: SnackBarBehavior.floating),
+              showUndoDeleteSnackBar(
+                context,
+                message: '"${cat.name}" deleted',
+                onUndo: () => ref.read(financeNotifierProvider.notifier).undoDelete('categories', cat.id),
               );
             },
             child: Text('Delete', style: TextStyle(color: AppColors.expense)),

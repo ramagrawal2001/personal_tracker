@@ -11,6 +11,7 @@ import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../../../domain/models/models.dart';
 import '../../../core/utils/responsive.dart';
 
@@ -475,6 +476,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             onPressed: () {
               ref.read(financeNotifierProvider.notifier).deleteRecurringPayment(item.id);
               Navigator.pop(ctx);
+              showUndoDeleteSnackBar(
+                context,
+                message: '"${item.title}" deleted',
+                onUndo: () => ref
+                    .read(financeNotifierProvider.notifier)
+                    .undoDelete('recurring_payments', item.id),
+              );
             },
             child: Text('Delete', style: TextStyle(color: AppColors.expense)),
           ),

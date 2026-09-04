@@ -41,6 +41,12 @@ const List<String> _pullTables = <String>[...kSyncedTables, 'user_settings'];
 
 const int _pullPageSize = 500;
 
+/// Once an outbox row for an id has been retried this many times (or has been
+/// dead-lettered) it is no longer treated as the authoritative local truth in
+/// [_mergeRemote] — a push that keeps failing must not hide the cloud state
+/// forever (a stuck `delete` least of all).
+const int _outboxAuthorityMaxAttempts = 5;
+
 /// Owns the sync lifecycle: bind to a user, one-time backfill of local data
 /// into the outbox, pull + LWW-merge the cloud state, drain the outbox, and
 /// keep both sides converged via a realtime subscription + a fallback timer.
@@ -104,8 +110,13 @@ class SyncService {
       await _seedBackfillIfNeeded(userId);
 
       final firstRun = !(await _bootstrapDone(userId));
-      await _pullAll(initial: firstRun);
-      await _setMeta('bootstrap:$userId', 'true');
+      final pulledOk = await _pullAll(initial: firstRun);
+      // Only mark the bootstrap done when the initial pull completed without a
+      // mid-stream failure. Otherwise the next start() re-runs a full pull so a
+      // partially-fetched table gets completed (Bug 3).
+      if (pulledOk) {
+        await _setMeta('bootstrap:$userId', 'true');
+      }
 
       await _drainLoop();
 
@@ -147,26 +158,69 @@ class SyncService {
 
   // ── pull + merge ──────────────────────────────────────────────────────────
 
-  Future<void> _pullAll({required bool initial}) async {
-    if (_pulling || !gateway.isAvailable) return;
+  /// Returns true only when the pull completed for every table without a
+  /// mid-stream failure.
+  Future<bool> _pullAll({required bool initial}) async {
+    if (_pulling || !gateway.isAvailable) return false;
     _pulling = true;
     try {
       for (final table in _pullTables) {
         await _pullTable(table, initial: initial);
       }
       status.update(isOnline: true, lastSyncTime: DateTime.now(), lastError: null);
+      return true;
     } on SyncTransientError catch (e) {
       status.update(isOnline: false, lastError: e.toString());
+      return false;
     } catch (e, st) {
       debugPrint('SyncService._pullAll failed: $e\n$st');
       status.update(lastError: e.toString());
+      return false;
     } finally {
       _pulling = false;
     }
   }
 
   Future<void> _pullTable(String table, {required bool initial}) async {
-    final since = initial ? null : _parseTs(await _meta('watermark:$table'));
+    if (initial) {
+      await _pullTableInitial(table);
+    } else {
+      await _pullTableDelta(table);
+    }
+  }
+
+  /// Initial (bootstrap) pull: **all-or-nothing**. Every page is fetched first;
+  /// only when the whole table has arrived without error do we merge it and
+  /// write the watermark. A failure on any page throws out, leaving the
+  /// watermark unset so the next start() retries the full table (Bug 3).
+  Future<void> _pullTableInitial(String table) async {
+    final pages = <Map<String, dynamic>>[];
+    var offset = 0;
+    while (true) {
+      final page = await gateway.pull(table, since: null, offset: offset, limit: _pullPageSize);
+      if (page.isEmpty) break;
+      pages.addAll(page);
+      if (page.length < _pullPageSize) break;
+      offset += _pullPageSize;
+    }
+
+    DateTime? maxSeen;
+    await db.transaction(() async {
+      for (final row in pages) {
+        await _mergeRemote(table, row);
+        final ts = _parseTs(row['updated_at'] as String?);
+        if (ts != null && (maxSeen == null || ts.isAfter(maxSeen!))) maxSeen = ts;
+      }
+    });
+    if (maxSeen != null) {
+      await _setMeta('watermark:$table', maxSeen!.toUtc().toIso8601String());
+    }
+  }
+
+  /// Steady-state delta pull: per-page watermark advancement is fine here —
+  /// a drop mid-pull just means we re-fetch from the last committed page.
+  Future<void> _pullTableDelta(String table) async {
+    final since = _parseTs(await _meta('watermark:$table'));
     var offset = 0;
     DateTime? maxSeen = since;
 
@@ -203,19 +257,41 @@ class SyncService {
     if (id == null) return MergeOutcome.skipStale;
 
     final remoteTs = _parseTs(row['updated_at'] as String?);
-    final deleted = row['is_deleted'] == true;
+    final remoteDeleted = row['is_deleted'] == true;
 
-    // A local pending change wins for now — our queued push + its realtime echo
-    // will reconcile.
-    if (await _outboxHas(table, id)) return MergeOutcome.skipPending;
+    // A *fresh* local pending change wins for now — our queued push + its
+    // realtime echo will reconcile. A row that keeps failing (dead-lettered or
+    // retried past the threshold) is no longer authoritative: it must not hide
+    // the cloud truth indefinitely (Bug 1).
+    final outbox = await _outboxStatus(table, id);
+    if (outbox.exists && !outbox.exhausted) return MergeOutcome.skipPending;
 
-    final localTs = await _localUpdatedAt(table, id);
+    final local = await _localRowMeta(table, id);
+    final localIsTombstone = local?.isTombstone ?? false;
+
+    // Local tombstone vs a live remote row. A local delete that the cloud has
+    // NOT confirmed must not outrank the still-alive cloud record on timestamp
+    // alone — otherwise every future pull sees `remote < localTombstoneTs` and
+    // the account is never restored. Restore unless we have a *successfully
+    // pushed* delete for this id that is at least as new as the remote row.
+    if (localIsTombstone && !remoteDeleted) {
+      final confirmedDeleteTs = _parseTs(await _meta('deleted:$table:$id'));
+      final confirmedWins = confirmedDeleteTs != null &&
+          (remoteTs == null || !remoteTs.isAfter(confirmedDeleteTs));
+      if (confirmedWins) return MergeOutcome.skipStale;
+      // The un-delete from the cloud wins — drop the stale delete marker.
+      await _clearMeta('deleted:$table:$id');
+      sink.applyRemote(table, row);
+      return MergeOutcome.apply;
+    }
+
+    final localTs = local?.updatedAt;
     if (localTs != null && remoteTs != null && remoteTs.isBefore(localTs)) {
       return MergeOutcome.skipStale;
     }
 
     sink.applyRemote(table, row);
-    return deleted ? MergeOutcome.applyDelete : MergeOutcome.apply;
+    return remoteDeleted ? MergeOutcome.applyDelete : MergeOutcome.apply;
   }
 
   Future<MergeOutcome> _mergeRemoteSettings(Map<String, dynamic> row) async {
@@ -231,36 +307,53 @@ class SyncService {
     return MergeOutcome.apply;
   }
 
-  Future<bool> _outboxHas(String table, String id) async {
+  /// Presence + authority of a pending outbox row for `(table, id)`.
+  /// `exhausted` means it has been dead-lettered or retried past
+  /// [_outboxAuthorityMaxAttempts] and can no longer block a merge.
+  Future<({bool exists, bool exhausted})> _outboxStatus(String table, String id) async {
     final r = await (db.select(db.syncOutbox)
           ..where((o) => o.entityTable.equals(table) & o.entityId.equals(id))
           ..limit(1))
         .getSingleOrNull();
-    return r != null;
+    if (r == null) return (exists: false, exhausted: false);
+    final exhausted = r.deadLettered || r.attempts >= _outboxAuthorityMaxAttempts;
+    return (exists: true, exhausted: exhausted);
   }
 
-  Future<DateTime?> _localUpdatedAt(String table, String id) async {
+  /// Local row's `updated_at` + whether it is a tombstone. Null when there is
+  /// no local row for `(table, id)`.
+  Future<({DateTime? updatedAt, bool isTombstone})?> _localRowMeta(String table, String id) async {
     switch (table) {
       case 'accounts':
-        return (await (db.select(db.accounts)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.accounts)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       case 'categories':
-        return (await (db.select(db.categories)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.categories)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       case 'transactions':
-        return (await (db.select(db.transactions)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.transactions)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       case 'credit_cards':
-        return (await (db.select(db.creditCards)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.creditCards)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       case 'loans':
-        return (await (db.select(db.loans)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.loans)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       case 'budgets':
-        return (await (db.select(db.budgets)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.budgets)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       case 'recurring_payments':
-        return (await (db.select(db.recurringPayments)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.recurringPayments)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       case 'investments':
-        return (await (db.select(db.investments)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.investments)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       case 'goals':
-        return (await (db.select(db.goals)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.goals)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       case 'notes':
-        return (await (db.select(db.notes)..where((t) => t.id.equals(id))).getSingleOrNull())?.updatedAt;
+        final r = await (db.select(db.notes)..where((t) => t.id.equals(id))).getSingleOrNull();
+        return r == null ? null : (updatedAt: r.updatedAt, isTombstone: r.isDeleted);
       default:
         return null;
     }
@@ -466,6 +559,10 @@ class SyncService {
     await db.into(db.syncMeta).insertOnConflictUpdate(
           SyncMetaCompanion(key: Value(key), value: Value(value)),
         );
+  }
+
+  Future<void> _clearMeta(String key) async {
+    await (db.delete(db.syncMeta)..where((m) => m.key.equals(key))).go();
   }
 }
 
