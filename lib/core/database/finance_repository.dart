@@ -692,10 +692,16 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     final rows = <Map<String, dynamic>>[];
     var offset = 0;
     while (true) {
+      // A stable order is required, not cosmetic: .range() is only a safe
+      // pagination cursor over a deterministically-ordered result set —
+      // without it Postgres is free to return rows in any order per page,
+      // which can silently skip or duplicate rows across pages for a user
+      // with more than one page of data.
       final page = await SupabaseService.client
           .from(table)
           .select()
           .eq('is_deleted', false)
+          .order('created_at')
           .range(offset, offset + _kRefreshPageSize - 1);
       final list = (page as List).map((e) => (e as Map).cast<String, dynamic>()).toList();
       rows.addAll(list);

@@ -123,10 +123,13 @@ class NotesNotifier extends StateNotifier<NotesState> with CloudDirectWrite {
       final rows = <Map<String, dynamic>>[];
       var offset = 0;
       while (true) {
+        // A stable order is required, not cosmetic — see the equivalent
+        // comment in FinanceNotifier._fetchAllPages.
         final page = await SupabaseService.client
             .from('notes')
             .select()
             .eq('is_deleted', false)
+            .order('created_at')
             .range(offset, offset + _kRefreshPageSize - 1);
         final list = (page as List).map((e) => (e as Map).cast<String, dynamic>()).toList();
         rows.addAll(list);
