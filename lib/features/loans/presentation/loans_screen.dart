@@ -140,7 +140,7 @@ class LoansScreen extends ConsumerWidget {
                           const SizedBox(width: 8),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.loan,
+                              backgroundColor: AppColors.loanButtonBg,
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,

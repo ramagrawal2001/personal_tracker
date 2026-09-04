@@ -65,7 +65,11 @@ class AppColors {
   static Color get accent => _p(0xFF60A5FA, 0xFF2563EB);
 
   // ── Financial semantics ───────────────────────────────────────────────
-  static Color get income => _p(0xFF22C55E, 0xFF16A34A);
+  // Light-mode value is green-800, not the brighter green-600: green-600
+  // only hits ~2.9:1 against surfaceLight/background as text — below WCAG.
+  // Darker green stays a strict contrast win everywhere else it's used too
+  // (icons, and as a solid background under white text).
+  static Color get income => _p(0xFF22C55E, 0xFF166534);
   static Color get incomeBg => _p(0xFF0C2A18, 0xFFDCF5E3);
 
   static Color get expense => _p(0xFFF43F5E, 0xFFDC2626);
@@ -76,6 +80,13 @@ class AppColors {
 
   static Color get creditCard => _p(0xFFFBBF24, 0xFFB45309);
   static Color get loan => _p(0xFFFB7185, 0xFFBE185D);
+
+  /// [loan], darkened for use as a solid button background under white text
+  /// (the un-darkened dark-mode value only hits ~2.7:1 contrast with white —
+  /// below WCAG AA). Safe to use in both modes: light mode's [loan] already
+  /// passes AA (~6:1) and the extra blend keeps it well clear of the floor.
+  static Color get loanButtonBg =>
+      Color.alphaBlend(Colors.black.withValues(alpha: 0.30), loan);
 
   static Color get warning => _p(0xFFFBBF24, 0xFFB45309);
   static Color get info => _p(0xFF60A5FA, 0xFF2563EB);
