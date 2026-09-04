@@ -32,8 +32,8 @@ class AppDecorations {
         ],
       );
 
-  /// Branded "hero" card — a solid deep teal (mode-independent) with an
-  /// almost-imperceptible vertical sheen. White text sits on it at ~7.6:1.
+  /// Branded "hero" card — a solid deep blue (mode-independent) with an
+  /// almost-imperceptible vertical sheen. White text sits on it at ~5.9:1.
   static BoxDecoration heroGradient({
     List<Color>? colors,
     double radius = radiusLg,

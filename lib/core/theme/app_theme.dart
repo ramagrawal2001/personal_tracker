@@ -2,51 +2,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Material [ThemeData] for both modes — "Evergreen" premium theme.
+/// Material [ThemeData] for both modes — "Cobalt" theme.
 ///
 /// Self-contained (no `AppColors` reference): `theme` / `darkTheme` are
 /// evaluated eagerly by `MaterialApp` and must not depend on mutable global
 /// state. The values here mirror the `AppColors` tokens 1:1.
 class AppTheme {
   // ── Palette (mirrors AppColors) ────────────────────────────────────────
-  static const _tealDark = Color(0xFF2DD4BF); // bright mint  (dark mode)
-  static const _tealLight = Color(0xFF0F766E); // deep teal    (light mode)
-  static const _onTealDark = Color(0xFF03211E); // ink on mint button
-  static const _blueDark = Color(0xFF60A5FA);
-  static const _blueLight = Color(0xFF2563EB);
+  static const _brandDark = Color(0xFF3B82F6); // electric blue (dark mode)
+  static const _brandLight = Color(0xFF2563EB); // deeper blue   (light mode)
+  static const _accentDark = Color(0xFF60A5FA);
+  static const _accentLight = Color(0xFF2563EB);
 
   static ThemeData get darkTheme => _build(
         brightness: Brightness.dark,
-        scaffold: const Color(0xFF0B0F14),
-        surface: const Color(0xFF141A21),
-        surfaceVar: const Color(0xFF1C242D),
+        scaffold: const Color(0xFF0A0C10),
+        surface: const Color(0xFF14171D),
+        surfaceVar: const Color(0xFF1C212B),
         elevated: const Color(0xFF1F2831),
-        border: const Color(0xFF2A343F),
-        textPrimary: const Color(0xFFF2F5F7),
+        border: const Color(0xFF262C37),
+        textPrimary: const Color(0xFFF3F5F8),
         textSecondary: const Color(0xFFA9B4BF),
-        textMuted: const Color(0xFF7C8894),
-        primary: _tealDark,
-        onPrimary: _onTealDark,
-        accent: _blueDark,
-        error: const Color(0xFFF87171),
+        textMuted: const Color(0xFF8B93A1),
+        primary: _brandDark,
+        onPrimary: Colors.white,
+        accent: _accentDark,
+        error: const Color(0xFFF43F5E),
         snackBg: const Color(0xFF1F2831),
       );
 
   static ThemeData get lightTheme => _build(
         brightness: Brightness.light,
-        scaffold: const Color(0xFFF5F7F8),
+        scaffold: const Color(0xFFF5F7FB),
         surface: const Color(0xFFFFFFFF),
-        surfaceVar: const Color(0xFFEDF1F2),
-        elevated: const Color(0xFFF7F9FA),
-        border: const Color(0xFFDEE4E7),
-        textPrimary: const Color(0xFF0E1519),
-        textSecondary: const Color(0xFF4A575F),
-        textMuted: const Color(0xFF5F6E76),
-        primary: _tealLight,
+        surfaceVar: const Color(0xFFEEF2F8),
+        elevated: const Color(0xFFF7F9FC),
+        border: const Color(0xFFE2E8F0),
+        textPrimary: const Color(0xFF0B1220),
+        textSecondary: const Color(0xFF46536A),
+        textMuted: const Color(0xFF5B6472),
+        primary: _brandLight,
         onPrimary: Colors.white,
-        accent: _blueLight,
-        error: const Color(0xFFC81E1E),
-        snackBg: const Color(0xFF141A21),
+        accent: _accentLight,
+        error: const Color(0xFFDC2626),
+        snackBg: const Color(0xFF14171D),
       );
 
   static ThemeData _build({
@@ -262,7 +261,7 @@ class AppTheme {
         backgroundColor: snackBg,
         contentTextStyle: TextStyle(
             color: isDark ? textPrimary : Colors.white, fontSize: 14),
-        actionTextColor: isDark ? _tealDark : _tealLight,
+        actionTextColor: isDark ? _brandDark : _brandLight,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         behavior: SnackBarBehavior.floating,
         elevation: 2,

@@ -59,7 +59,7 @@ void main() {
 
     expect(seenBg, isNotEmpty);
     final lightBg = seenBg.last;
-    expect(lightBg, const Color(0xFFF5F7F8), reason: 'light background token');
+    expect(lightBg, const Color(0xFFF5F7FB), reason: 'light background token');
 
     // Flip to dark.
     hostKey.currentState!.setMode(ThemeMode.dark);
@@ -68,13 +68,13 @@ void main() {
     expect(seenBg.length, greaterThan(1),
         reason: 'child must rebuild when brightness flips');
     final darkBg = seenBg.last;
-    expect(darkBg, const Color(0xFF0B0F14), reason: 'dark background token');
+    expect(darkBg, const Color(0xFF0A0C10), reason: 'dark background token');
     expect(AppColors.brightness, Brightness.dark);
 
     // Flip back to light — must return to the light token, not stay dark.
     hostKey.currentState!.setMode(ThemeMode.light);
     await tester.pump();
-    expect(seenBg.last, const Color(0xFFF5F7F8));
+    expect(seenBg.last, const Color(0xFFF5F7FB));
     expect(AppColors.brightness, Brightness.light);
   });
 
@@ -110,7 +110,6 @@ void main() {
           AppColors.textSecondary,
           AppColors.textMuted,
           AppColors.primary,
-          AppColors.onPrimary,
           AppColors.income,
           AppColors.expense,
           AppColors.transfer,
