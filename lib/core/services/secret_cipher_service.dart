@@ -449,6 +449,33 @@ class SecretCipherService {
     }
   }
 
+  /// Static field crypto — for the mapper layer, which has no service instance
+  /// but shares the process-global DEK. [encField] returns the plaintext
+  /// unchanged when the cipher isn't ready (so data is never lost); [decField]
+  /// returns the raw string when it isn't ciphertext this key can open (legacy
+  /// plaintext rows, or cipher not ready) so the UI never breaks.
+  static bool get ready => _dek != null;
+
+  static String encField(String plaintext) {
+    final dek = _dek;
+    if (dek == null) return plaintext;
+    final iv = enc.IV.fromSecureRandom(_ivLength);
+    return '${iv.base64}:${_gcm(dek).encrypt(plaintext, iv: iv).base64}';
+  }
+
+  static String decField(String stored) {
+    final dek = _dek;
+    if (dek == null || stored.isEmpty) return stored;
+    final parts = stored.split(':');
+    if (parts.length != 2) return stored; // not our ciphertext shape → legacy plaintext
+    try {
+      final iv = enc.IV.fromBase64(parts[0]);
+      return _gcm(dek).decrypt(enc.Encrypted.fromBase64(parts[1]), iv: iv);
+    } catch (_) {
+      return stored; // wrong key / tampered — don't crash the list
+    }
+  }
+
   /// Masks a value for display, keeping the last [visible] characters.
   static String mask(String value, {int visible = 4}) {
     final trimmed = value.replaceAll(' ', '');

@@ -252,9 +252,17 @@ void main() {
       final back = NoteCloud.fromCloud(json);
       expect(back.toCloudJson(), json);
       expect(json['color'], 'teal');
-      expect(json['labels'], ['home', 'weekly']);
-      expect((json['checklist_items'] as List).first, {'id': 'c1', 'text': 'Milk', 'isChecked': true});
+      // title / body / labels / checklist_items ship as (encrypted) strings —
+      // never the readable plaintext.
+      expect(json['labels'], isA<String>());
+      expect(json['checklist_items'], isA<String>());
+      expect(json['body'], isNot('body containing readable text'));
+      // ...and the round-trip restores the exact plaintext note.
+      expect(back.title, 'Groceries');
+      expect(back.labels, ['home', 'weekly']);
       expect(back.checklistItems.length, 2);
+      expect(back.checklistItems.first.text, 'Milk');
+      expect(back.checklistItems.first.isChecked, true);
       expect(back.isDeleted, true);
     });
 

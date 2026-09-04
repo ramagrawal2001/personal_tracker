@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import '../constants/app_constants.dart';
+import '../services/secret_cipher_service.dart';
 import '../../domain/models/models.dart';
 import '../../domain/models/note_model.dart';
 
@@ -406,17 +409,23 @@ extension GoalCloud on GoalModel {
 // ═══════════════════════════════════════════════════════════════════════════
 // Notes
 // ═══════════════════════════════════════════════════════════════════════════
+/// Notes sync ENCRYPTED: `title` / `body` / `checklist_items` / `labels` leave
+/// the device (and land in Postgres) as ciphertext, matching what the local
+/// Drift columns hold. `fromCloud` decrypts back to the plaintext [NoteModel]
+/// the UI uses. Legacy plaintext rows pass through unchanged (see
+/// `SecretCipherService.decField`).
 extension NoteCloud on NoteModel {
   Map<String, dynamic> toCloudJson() => {
         'id': id,
-        'title': title,
-        'body': body,
+        'title': SecretCipherService.encField(title),
+        'body': SecretCipherService.encField(body),
         'color': color.name,
         'is_pinned': isPinned,
         'is_archived': isArchived,
         'is_checklist': isChecklist,
-        'checklist_items': checklistItems.map((e) => e.toMap()).toList(),
-        'labels': labels,
+        'checklist_items':
+            SecretCipherService.encField(jsonEncode(checklistItems.map((e) => e.toMap()).toList())),
+        'labels': SecretCipherService.encField(jsonEncode(labels)),
         'is_deleted': isDeleted,
         'deleted_at': _isoN(isDeleted ? updatedAt : null),
         'created_at': _iso(createdAt),
@@ -425,18 +434,37 @@ extension NoteCloud on NoteModel {
 
   static NoteModel fromCloud(Map<String, dynamic> m) => NoteModel(
         id: m['id'] as String,
-        title: m['title'] as String? ?? '',
-        body: m['body'] as String? ?? '',
+        title: SecretCipherService.decField(m['title'] as String? ?? ''),
+        body: SecretCipherService.decField(m['body'] as String? ?? ''),
         color: NoteColor.values.byName(m['color'] as String? ?? 'defaultColor'),
         isPinned: _bool(m['is_pinned']),
         isArchived: _bool(m['is_archived']),
         isChecklist: _bool(m['is_checklist']),
-        checklistItems: _mapList(m['checklist_items']).map(NoteChecklistItem.fromMap).toList(),
-        labels: _strList(m['labels']),
+        checklistItems: _decNoteJsonList(m['checklist_items'])
+            .map((e) => NoteChecklistItem.fromMap((e as Map).cast<String, dynamic>()))
+            .toList(),
+        labels: _decNoteJsonList(m['labels']).cast<String>(),
         createdAt: _dt(m['created_at']),
         updatedAt: _dt(m['updated_at']),
         isDeleted: _bool(m['is_deleted']),
       );
+}
+
+/// A note's checklist/labels come back from the cloud either as an encrypted
+/// string (current) or, for legacy rows, as a plain JSON array.
+List<dynamic> _decNoteJsonList(dynamic raw) {
+  if (raw is List) return raw; // legacy plaintext jsonb array
+  if (raw is String) {
+    final s = SecretCipherService.decField(raw).trim();
+    if (s.isEmpty) return const [];
+    try {
+      final v = jsonDecode(s);
+      return v is List ? v : const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+  return const [];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
