@@ -1,16 +1,13 @@
-import 'package:google_fonts/google_fonts.dart';
-
-/// Shared, network-free test setup.
+/// Shared test setup.
 ///
-/// `app_theme.dart` builds its text theme with `GoogleFonts.interTextTheme(...)`,
-/// which — the first time a `MaterialApp` builds — tries to pull the Inter font
-/// files from `fonts.gstatic.com`. There is no bundled Inter asset, so on a
-/// headless / sandboxed runner (notably `integration_test/*`) that request hangs
-/// or fails and the test dies before the first frame. Turning runtime fetching
-/// off makes google_fonts fall back to the platform default font instead.
+/// Historically `app_theme.dart` fetched Inter from `fonts.gstatic.com` via
+/// `google_fonts` on first `MaterialApp` build, which hung/failed on a
+/// headless or offline runner (notably `integration_test/*`). Inter is now
+/// bundled locally (`assets/fonts/Inter-Variable.ttf`, declared in
+/// `pubspec.yaml`), so theme resolution never touches the network and this
+/// is a no-op — kept so every test `main()` that already calls it doesn't
+/// need to change.
 ///
 /// Call from a test `main()` immediately after the binding is initialised and
 /// before the first `pumpWidget`.
-void bootstrapTestEnv() {
-  GoogleFonts.config.allowRuntimeFetching = false;
-}
+void bootstrapTestEnv() {}

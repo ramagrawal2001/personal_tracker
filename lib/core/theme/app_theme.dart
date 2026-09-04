@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Material [ThemeData] for both modes — "Cobalt" theme.
 ///
@@ -98,17 +97,23 @@ class AppTheme {
         error: error,
         onError: Colors.white,
       ),
-      textTheme: GoogleFonts.interTextTheme(base.textTheme).copyWith(
-        displayLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 30, letterSpacing: -0.5),
-        displayMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 26, letterSpacing: -0.4),
-        headlineSmall: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 22, letterSpacing: -0.3),
-        titleLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 19, letterSpacing: -0.2),
-        titleMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w600, fontSize: 15),
-        titleSmall: TextStyle(color: textSecondary, fontWeight: FontWeight.w600, fontSize: 13),
-        bodyLarge: TextStyle(color: textPrimary, fontSize: 15, height: 1.45),
-        bodyMedium: TextStyle(color: textSecondary, fontSize: 14, height: 1.45),
-        bodySmall: TextStyle(color: textMuted, fontSize: 12, height: 1.4),
-        labelLarge: TextStyle(color: textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+      // 'Inter' is bundled locally (assets/fonts/Inter-Variable.ttf) — no
+      // network fetch, so theme resolution never depends on connectivity.
+      // NB: every style below must repeat `fontFamily: 'Inter'` explicitly —
+      // .copyWith() replaces each named TextStyle wholesale, so it would
+      // otherwise silently drop the family applied above and fall back to
+      // the platform default font for exactly the roles most text uses.
+      textTheme: base.textTheme.apply(fontFamily: 'Inter').copyWith(
+        displayLarge: TextStyle(fontFamily: 'Inter', color: textPrimary, fontWeight: FontWeight.w700, fontSize: 30, letterSpacing: -0.5),
+        displayMedium: TextStyle(fontFamily: 'Inter', color: textPrimary, fontWeight: FontWeight.w700, fontSize: 26, letterSpacing: -0.4),
+        headlineSmall: TextStyle(fontFamily: 'Inter', color: textPrimary, fontWeight: FontWeight.w700, fontSize: 22, letterSpacing: -0.3),
+        titleLarge: TextStyle(fontFamily: 'Inter', color: textPrimary, fontWeight: FontWeight.w700, fontSize: 19, letterSpacing: -0.2),
+        titleMedium: TextStyle(fontFamily: 'Inter', color: textPrimary, fontWeight: FontWeight.w600, fontSize: 15),
+        titleSmall: TextStyle(fontFamily: 'Inter', color: textSecondary, fontWeight: FontWeight.w600, fontSize: 13),
+        bodyLarge: TextStyle(fontFamily: 'Inter', color: textPrimary, fontSize: 15, height: 1.45),
+        bodyMedium: TextStyle(fontFamily: 'Inter', color: textSecondary, fontSize: 14, height: 1.45),
+        bodySmall: TextStyle(fontFamily: 'Inter', color: textMuted, fontSize: 12, height: 1.4),
+        labelLarge: TextStyle(fontFamily: 'Inter', color: textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
       ),
       cardTheme: CardThemeData(
         color: surface,

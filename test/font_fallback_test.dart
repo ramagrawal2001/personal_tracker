@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'package:aspyric/core/theme/app_theme.dart';
 import 'support/test_bootstrap.dart';
 
-/// Bug 6 regression: the headless / sandboxed test harness has no network, so
-/// `AppTheme`'s `GoogleFonts.interTextTheme(...)` must not try to fetch Inter
-/// from fonts.gstatic.com. `bootstrapTestEnv()` disables runtime fetching; a
-/// themed `MaterialApp` must then build cleanly using the platform font.
+/// Bug 6 regression: `AppTheme` must build cleanly with no network — Inter is
+/// bundled locally (assets/fonts/Inter-Variable.ttf), not fetched at runtime.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   bootstrapTestEnv();
 
-  testWidgets('themed MaterialApp builds offline with runtime font fetching disabled',
+  testWidgets('themed MaterialApp builds offline using the bundled Inter font',
       (tester) async {
-    expect(GoogleFonts.config.allowRuntimeFetching, isFalse);
-
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.lightTheme,
@@ -29,5 +24,9 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text('hermetic'), findsOneWidget);
+    // bodyMedium is what a bare Text() resolves through by default.
+    final resolvedFamily =
+        Theme.of(tester.element(find.text('hermetic'))).textTheme.bodyMedium?.fontFamily;
+    expect(resolvedFamily, 'Inter');
   });
 }

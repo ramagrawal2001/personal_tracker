@@ -44,7 +44,6 @@ dependencies:
   flutter_secure_storage: ^9.2.0
   encrypt: ^5.0.3
   flutter_colorpicker: ^1.1.0
-  google_fonts: ^6.2.1
   lucide_icons: ^0.257.0
   supabase_flutter: ^2.5.0
   crypto: ^3.0.3
@@ -99,6 +98,21 @@ flutter:
     - family: Lucide
       fonts:
         - asset: assets/fonts/lucide.ttf
+    # Bundled locally (assets/fonts/Inter-LICENSE.txt has the OFL text) so the
+    # app never depends on fetching Inter from fonts.gstatic.com at runtime —
+    # google_fonts' runtime fetch has no offline fallback and throws when it
+    # can't reach the network. One variable-font file registered under each
+    # weight the theme uses; the engine resolves the matching instance.
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 700
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
