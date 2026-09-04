@@ -450,7 +450,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           isAutoPay: isAutoPay,
                         );
                       }
-                      Navigator.pop(context);
+                      Navigator.pop(ctx);
                     },
                     child: Text(existing == null ? 'Add Payment' : 'Save Changes'),
                   ),

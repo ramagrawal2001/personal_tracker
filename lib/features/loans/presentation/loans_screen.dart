@@ -338,7 +338,7 @@ class LoansScreen extends ConsumerWidget {
                     monthlyEmi: emi,
                     dueDay: dueDay,
                   );
-                  Navigator.pop(context);
+                  Navigator.pop(ctx);
                 },
                 child: const Text('Save Changes'),
               )),

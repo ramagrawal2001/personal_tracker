@@ -215,7 +215,7 @@ class BudgetsScreen extends ConsumerWidget {
                       return;
                     }
                     ref.read(financeNotifierProvider.notifier).updateBudget(budget.id, limitAmount: limit);
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                   },
                   child: const Text('Save'),
                 ),
@@ -290,7 +290,7 @@ class BudgetsScreen extends ConsumerWidget {
                       return;
                     }
                     ref.read(financeNotifierProvider.notifier).addBudget(categoryId: selectedCategoryId, monthlyLimit: limit, monthYear: monthYear);
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                   },
                   child: const Text('Create Budget'),
                 ),

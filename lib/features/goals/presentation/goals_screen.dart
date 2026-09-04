@@ -347,7 +347,7 @@ class GoalsScreen extends ConsumerWidget {
                       targetAmount: target,
                       targetDate: targetDate,
                     );
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                   },
                   child: const Text('Save Changes'),
                 )),

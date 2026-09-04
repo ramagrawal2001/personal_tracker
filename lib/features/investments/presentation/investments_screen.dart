@@ -253,7 +253,7 @@ class InvestmentsScreen extends ConsumerWidget {
                       currentValue: current,
                       monthlySipAmount: sip,
                     );
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                   },
                   child: const Text('Save Changes'),
                 )),

@@ -170,7 +170,7 @@ class CategoriesScreen extends ConsumerWidget {
                       return;
                     }
                     ref.read(financeNotifierProvider.notifier).updateCategory(cat.id, name: name, icon: selectedIcon);
-                    Navigator.pop(context);
+                    Navigator.pop(ctx);
                   },
                   child: const Text('Save'),
                 )),
