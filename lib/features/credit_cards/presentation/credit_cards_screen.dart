@@ -351,8 +351,8 @@ return SingleChildScrollView(
     final bankCtrl = TextEditingController(text: card.bank);
     final holderCtrl = TextEditingController(text: card.cardholderName);
     final limitCtrl = TextEditingController(text: card.creditLimit.toStringAsFixed(0));
-    final statementDayCtrl = TextEditingController(text: '${card.statementDay}');
-    final dueDayCtrl = TextEditingController(text: '${card.dueDay}');
+    int statementDay = card.statementDay.clamp(1, 31);
+    int dueDay = card.dueDay.clamp(1, 31);
     final numCtrl = TextEditingController(text: cipher.isReady ? (cipher.decryptField(card.encCardNumber) ?? '') : '');
     final cvvCtrl = TextEditingController(text: cipher.isReady ? (cipher.decryptField(card.encCvv) ?? '') : '');
     final pinCtrl = TextEditingController(text: cipher.isReady ? (cipher.decryptField(card.encPin) ?? '') : '');
@@ -391,13 +391,25 @@ return SingleChildScrollView(
                 TextField(controller: holderCtrl, decoration: const InputDecoration(labelText: 'Cardholder Name')),
                 if (isCredit) ...[
                   const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: TextField(controller: limitCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Credit Limit (${CurrencyFormatter.symbol})'))),
-                    const SizedBox(width: 12),
-                    Expanded(child: TextField(controller: statementDayCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Statement Day'))),
-                  ]),
+                  TextField(controller: limitCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Credit Limit (${CurrencyFormatter.symbol})')),
                   const SizedBox(height: 12),
-                  TextField(controller: dueDayCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Due Day (1-31)')),
+                  Row(children: [
+                    Expanded(
+                      child: _dayDropdown(
+                        label: 'Statement Day',
+                        value: statementDay,
+                        onChanged: (v) => setSheetState(() => statementDay = v),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _dayDropdown(
+                        label: 'Due Day',
+                        value: dueDay,
+                        onChanged: (v) => setSheetState(() => dueDay = v),
+                      ),
+                    ),
+                  ]),
                 ],
                 if (isDebit) ...[
                   const SizedBox(height: 16),
@@ -511,7 +523,6 @@ return SingleChildScrollView(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () async {
-                      final navigator = Navigator.of(context);
                       if (nameCtrl.text.trim().isEmpty || bankCtrl.text.trim().isEmpty) {
                         setSheetState(() => error = 'Name and bank are required');
                         return;
@@ -521,22 +532,12 @@ return SingleChildScrollView(
                         return;
                       }
                       double? limit;
-                      int? statementDay;
-                      int? dueDay;
+                      // statementDay/dueDay come from the dropdowns above, already
+                      // valid 1-31 ints — no parsing/range-check needed.
                       if (isCredit) {
                         limit = double.tryParse(limitCtrl.text);
-                        statementDay = int.tryParse(statementDayCtrl.text);
-                        dueDay = int.tryParse(dueDayCtrl.text);
                         if (limit == null || limit < 0) {
                           setSheetState(() => error = 'Enter a valid credit limit');
-                          return;
-                        }
-                        if (statementDay == null || statementDay < 1 || statementDay > 31) {
-                          setSheetState(() => error = 'Statement day must be between 1 and 31');
-                          return;
-                        }
-                        if (dueDay == null || dueDay < 1 || dueDay > 31) {
-                          setSheetState(() => error = 'Due day must be between 1 and 31');
                           return;
                         }
                       }
@@ -573,7 +574,12 @@ return SingleChildScrollView(
                           dueDay: dueDay,
                           linkedAccountId: isDebit ? linkedAccountId : null,
                         );
-                        navigator.pop();
+                        // Pop the sheet's own route via `ctx` — Navigator.of(context)
+                        // here would resolve to the screen's navigator, not the one
+                        // this bottom sheet was actually pushed onto, and silently
+                        // fail to close it (or pop the wrong route).
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
                       } catch (e) {
                         setSheetState(() => error = 'Failed to save: $e');
                       }
@@ -586,6 +592,40 @@ return SingleChildScrollView(
           ),
         ),
       ),
+    );
+  }
+
+  /// Day-of-month picker (1-31) used by the Edit Card sheet — matches
+  /// _AddCardModalState's own _buildDropdown look, duplicated here since
+  /// that one lives on a different State class.
+  Widget _dayDropdown({required String label, required int value, required void Function(int) onChanged}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+        const SizedBox(height: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceLight,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButton<int>(
+            value: value,
+            items: List.generate(31, (i) => i + 1)
+                .map((d) => DropdownMenuItem(value: d, child: Text('${d}th', style: TextStyle(color: AppColors.textPrimary, fontSize: 13))))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) onChanged(v);
+            },
+            isExpanded: true,
+            underline: const SizedBox.shrink(),
+            dropdownColor: AppColors.surface,
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+          ),
+        ),
+      ],
     );
   }
 

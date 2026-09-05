@@ -393,17 +393,17 @@ Future<List<String>> runSalaryFlowSweep(WidgetTester tester, {String? screenshot
       return;
     }
     final tf = find.byType(TextField);
-    // For a credit card: name(0) bank(1) holder(2) limit(3) statementDay(4)
-    // dueDay(5) cardNumber(6) cvv(7) pin(8).
-    if (tf.evaluate().length < 9) {
-      failures.add('credit-card-edit-prefill: expected 9 text fields in Edit Card, found ${tf.evaluate().length}');
+    // For a credit card: name(0) bank(1) holder(2) limit(3) cardNumber(4)
+    // cvv(5) pin(6). Statement/Due Day are dropdowns, not TextFields.
+    if (tf.evaluate().length < 7) {
+      failures.add('credit-card-edit-prefill: expected 7 text fields in Edit Card, found ${tf.evaluate().length}');
       return;
     }
-    await tester.ensureVisible(tf.at(6));
+    await tester.ensureVisible(tf.at(4));
     await settle();
     await shot('edit_card_prefilled_secrets');
-    final numberField = tester.widget<TextField>(tf.at(6));
-    final cvvField = tester.widget<TextField>(tf.at(7));
+    final numberField = tester.widget<TextField>(tf.at(4));
+    final cvvField = tester.widget<TextField>(tf.at(5));
     final prefilledNumber = numberField.controller?.text ?? '';
     final prefilledCvv = cvvField.controller?.text ?? '';
     if (prefilledNumber.isEmpty) {
