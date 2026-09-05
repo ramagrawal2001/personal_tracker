@@ -52,6 +52,10 @@ class QuickAddModal extends ConsumerStatefulWidget {
 
 class _QuickAddModalState extends ConsumerState<QuickAddModal> {
   late TransactionType _selectedType;
+  // Guards against a double-tap on Save firing two overlapping
+  // addTransaction/updateTransaction calls before the sheet closes — without
+  // this a fast double-tap posts the same transaction twice.
+  bool _isSaving = false;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _merchantController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
@@ -519,8 +523,10 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                   foregroundColor: AppColors.onPrimary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                onPressed: _saveTransaction,
-                child: Text(_isEditing ? 'Save Changes' : 'Save Transaction', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                onPressed: _isSaving ? null : _saveTransaction,
+                child: _isSaving
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(_isEditing ? 'Save Changes' : 'Save Transaction', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -557,6 +563,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
   }
 
   Future<void> _saveTransaction() async {
+    if (_isSaving) return;
     final amountText = _amountController.text.trim();
     final amount = double.tryParse(amountText);
 
@@ -634,6 +641,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
     }
 
     final notifier = ref.read(financeNotifierProvider.notifier);
+    setState(() => _isSaving = true);
     try {
       if (_isEditing) {
         await notifier.updateTransaction(
@@ -660,6 +668,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       }
     } catch (e) {
       if (!mounted) return;
+      setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to save transaction: $e'), backgroundColor: AppColors.expense, behavior: SnackBarBehavior.floating),
       );
