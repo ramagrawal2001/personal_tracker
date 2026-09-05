@@ -213,6 +213,11 @@ class TransactionModel {
     List<TransactionSplit>? splits,
     String? attachmentPath,
     String? creditCardId,
+    // `creditCardId: null` above is indistinguishable from "not supplied" —
+    // the `?? this.creditCardId` fallback below would silently keep the old
+    // card. Pass this to actually clear the link (e.g. editing a charge back
+    // onto a plain account). See FinanceNotifier.updateTransaction.
+    bool clearCreditCardId = false,
     String? loanId,
     String? investmentId,
     String? companyId,
@@ -236,7 +241,7 @@ class TransactionModel {
       tags: tags ?? this.tags,
       splits: splits ?? this.splits,
       attachmentPath: attachmentPath ?? this.attachmentPath,
-      creditCardId: creditCardId ?? this.creditCardId,
+      creditCardId: clearCreditCardId ? null : (creditCardId ?? this.creditCardId),
       loanId: loanId ?? this.loanId,
       investmentId: investmentId ?? this.investmentId,
       companyId: companyId ?? this.companyId,

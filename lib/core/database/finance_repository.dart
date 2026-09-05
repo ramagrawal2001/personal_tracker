@@ -1158,13 +1158,26 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     String? description,
     String? notes,
     List<String>? tags,
+    // Moving a transaction to a different account never needs manual
+    // reversal — account balances are always recomputed from transaction
+    // history, so changing `accountId` alone is enough (see
+    // accountsWithCalculatedBalances). Credit-card outstanding is the
+    // exception: it's a *stored* field, so switching `creditCardId` (or
+    // clearing it) below explicitly reverses the old card's effect and
+    // applies the new one, rather than relying on recomputation.
+    String? accountId,
+    String? creditCardId,
+    bool clearCreditCardId = false,
   }) async {
     final match = state.transactions.where((t) => t.id == id).toList();
     if (match.isEmpty) return; // nothing to update — treat as a no-op
     final original = match.first;
     final newAmount = amount ?? original.amount;
-    final delta = newAmount - original.amount;
     final now = DateTime.now();
+
+    final oldCreditCardId = original.creditCardId;
+    final newCreditCardId = clearCreditCardId ? null : (creditCardId ?? oldCreditCardId);
+    final cardChanged = oldCreditCardId != newCreditCardId;
 
     final draft = original.copyWith(
       amount: newAmount,
@@ -1174,28 +1187,52 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       description: description ?? original.description,
       notes: notes ?? original.notes,
       tags: tags ?? original.tags,
+      accountId: accountId ?? original.accountId,
+      creditCardId: creditCardId,
+      clearCreditCardId: clearCreditCardId,
       updatedAt: now,
     );
 
-    CreditCardModel? adjustedCard;
-    if (delta != 0 && original.creditCardId != null) {
-      final cardIdx = state.creditCards.indexWhere((c) => c.id == original.creditCardId);
-      // Debit / prepaid / store / forex cards have no `currentOutstanding`;
-      // their spend lives on the linked account and needs no adjustment here.
-      if (cardIdx != -1 && state.creditCards[cardIdx].cardType == CardType.credit) {
-        final card = state.creditCards[cardIdx];
-        int sign;
-        if (original.type == TransactionType.creditCardPayment || original.type == TransactionType.refund) {
-          sign = -1; // Payment or refund reduces outstanding
-        } else {
-          sign = 1; // Expense increases outstanding
+    // Payment/refund reduce outstanding; every other type that reaches a
+    // card (expense) increases it. A transaction's own `type` never changes
+    // here, so the sign only ever depends on `original.type`.
+    final outstandingSign =
+        (original.type == TransactionType.creditCardPayment || original.type == TransactionType.refund) ? -1 : 1;
+
+    CardModel? adjustedOldCard;
+    CardModel? adjustedNewCard;
+    if (cardChanged) {
+      // Reverse the *full* original amount off the card it used to be on...
+      if (oldCreditCardId != null) {
+        final i = state.creditCards.indexWhere((c) => c.id == oldCreditCardId);
+        if (i != -1 && state.creditCards[i].cardType == CardType.credit) {
+          final card = state.creditCards[i];
+          final reversed = (card.currentOutstanding - original.amount * outstandingSign).clamp(0.0, double.infinity);
+          adjustedOldCard = card.copyWith(currentOutstanding: reversed, updatedAt: now);
         }
-        final newOutstanding = (card.currentOutstanding + (delta * sign)).clamp(0.0, double.infinity);
-        adjustedCard = card.copyWith(currentOutstanding: newOutstanding, updatedAt: now);
+      }
+      // ...and apply the *full* new amount to the card it's on now.
+      if (newCreditCardId != null) {
+        final i = state.creditCards.indexWhere((c) => c.id == newCreditCardId);
+        if (i != -1 && state.creditCards[i].cardType == CardType.credit) {
+          final card = state.creditCards[i];
+          final applied = (card.currentOutstanding + newAmount * outstandingSign).clamp(0.0, double.infinity);
+          adjustedNewCard = card.copyWith(currentOutstanding: applied, updatedAt: now);
+        }
+      }
+    } else if (newAmount != original.amount && oldCreditCardId != null) {
+      // Same card throughout — only the amount moved, so just the delta.
+      final i = state.creditCards.indexWhere((c) => c.id == oldCreditCardId);
+      if (i != -1 && state.creditCards[i].cardType == CardType.credit) {
+        final card = state.creditCards[i];
+        final delta = newAmount - original.amount;
+        final updated = (card.currentOutstanding + delta * outstandingSign).clamp(0.0, double.infinity);
+        adjustedOldCard = card.copyWith(currentOutstanding: updated, updatedAt: now);
       }
     }
 
     LoanModel? adjustedLoan;
+    final delta = newAmount - original.amount;
     if (delta != 0 && original.type == TransactionType.loanPayment && original.loanId != null) {
       final loanIdx = state.loans.indexWhere((l) => l.id == original.loanId);
       if (loanIdx != -1) {
@@ -1211,12 +1248,18 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       }
     }
 
+    // Push every changed row before touching local state/DB — same
+    // atomicity guarantee as every other multi-row mutator in this file.
     final txTs = await pushToCloud('transactions', draft.toCloudJson());
-    final cardTs = adjustedCard == null ? null : await pushToCloud('credit_cards', adjustedCard.toCloudJson());
+    final oldCardTs = adjustedOldCard == null ? null : await pushToCloud('credit_cards', adjustedOldCard.toCloudJson());
+    final newCardTs = adjustedNewCard == null ? null : await pushToCloud('credit_cards', adjustedNewCard.toCloudJson());
     final loanTs = adjustedLoan == null ? null : await pushToCloud('loans', adjustedLoan.toCloudJson());
 
     final savedTx = txTs != null ? draft.copyWith(updatedAt: txTs) : draft;
-    final savedCard = adjustedCard == null ? null : (cardTs != null ? adjustedCard.copyWith(updatedAt: cardTs) : adjustedCard);
+    final savedOldCard =
+        adjustedOldCard == null ? null : (oldCardTs != null ? adjustedOldCard.copyWith(updatedAt: oldCardTs) : adjustedOldCard);
+    final savedNewCard =
+        adjustedNewCard == null ? null : (newCardTs != null ? adjustedNewCard.copyWith(updatedAt: newCardTs) : adjustedNewCard);
     final savedLoan = adjustedLoan == null
         ? null
         : (loanTs == null
@@ -1230,12 +1273,17 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
               ));
 
     await _db.into(_db.transactions).insertOnConflictUpdate(savedTx.toCompanion());
-    if (savedCard != null) await _db.into(_db.creditCards).insertOnConflictUpdate(savedCard.toCompanion());
+    if (savedOldCard != null) await _db.into(_db.creditCards).insertOnConflictUpdate(savedOldCard.toCompanion());
+    if (savedNewCard != null) await _db.into(_db.creditCards).insertOnConflictUpdate(savedNewCard.toCompanion());
     if (savedLoan != null) await _db.into(_db.loans).insertOnConflictUpdate(savedLoan.toCompanion());
+
+    var updatedCards = state.creditCards;
+    if (savedOldCard != null) updatedCards = _spliceById(updatedCards, savedOldCard, (c) => c.id, false);
+    if (savedNewCard != null) updatedCards = _spliceById(updatedCards, savedNewCard, (c) => c.id, false);
 
     state = state.copyWith(
       transactions: state.transactions.map((t) => t.id == id ? savedTx : t).toList(),
-      creditCards: savedCard != null ? _spliceById(state.creditCards, savedCard, (c) => c.id, false) : state.creditCards,
+      creditCards: updatedCards,
       loans: savedLoan != null ? _spliceById(state.loans, savedLoan, (l) => l.id, false) : state.loans,
     );
   }

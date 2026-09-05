@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/app_constants.dart';
@@ -9,6 +10,38 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../domain/models/models.dart';
 import 'log_salary_modal.dart';
+
+/// Parses the Amount field: a plain number ("120.5"), or a single binary
+/// arithmetic expression between exactly two numbers ("100/3", "45+10.5",
+/// "500-125", "20*3") — one operator, no chains, no parentheses. Covers the
+/// common "split this 3 ways" / "add the tip" case without turning the field
+/// into a full calculator. Returns null for anything else (including a
+/// division by zero), same as an invalid plain number would.
+double? parseAmountExpression(String raw) {
+  final text = raw.trim();
+  if (text.isEmpty) return null;
+  final direct = double.tryParse(text);
+  if (direct != null) return direct;
+
+  final match = RegExp(r'^(-?\d+(?:\.\d+)?)\s*([+\-x×*/])\s*(-?\d+(?:\.\d+)?)$').firstMatch(text);
+  if (match == null) return null;
+  final a = double.parse(match.group(1)!);
+  final b = double.parse(match.group(3)!);
+  switch (match.group(2)!) {
+    case '+':
+      return a + b;
+    case '-':
+      return a - b;
+    case 'x':
+    case '×':
+    case '*':
+      return a * b;
+    case '/':
+      return b == 0 ? null : a / b;
+    default:
+      return null;
+  }
+}
 
 class QuickAddModal extends ConsumerStatefulWidget {
   final TransactionModel? existing;
@@ -159,7 +192,11 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       }
       if (debitLinkedAccount != null) _selectedAccountId = debitLinkedAccount.id;
     }
-    final accountLocked = _isEditing || debitLinkedAccount != null || isCreditCharge;
+    // The account/pay-card can be changed even while editing — balances are
+    // always recomputed from transaction history (or, for a card charge,
+    // reversed off the old card and applied to the new one in
+    // updateTransaction), so moving a transaction is always safe.
+    final accountLocked = debitLinkedAccount != null || isCreditCharge;
 
     final horizontalPadding = context.responsiveHorizontalPadding(mobile: 16, tablet: 24, desktop: 32);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -238,7 +275,10 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
             ],
             const SizedBox(height: 18),
 
-            // Amount Input
+            // Amount Input — also accepts a quick "100/3" style split, see
+            // parseAmountExpression. A plain numeric keyboard has no room for
+            // +-*/ on either platform, so this field uses the text keyboard
+            // with everything but digits/operators/decimal filtered out.
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -246,22 +286,42 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.border),
               ),
-              child: TextField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                autofocus: !_isEditing,
-                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                decoration: InputDecoration(
-                  prefixText: '${CurrencyFormatter.symbol} ',
-                  prefixStyle: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.primary),
-                  hintText: '0',
-                  hintStyle: TextStyle(color: AppColors.textMuted),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                  isDense: true,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _amountController,
+                    keyboardType: TextInputType.text,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-x×*/. ]'))],
+                    autofocus: !_isEditing,
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                    decoration: InputDecoration(
+                      prefixText: '${CurrencyFormatter.symbol} ',
+                      prefixStyle: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: AppColors.primary),
+                      hintText: '0 or 100/3',
+                      hintStyle: TextStyle(color: AppColors.textMuted),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  Builder(builder: (context) {
+                    final text = _amountController.text.trim();
+                    final isPlainNumber = double.tryParse(text) != null;
+                    final result = isPlainNumber ? null : parseAmountExpression(text);
+                    if (result == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '= ${CurrencyFormatter.symbol} ${result.toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primary),
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -456,7 +516,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                         ),
                       )),
                 ],
-                onChanged: _isEditing ? null : (val) => setState(() => _selectedPayCardId = val),
+                onChanged: (val) => setState(() => _selectedPayCardId = val),
               ),
               if (selectedPayCard != null && selectedPayCard.cardType == CardType.debit && debitLinkedAccount == null) ...[
                 const SizedBox(height: 6),
@@ -565,7 +625,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
   Future<void> _saveTransaction() async {
     if (_isSaving) return;
     final amountText = _amountController.text.trim();
-    final amount = double.tryParse(amountText);
+    final amount = parseAmountExpression(amountText);
 
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -574,9 +634,11 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       return;
     }
 
-    // Resolve the chosen pay card up front.
+    // Resolve the chosen pay card up front — also on edit now, so switching
+    // "Pay With" (or the plain account) on an existing transaction resolves
+    // the same way a new one would.
     CardModel? payCard;
-    if (_selectedType == TransactionType.expense && _selectedPayCardId != null && !_isEditing) {
+    if (_selectedType == TransactionType.expense && _selectedPayCardId != null) {
       final state = ref.read(financeNotifierProvider);
       for (final c in state.creditCards) {
         if (c.id == _selectedPayCardId) {
@@ -651,6 +713,16 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
           merchant: _merchantController.text.trim().isNotEmpty ? _merchantController.text.trim() : null,
           date: _selectedDate,
           description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
+          accountId: effectiveAccountId,
+          // Only expense transactions have a "Pay With" card to reconsider —
+          // for every other type (income/transfer/creditCardPayment/
+          // loanPayment) `payCardId` is always null here, and passing
+          // clearCreditCardId along with it would wrongly wipe out a
+          // creditCardPayment's target card or a loanPayment's link. Leaving
+          // both un-set for those types keeps updateTransaction's "not
+          // supplied = unchanged" default.
+          creditCardId: _selectedType == TransactionType.expense ? payCardId : null,
+          clearCreditCardId: _selectedType == TransactionType.expense && payCardId == null,
         );
       } else {
         await notifier.addTransaction(
