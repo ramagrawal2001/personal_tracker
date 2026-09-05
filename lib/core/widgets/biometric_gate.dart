@@ -95,8 +95,19 @@ class _BiometricGateState extends ConsumerState<BiometricGate>
     // If biometric not enabled, pass straight through
     if (!bioEnabled || _unlocked) return widget.child;
 
-    // Lock screen
-    return Scaffold(
+    // Lock screen. This replaces `widget.child` (MainShell) entirely, so on
+    // its own it sits *underneath* whatever back-navigation guard MainShell
+    // would otherwise provide for the current route. Without a PopScope here,
+    // a re-lock while the user is sitting on a pushed secondary screen (e.g.
+    // Settings, opened after backgrounding the app to copy a password) lets a
+    // back press silently pop that hidden route instead of doing nothing —
+    // repeat a few times and the pop unwinds the whole navigation stack and
+    // exits the app, even though the lock screen never visibly changed.
+    // Blocking pop outright is correct UX for a lock screen: authenticate or
+    // explicitly sign out, don't back your way past it.
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
@@ -170,6 +181,7 @@ class _BiometricGateState extends ConsumerState<BiometricGate>
             ),
           ),
         ),
+      ),
       ),
     );
   }
