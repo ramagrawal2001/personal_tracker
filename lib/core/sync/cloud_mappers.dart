@@ -85,6 +85,7 @@ extension AccountCloud on AccountModel {
         'deleted_at': _isoN(isDeleted ? updatedAt : null),
         'created_at': _iso(createdAt),
         'updated_at': _iso(updatedAt),
+        'sort_order': sortOrder,
       };
 
   static AccountModel fromCloud(Map<String, dynamic> m) => AccountModel(
@@ -102,6 +103,7 @@ extension AccountCloud on AccountModel {
         createdAt: _dt(m['created_at']),
         updatedAt: _dt(m['updated_at']),
         isDeleted: _bool(m['is_deleted']),
+        sortOrder: _intN(m['sort_order']) ?? 0,
       );
 }
 

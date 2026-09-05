@@ -165,6 +165,18 @@ class $AccountsTable extends Accounts
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -181,6 +193,7 @@ class $AccountsTable extends Accounts
     updatedAt,
     isDeleted,
     deletedAt,
+    sortOrder,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -294,6 +307,12 @@ class $AccountsTable extends Accounts
         deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
       );
     }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
     return context;
   }
 
@@ -359,6 +378,10 @@ class $AccountsTable extends Accounts
         DriftSqlType.dateTime,
         data['${effectivePrefix}deleted_at'],
       ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
     );
   }
 
@@ -383,6 +406,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
   final DateTime updatedAt;
   final bool isDeleted;
   final DateTime? deletedAt;
+  final int sortOrder;
   const AccountEntry({
     required this.id,
     required this.name,
@@ -398,6 +422,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     required this.updatedAt,
     required this.isDeleted,
     this.deletedAt,
+    required this.sortOrder,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -426,6 +451,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     if (!nullToAbsent || deletedAt != null) {
       map['deleted_at'] = Variable<DateTime>(deletedAt);
     }
+    map['sort_order'] = Variable<int>(sortOrder);
     return map;
   }
 
@@ -453,6 +479,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
       deletedAt: deletedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedAt),
+      sortOrder: Value(sortOrder),
     );
   }
 
@@ -478,6 +505,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
     );
   }
   @override
@@ -498,6 +526,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'sortOrder': serializer.toJson<int>(sortOrder),
     };
   }
 
@@ -516,6 +545,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     DateTime? updatedAt,
     bool? isDeleted,
     Value<DateTime?> deletedAt = const Value.absent(),
+    int? sortOrder,
   }) => AccountEntry(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -535,6 +565,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     updatedAt: updatedAt ?? this.updatedAt,
     isDeleted: isDeleted ?? this.isDeleted,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    sortOrder: sortOrder ?? this.sortOrder,
   );
   AccountEntry copyWithCompanion(AccountsCompanion data) {
     return AccountEntry(
@@ -558,6 +589,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
     );
   }
 
@@ -577,7 +609,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
-          ..write('deletedAt: $deletedAt')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('sortOrder: $sortOrder')
           ..write(')'))
         .toString();
   }
@@ -598,6 +631,7 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
     updatedAt,
     isDeleted,
     deletedAt,
+    sortOrder,
   );
   @override
   bool operator ==(Object other) =>
@@ -616,7 +650,8 @@ class AccountEntry extends DataClass implements Insertable<AccountEntry> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.isDeleted == this.isDeleted &&
-          other.deletedAt == this.deletedAt);
+          other.deletedAt == this.deletedAt &&
+          other.sortOrder == this.sortOrder);
 }
 
 class AccountsCompanion extends UpdateCompanion<AccountEntry> {
@@ -634,6 +669,7 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
   final Value<DateTime> updatedAt;
   final Value<bool> isDeleted;
   final Value<DateTime?> deletedAt;
+  final Value<int> sortOrder;
   final Value<int> rowid;
   const AccountsCompanion({
     this.id = const Value.absent(),
@@ -650,6 +686,7 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AccountsCompanion.insert({
@@ -667,6 +704,7 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     required DateTime updatedAt,
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
+    this.sortOrder = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -688,6 +726,7 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? isDeleted,
     Expression<DateTime>? deletedAt,
+    Expression<int>? sortOrder,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -706,6 +745,7 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (deletedAt != null) 'deleted_at': deletedAt,
+      if (sortOrder != null) 'sort_order': sortOrder,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -725,6 +765,7 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     Value<DateTime>? updatedAt,
     Value<bool>? isDeleted,
     Value<DateTime?>? deletedAt,
+    Value<int>? sortOrder,
     Value<int>? rowid,
   }) {
     return AccountsCompanion(
@@ -742,6 +783,7 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: deletedAt ?? this.deletedAt,
+      sortOrder: sortOrder ?? this.sortOrder,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -791,6 +833,9 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
     if (deletedAt.present) {
       map['deleted_at'] = Variable<DateTime>(deletedAt.value);
     }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -814,6 +859,7 @@ class AccountsCompanion extends UpdateCompanion<AccountEntry> {
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt, ')
+          ..write('sortOrder: $sortOrder, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8949,6 +8995,7 @@ typedef $$AccountsTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
+      Value<int> sortOrder,
       Value<int> rowid,
     });
 typedef $$AccountsTableUpdateCompanionBuilder =
@@ -8967,6 +9014,7 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
+      Value<int> sortOrder,
       Value<int> rowid,
     });
 
@@ -9046,6 +9094,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<DateTime> get deletedAt => $composableBuilder(
     column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -9128,6 +9181,11 @@ class $$AccountsTableOrderingComposer
     column: $table.deletedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$AccountsTableAnnotationComposer
@@ -9186,6 +9244,9 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get deletedAt =>
       $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
 }
 
 class $$AccountsTableTableManager
@@ -9233,6 +9294,7 @@ class $$AccountsTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion(
                 id: id,
@@ -9249,6 +9311,7 @@ class $$AccountsTableTableManager
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,
+                sortOrder: sortOrder,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9267,6 +9330,7 @@ class $$AccountsTableTableManager
                 required DateTime updatedAt,
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AccountsCompanion.insert(
                 id: id,
@@ -9283,6 +9347,7 @@ class $$AccountsTableTableManager
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,
+                sortOrder: sortOrder,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

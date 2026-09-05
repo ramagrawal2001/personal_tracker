@@ -18,6 +18,8 @@ class Accounts extends Table {
   // Sync tombstone columns (updatedAt already present above).
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get deletedAt => dateTime().nullable()();
+  // v8: user-chosen display position — see AccountModel.sortOrder.
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};

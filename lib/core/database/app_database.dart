@@ -35,7 +35,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -181,6 +181,15 @@ class AppDatabase extends _$AppDatabase {
             await addV7(recurringPayments, recurringPayments.isIncome);
             await addV7(recurringPayments, recurringPayments.companyId);
             await addV7(investments, investments.referenceNumber);
+          }
+          if (from < 8) {
+            // v8: user-reorderable Accounts list.
+            final existing = (await customSelect('PRAGMA table_info(accounts)').get())
+                .map((row) => row.read<String>('name'))
+                .toSet();
+            if (!existing.contains(accounts.sortOrder.name)) {
+              await m.addColumn(accounts, accounts.sortOrder);
+            }
           }
         },
       );

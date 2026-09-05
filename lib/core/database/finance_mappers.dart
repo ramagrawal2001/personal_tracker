@@ -25,6 +25,7 @@ extension AccountEntryMapper on AccountEntry {
       isDeleted: isDeleted,
       encAccountNumber: encAccountNumber,
       encIfsc: encIfsc,
+      sortOrder: sortOrder,
     );
   }
 }
@@ -46,6 +47,7 @@ extension AccountModelMapper on AccountModel {
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: Value(isDeleted ? DateTime.now() : null),
+      sortOrder: Value(sortOrder),
     );
   }
 }

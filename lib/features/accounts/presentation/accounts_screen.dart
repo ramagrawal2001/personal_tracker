@@ -14,13 +14,40 @@ import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/summary_card.dart';
 import '../../../core/widgets/undo_delete_snackbar.dart';
+import '../../../domain/models/models.dart';
 import 'add_account_modal.dart';
 
-class AccountsScreen extends ConsumerWidget {
+class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AccountsScreen> createState() => _AccountsScreenState();
+}
+
+class _AccountsScreenState extends ConsumerState<AccountsScreen> {
+  bool _reordering = false;
+
+  Future<void> _handleReorder(List<AccountModel> accounts, int oldIndex, int newIndex) async {
+    if (newIndex > oldIndex) newIndex -= 1;
+    final ids = accounts.map((a) => a.id).toList();
+    final movedId = ids.removeAt(oldIndex);
+    ids.insert(newIndex, movedId);
+    // Optimistic — ReorderableListView already reordered its own visuals;
+    // reorderAccounts pushes to the cloud before touching local state/DB, so
+    // on failure the list simply reverts to the last persisted order on the
+    // next rebuild rather than showing a saved-looking drag that didn't stick.
+    try {
+      await ref.read(financeNotifierProvider.notifier).reorderAccounts(ids);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save the new order: $e'), backgroundColor: AppColors.expense),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final financeState = ref.watch(financeNotifierProvider);
     final accounts = financeState.accountsWithCalculatedBalances;
     final totalLiquid = financeState.totalLiquidBalance;
@@ -28,6 +55,12 @@ class AccountsScreen extends ConsumerWidget {
     return AppScaffold(
       title: 'Accounts',
       actions: [
+        if (accounts.length > 1)
+          IconButton(
+            tooltip: _reordering ? 'Done reordering' : 'Reorder accounts',
+            icon: Icon(_reordering ? LucideIcons.check : LucideIcons.arrowUpDown, size: 20),
+            onPressed: () => setState(() => _reordering = !_reordering),
+          ),
         AppScaffold.addAction(onPressed: () => AddAccountModal.show(context)),
       ],
       scrollable: true,
@@ -42,7 +75,7 @@ class AccountsScreen extends ConsumerWidget {
             valueColor: AppColors.textPrimary,
           ),
           const SizedBox(height: 24),
-          const SectionHeader(title: 'Your Accounts'),
+          SectionHeader(title: _reordering ? 'Drag to reorder' : 'Your Accounts'),
           if (accounts.isEmpty)
             EmptyState(
               icon: LucideIcons.wallet,
@@ -50,6 +83,33 @@ class AccountsScreen extends ConsumerWidget {
               description: 'Add your bank account, cash wallet, or savings account to track balances.',
               actionLabel: 'Add Account',
               onAction: () => AddAccountModal.show(context),
+            )
+          else if (_reordering)
+            ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: false,
+              itemCount: accounts.length,
+              onReorder: (oldIndex, newIndex) => _handleReorder(accounts, oldIndex, newIndex),
+              itemBuilder: (context, index) {
+                final acc = accounts[index];
+                return Padding(
+                  key: ValueKey(acc.id),
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AppListTile(
+                    icon: acc.type == AccountType.cash ? LucideIcons.banknote : LucideIcons.landmark,
+                    iconColor: AppColors.primary,
+                    title: acc.name,
+                    subtitle: '${acc.type.displayName}${acc.accountNumberLast4 != null ? " •••• ${acc.accountNumberLast4}" : ""}',
+                    trailing: CurrencyFormatter.format(acc.calculatedBalance),
+                    trailingColor: AppColors.income,
+                    menuButton: ReorderableDragStartListener(
+                      index: index,
+                      child: Icon(LucideIcons.gripVertical, color: AppColors.textMuted, size: 18),
+                    ),
+                  ),
+                );
+              },
             )
           else
             ListView.separated(

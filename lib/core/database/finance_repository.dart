@@ -182,7 +182,16 @@ class FinanceState {
       }
 
       return acc.copyWith(calculatedBalance: calc);
-    }).toList();
+    }).toList()
+      // User-chosen display order (see AccountModel.sortOrder / reorderAccounts)
+      // wins everywhere accounts are listed — dashboard, dropdowns, this
+      // screen — not just on the Accounts screen itself. Every account
+      // starts at sortOrder 0, so untouched installs fall back to a stable
+      // createdAt tiebreak and keep exactly the order they render in today.
+      ..sort((a, b) {
+        final cmp = a.sortOrder.compareTo(b.sortOrder);
+        return cmp != 0 ? cmp : a.createdAt.compareTo(b.createdAt);
+      });
   }
 
   /// Total Liquid Money across active accounts holding readily spendable cash.
@@ -1241,6 +1250,11 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     String? encIfsc,
   }) async {
     final now = DateTime.now();
+    // New accounts append to the end of the user's chosen order rather than
+    // defaulting to 0, which would otherwise jump them to the front of an
+    // already-reordered list.
+    final nextSortOrder =
+        state.accounts.isEmpty ? 0 : state.accounts.map((a) => a.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
     final draft = AccountModel(
       id: _uuid.v4(),
       name: name,
@@ -1253,6 +1267,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       updatedAt: now,
       encAccountNumber: encAccountNumber,
       encIfsc: encIfsc,
+      sortOrder: nextSortOrder,
     );
 
     final serverTs = await pushToCloud('accounts', draft.toCloudJson());
@@ -1954,6 +1969,39 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
 
     await _db.into(_db.accounts).insertOnConflictUpdate(saved.toCompanion());
     state = state.copyWith(accounts: state.accounts.map((a) => a.id == id ? saved : a).toList());
+  }
+
+  /// Persists a new display order for the Accounts list. [orderedIds] must be
+  /// every non-deleted account id, in the order the user wants them shown —
+  /// the Accounts screen's reorderable list hands back its full item list on
+  /// every drag, not just the ids that moved.
+  ///
+  /// Same atomicity guarantee as every other multi-row mutator here: every
+  /// changed row is pushed to the cloud first, and local Drift / state are
+  /// only touched once all of them succeed — a failed push midway leaves the
+  /// whole reorder untouched rather than saving a half-applied order.
+  Future<void> reorderAccounts(List<String> orderedIds) async {
+    final now = DateTime.now();
+    final byId = {for (final a in state.accounts) a.id: a};
+    final drafts = <AccountModel>[];
+    for (var i = 0; i < orderedIds.length; i++) {
+      final acc = byId[orderedIds[i]];
+      if (acc == null || acc.sortOrder == i) continue;
+      drafts.add(acc.copyWith(sortOrder: i, updatedAt: now));
+    }
+    if (drafts.isEmpty) return;
+
+    final saved = <AccountModel>[];
+    for (final draft in drafts) {
+      final serverTs = await pushToCloud('accounts', draft.toCloudJson());
+      saved.add(serverTs != null ? draft.copyWith(updatedAt: serverTs) : draft);
+    }
+
+    for (final acc in saved) {
+      await _db.into(_db.accounts).insertOnConflictUpdate(acc.toCompanion());
+    }
+    final savedById = {for (final a in saved) a.id: a};
+    state = state.copyWith(accounts: state.accounts.map((a) => savedById[a.id] ?? a).toList());
   }
 
   // ── Loans ──────────────────────────────────────────────────────────────────

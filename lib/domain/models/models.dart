@@ -21,6 +21,13 @@ class AccountModel {
   final String? encAccountNumber;
   final String? encIfsc;
 
+  /// User-chosen display position (lower sorts first). Every account starts
+  /// at 0 until the user actually reorders — see
+  /// `FinanceNotifier.accountsWithCalculatedBalances`, which sorts by this
+  /// with a stable `createdAt` tiebreak so untouched accounts keep their
+  /// original relative order. Set in bulk by `FinanceNotifier.reorderAccounts`.
+  final int sortOrder;
+
   AccountModel({
     required this.id,
     required this.name,
@@ -36,6 +43,7 @@ class AccountModel {
     this.isDeleted = false,
     this.encAccountNumber,
     this.encIfsc,
+    this.sortOrder = 0,
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   AccountModel copyWith({
@@ -50,6 +58,7 @@ class AccountModel {
     bool? isDeleted,
     String? encAccountNumber,
     String? encIfsc,
+    int? sortOrder,
   }) {
     return AccountModel(
       id: id,
@@ -66,6 +75,7 @@ class AccountModel {
       isDeleted: isDeleted ?? this.isDeleted,
       encAccountNumber: encAccountNumber ?? this.encAccountNumber,
       encIfsc: encIfsc ?? this.encIfsc,
+      sortOrder: sortOrder ?? this.sortOrder,
     );
   }
 }
