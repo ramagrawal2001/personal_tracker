@@ -206,20 +206,40 @@ class SecretCipherService {
   }
 
   // ── cloud lookup ─────────────────────────────────────────────────────────
+  /// `null` means an actual attempted request to a live Supabase client
+  /// failed (offline, timeout, RLS hiccup, anything) — NOT that no wrapper
+  /// exists. Callers must never treat that as "safe to provision a fresh
+  /// DEK": every sign-out clears the local wrapper copy (see [wipe]), so
+  /// this cloud row is the *only* remaining record of the real key on a
+  /// device that hits this path — a transient failure here must never be
+  /// indistinguishable from "genuinely no wrapper", or a sign-out
+  /// immediately followed by a flaky sign-in silently orphans every
+  /// already-encrypted field, permanently. An empty map means either the
+  /// request definitely succeeded with no row, or there is no cloud at all
+  /// for this session (demo/offline/test) — both are cases where "provision
+  /// fresh, there's nothing to wait for" is the correct, certain answer.
   Future<Map<String, dynamic>?> _fetchCloudKeyRow(String userId) async {
-    if (!SupabaseService.isInitialized) return null;
-    try {
-      final row = await SupabaseService.client
-          .from('user_settings')
-          .select('sec_wrapped_dek, sec_kek_salt, sec_wrapped_dek_rc, sec_rc_salt')
-          .eq('user_id', userId)
-          .maybeSingle();
-      if (row == null) return null;
-      return Map<String, dynamic>.from(row as Map);
-    } catch (e) {
-      debugPrint('SecretCipherService: cloud key lookup failed: $e');
-      return null;
+    if (!SupabaseService.isInitialized) return <String, dynamic>{};
+    // A couple of quick retries so a one-off network blip on this
+    // particular request — which every sign-out makes the sole remaining
+    // record of the real key — doesn't route the caller into "needs
+    // recovery" for a problem that would have cleared itself half a second
+    // later.
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final row = await SupabaseService.client
+            .from('user_settings')
+            .select('sec_wrapped_dek, sec_kek_salt, sec_wrapped_dek_rc, sec_rc_salt')
+            .eq('user_id', userId)
+            .maybeSingle();
+        if (row == null) return <String, dynamic>{};
+        return Map<String, dynamic>.from(row as Map);
+      } catch (e) {
+        debugPrint('SecretCipherService: cloud key lookup failed (attempt ${attempt + 1}/3): $e');
+        if (attempt < 2) await Future.delayed(Duration(milliseconds: 400 * (attempt + 1)));
+      }
     }
+    return null;
   }
 
   /// Pushes the (now re-wrapped) DEK key material straight to the cloud
@@ -322,19 +342,30 @@ class SecretCipherService {
     var saltB64 = await _readMeta(_metaKekSalt);
     if (wrapped == null || saltB64 == null) {
       final cloud = await _fetchCloudKeyRow(userId);
-      if (cloud != null) {
-        wrapped = cloud['sec_wrapped_dek'] as String?;
-        saltB64 = cloud['sec_kek_salt'] as String?;
-        if (wrapped != null && saltB64 != null) {
-          await _writeMeta(_metaWrappedDek, wrapped);
-          await _writeMeta(_metaKekSalt, saltB64);
-        }
-        final rcWrapped = cloud['sec_wrapped_dek_rc'] as String?;
-        final rcSalt = cloud['sec_rc_salt'] as String?;
-        if (rcWrapped != null && rcSalt != null) {
-          await _writeMeta(_metaWrappedDekRc, rcWrapped);
-          await _writeMeta(_metaRcSalt, rcSalt);
-        }
+      if (cloud == null) {
+        // Couldn't reach the cloud to check — every sign-out clears the local
+        // wrapper copy, so this is the ONLY place a wrapper for an existing
+        // account would show up. Treating a failed lookup the same as
+        // "confirmed no wrapper" would fall through to provisioning a brand
+        // new DEK below and permanently orphan every already-encrypted
+        // field. Surface the recovery prompt instead — safe even though the
+        // real issue is transient connectivity, not a lost password — and
+        // never invent new key material on uncertainty.
+        debugPrint('SecretCipherService: cloud key lookup failed for $userId — refusing to provision a new DEK');
+        needsRecoveryListenable.value = true;
+        return;
+      }
+      wrapped = cloud['sec_wrapped_dek'] as String?;
+      saltB64 = cloud['sec_kek_salt'] as String?;
+      if (wrapped != null && saltB64 != null) {
+        await _writeMeta(_metaWrappedDek, wrapped);
+        await _writeMeta(_metaKekSalt, saltB64);
+      }
+      final rcWrapped = cloud['sec_wrapped_dek_rc'] as String?;
+      final rcSalt = cloud['sec_rc_salt'] as String?;
+      if (rcWrapped != null && rcSalt != null) {
+        await _writeMeta(_metaWrappedDekRc, rcWrapped);
+        await _writeMeta(_metaRcSalt, rcSalt);
       }
     }
 
