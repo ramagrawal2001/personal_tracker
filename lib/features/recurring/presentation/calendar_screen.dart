@@ -57,12 +57,15 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final financeState = ref.watch(financeNotifierProvider);
     final recurring = financeState.recurringPayments;
 
-    // Collect days in _selectedMonth that have a due payment
+    // Collect days in _selectedMonth that have a due payment — tracked
+    // separately from income (payday) days so the strip can show a distinct
+    // icon/color for "money in" vs "money out".
     final dueDays = <int>{};
+    final incomeDays = <int>{};
     for (final r in recurring) {
       final d = r.nextDueDate;
       if (d.year == _selectedMonth.year && d.month == _selectedMonth.month) {
-        dueDays.add(d.day);
+        (r.isIncome ? incomeDays : dueDays).add(d.day);
       }
     }
 
@@ -163,16 +166,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     children: stripDays.map((day) {
                       final isToday = isCurrentMonth && day == today.day;
                       final isDue = dueDays.contains(day);
-                      final highlight = isDue || isToday;
+                      final isIncomeDay = incomeDays.contains(day);
+                      final highlight = isDue || isIncomeDay || isToday;
+                      final dotColor = isIncomeDay ? AppColors.income : AppColors.primary;
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         decoration: BoxDecoration(
-                          color: highlight
-                              ? AppColors.primary.withValues(alpha: 0.18)
-                              : AppColors.surfaceLight,
+                          color: highlight ? dotColor.withValues(alpha: 0.18) : AppColors.surfaceLight,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: highlight ? AppColors.primary : AppColors.border,
+                            color: highlight ? dotColor : AppColors.border,
                           ),
                         ),
                         child: Column(
@@ -181,16 +184,18 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               '$day',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: highlight ? AppColors.primary : AppColors.textPrimary,
+                                color: highlight ? dotColor : AppColors.textPrimary,
                                 fontSize: 14,
                               ),
                             ),
                             const SizedBox(height: 4),
                             Icon(
-                              isDue ? LucideIcons.creditCard : (isToday ? LucideIcons.dot : LucideIcons.circle),
+                              isIncomeDay
+                                  ? LucideIcons.wallet
+                                  : (isDue ? LucideIcons.creditCard : (isToday ? LucideIcons.dot : LucideIcons.circle)),
                               size: 10,
-                              color: isDue
-                                  ? AppColors.primary
+                              color: (isDue || isIncomeDay)
+                                  ? dotColor
                                   : (isToday ? AppColors.income : Colors.transparent),
                             ),
                           ],
@@ -199,8 +204,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     }).toList(),
                   ),
 
-                // Due count badge
-                if (dueDays.isNotEmpty) ...[
+                // Due / expected count badge
+                if (dueDays.isNotEmpty || incomeDays.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -212,7 +217,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            '${dueDays.length} payment${dueDays.length > 1 ? 's' : ''} scheduled in this period',
+                            [
+                              if (dueDays.isNotEmpty) '${dueDays.length} payment${dueDays.length > 1 ? 's' : ''} due',
+                              if (incomeDays.isNotEmpty) '${incomeDays.length} credit${incomeDays.length > 1 ? 's' : ''} expected',
+                            ].join(' · '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.w600),
@@ -248,6 +256,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 final item = scheduleItems[index];
                 final dueDate = item.nextDueDate;
                 final isOverdue = dueDate.isBefore(today) && !isCurrentMonth;
+                final isIncome = item.isIncome;
+                final accentColor = isIncome ? AppColors.income : AppColors.accent;
                 return InkWell(
                   borderRadius: BorderRadius.circular(16),
                   onTap: () => _showRecurringSheet(context, ref, financeState, existing: item),
@@ -258,15 +268,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isOverdue ? AppColors.expense.withValues(alpha: 0.5) : AppColors.border,
+                      color: isIncome
+                          ? AppColors.income.withValues(alpha: 0.4)
+                          : (isOverdue ? AppColors.expense.withValues(alpha: 0.5) : AppColors.border),
                     ),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: AppDecorations.iconBadge(AppColors.accent),
-                        child: Icon(LucideIcons.calendar, color: AppColors.accent, size: 20),
+                        decoration: AppDecorations.iconBadge(accentColor),
+                        child: Icon(isIncome ? LucideIcons.wallet : LucideIcons.calendar, color: accentColor, size: 20),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -286,11 +298,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Due ${DateFormatter.formatShort(dueDate)} • ${item.frequency.displayName}',
+                              '${isIncome ? 'Expected' : 'Due'} ${DateFormatter.formatShort(dueDate)} • ${item.frequency.displayName}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                color: isOverdue ? AppColors.expense : AppColors.textMuted,
+                                color: isIncome ? AppColors.income : (isOverdue ? AppColors.expense : AppColors.textMuted),
                                 fontSize: 12,
                               ),
                             ),
@@ -299,12 +311,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        CurrencyFormatter.format(item.amount),
+                        '${isIncome ? '+' : ''}${CurrencyFormatter.format(item.amount)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                          color: isIncome ? AppColors.income : AppColors.textPrimary,
                           fontSize: 15,
                         ),
                       ),
@@ -325,8 +337,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     PaymentFrequency frequency = existing?.frequency ?? PaymentFrequency.monthly;
     DateTime dueDate = existing?.nextDueDate ?? DateTime.now().add(const Duration(days: 7));
     bool isAutoPay = existing?.isAutoPay ?? false;
+    bool isIncome = existing?.isIncome ?? false;
     String? categoryId = existing?.categoryId;
     String? accountId = existing?.accountId;
+    String? companyId = existing?.companyId;
     String? error;
 
     AdaptiveModal.show(
@@ -346,9 +360,21 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 const SizedBox(height: 20),
                 TextField(
                   controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: 'Title (e.g. Netflix, Rent)'),
+                  decoration: InputDecoration(labelText: isIncome ? 'Title (e.g. Salary)' : 'Title (e.g. Netflix, Rent)'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('This is money coming in (e.g. payday)', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                  subtitle: Text(
+                    'Shown as an expected credit, not counted against Safe-to-Spend',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                  ),
+                  value: isIncome,
+                  activeColor: AppColors.income,
+                  onChanged: (v) => setSheetState(() => isIncome = v),
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: amountCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -380,7 +406,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (financeState.categories.isNotEmpty)
+                if (isIncome && financeState.companies.isNotEmpty)
+                  DropdownButtonFormField<String?>(
+                    isExpanded: true,
+                    value: companyId,
+                    decoration: const InputDecoration(labelText: 'Company (optional)'),
+                    dropdownColor: AppColors.surface,
+                    items: [
+                      const DropdownMenuItem<String?>(value: null, child: Text('None')),
+                      ...financeState.companies.map((c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name))),
+                    ],
+                    onChanged: (v) => setSheetState(() => companyId = v),
+                  )
+                else if (!isIncome && financeState.categories.isNotEmpty)
                   DropdownButtonFormField<String?>(
                     isExpanded: true,
                     value: categoryId,
@@ -397,7 +435,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   DropdownButtonFormField<String?>(
                     isExpanded: true,
                     value: accountId,
-                    decoration: const InputDecoration(labelText: 'Pay From Account (optional)'),
+                    decoration: InputDecoration(labelText: isIncome ? 'Credited To Account (optional)' : 'Pay From Account (optional)'),
                     dropdownColor: AppColors.surface,
                     items: [
                       const DropdownMenuItem<String?>(value: null, child: Text('None')),
@@ -435,9 +473,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             amount: amount,
                             frequency: frequency,
                             nextDueDate: dueDate,
-                            categoryId: categoryId,
+                            categoryId: isIncome ? null : categoryId,
                             accountId: accountId,
                             isAutoPay: isAutoPay,
+                            isIncome: isIncome,
+                            companyId: isIncome ? companyId : null,
                           );
                         } else {
                           await notifier.updateRecurringPayment(
@@ -449,6 +489,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             categoryId: categoryId,
                             accountId: accountId,
                             isAutoPay: isAutoPay,
+                            isIncome: isIncome,
+                            companyId: companyId,
                           );
                         }
                         if (!ctx.mounted) return;

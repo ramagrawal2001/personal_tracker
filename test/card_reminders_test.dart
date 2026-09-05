@@ -127,4 +127,16 @@ void main() {
     );
     expect(PaymentReminders.compute(stateWith(recurring: [rec]), now), isEmpty);
   });
+
+  test('a payday reminder (isIncome) says "expected", not "due"', () {
+    final payday = RecurringPaymentModel(
+      id: 'r2', title: 'Acme Corp salary', amount: 80000,
+      frequency: PaymentFrequency.monthly, nextDueDate: DateTime(2026, 6, 25),
+      isIncome: true, companyId: 'co1',
+    );
+    final r = PaymentReminders.compute(stateWith(recurring: [payday]), now);
+    expect(r.length, 2);
+    expect(r.every((e) => e.title.contains('expected')), isTrue);
+    expect(r.any((e) => e.title.contains('due')), isFalse);
+  });
 }

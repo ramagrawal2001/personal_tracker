@@ -30,6 +30,7 @@ const Map<Type, String> kTableForModel = {
   RecurringPaymentModel: 'recurring_payments',
   InvestmentModel: 'investments',
   GoalModel: 'goals',
+  CompanyModel: 'companies',
   NoteModel: 'notes',
 };
 
@@ -44,6 +45,7 @@ const List<String> kSyncedTables = <String>[
   'recurring_payments',
   'investments',
   'goals',
+  'companies',
   'notes',
 ];
 
@@ -150,6 +152,8 @@ extension TransactionCloud on TransactionModel {
         'credit_card_id': creditCardId,
         'loan_id': loanId,
         'investment_id': investmentId,
+        'company_id': companyId,
+        'is_external_to_account': isExternalToAccount,
         'sync_status': syncStatus.name,
         'tags': tags,
         'splits': splits.map((s) => s.toMap()).toList(),
@@ -177,6 +181,8 @@ extension TransactionCloud on TransactionModel {
         creditCardId: m['credit_card_id'] as String?,
         loanId: m['loan_id'] as String?,
         investmentId: m['investment_id'] as String?,
+        companyId: m['company_id'] as String?,
+        isExternalToAccount: _bool(m['is_external_to_account']),
         syncStatus: SyncStatus.values.byName(m['sync_status'] as String? ?? 'synced'),
         createdAt: _dt(m['created_at']),
         updatedAt: _dt(m['updated_at']),
@@ -328,6 +334,8 @@ extension RecurringPaymentCloud on RecurringPaymentModel {
         'category_id': categoryId,
         'account_id': accountId,
         'is_auto_pay': isAutoPay,
+        'is_income': isIncome,
+        'company_id': companyId,
         'is_deleted': isDeleted,
         'deleted_at': _isoN(isDeleted ? updatedAt : null),
         'created_at': _iso(updatedAt),
@@ -343,6 +351,8 @@ extension RecurringPaymentCloud on RecurringPaymentModel {
         categoryId: m['category_id'] as String?,
         accountId: m['account_id'] as String?,
         isAutoPay: _bool(m['is_auto_pay']),
+        isIncome: _bool(m['is_income']),
+        companyId: m['company_id'] as String?,
         updatedAt: _dt(m['updated_at']),
         isDeleted: _bool(m['is_deleted']),
       );
@@ -360,6 +370,7 @@ extension InvestmentCloud on InvestmentModel {
         'current_value': currentValue,
         'monthly_sip_amount': monthlySipAmount,
         'sip_day': sipDay,
+        'reference_number': referenceNumber,
         'is_deleted': isDeleted,
         'deleted_at': _isoN(isDeleted ? updatedAt : null),
         'created_at': _iso(updatedAt),
@@ -374,6 +385,7 @@ extension InvestmentCloud on InvestmentModel {
         currentValue: _d(m['current_value'] ?? 0),
         monthlySipAmount: _d(m['monthly_sip_amount'] ?? 0),
         sipDay: _int(m['sip_day'] ?? 1),
+        referenceNumber: m['reference_number'] as String?,
         updatedAt: _dt(m['updated_at']),
         isDeleted: _bool(m['is_deleted']),
       );
@@ -405,6 +417,35 @@ extension GoalCloud on GoalModel {
         targetDate: _dtN(m['target_date']),
         icon: m['icon'] as String? ?? 'target',
         colorHex: m['color_hex'] as String? ?? '0xFF6366F1',
+        updatedAt: _dt(m['updated_at']),
+        isDeleted: _bool(m['is_deleted']),
+      );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Companies
+// ═══════════════════════════════════════════════════════════════════════════
+extension CompanyCloud on CompanyModel {
+  Map<String, dynamic> toCloudJson() => {
+        'id': id,
+        'name': name,
+        'joined_date': _isoN(joinedDate),
+        'is_current_employer': isCurrentEmployer,
+        'default_bank_account_id': defaultBankAccountId,
+        'default_pf_amount': defaultPfAmount,
+        'is_deleted': isDeleted,
+        'deleted_at': _isoN(isDeleted ? updatedAt : null),
+        'created_at': _iso(updatedAt),
+        'updated_at': _iso(updatedAt),
+      };
+
+  static CompanyModel fromCloud(Map<String, dynamic> m) => CompanyModel(
+        id: m['id'] as String,
+        name: m['name'] as String,
+        joinedDate: _dtN(m['joined_date']),
+        isCurrentEmployer: _bool(m['is_current_employer']),
+        defaultBankAccountId: m['default_bank_account_id'] as String?,
+        defaultPfAmount: _dN(m['default_pf_amount']),
         updatedAt: _dt(m['updated_at']),
         isDeleted: _bool(m['is_deleted']),
       );

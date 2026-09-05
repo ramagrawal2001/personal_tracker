@@ -337,16 +337,25 @@ return SingleChildScrollView(
     );
   }
 
-  void _showEditCardSheet(CardModel card) {
+  Future<void> _showEditCardSheet(CardModel card) async {
+    // Decrypt the existing sensitive fields (if any) so the edit form opens
+    // pre-filled instead of blank — previously it always started empty,
+    // which looked like the saved number/CVV/PIN had been lost.
+    final cipher = ref.read(secretCipherServiceProvider);
+    if (!cipher.isReady) await cipher.restoreFromCache();
+    if (!mounted) return;
+    final hasSecrets = card.encCardNumber != null || card.encCvv != null || card.encPin != null;
+    final secretsLocked = !cipher.isReady && hasSecrets;
+
     final nameCtrl = TextEditingController(text: card.name);
     final bankCtrl = TextEditingController(text: card.bank);
     final holderCtrl = TextEditingController(text: card.cardholderName);
     final limitCtrl = TextEditingController(text: card.creditLimit.toStringAsFixed(0));
     final statementDayCtrl = TextEditingController(text: '${card.statementDay}');
     final dueDayCtrl = TextEditingController(text: '${card.dueDay}');
-    final numCtrl = TextEditingController();
-    final cvvCtrl = TextEditingController();
-    final pinCtrl = TextEditingController();
+    final numCtrl = TextEditingController(text: cipher.isReady ? (cipher.decryptField(card.encCardNumber) ?? '') : '');
+    final cvvCtrl = TextEditingController(text: cipher.isReady ? (cipher.decryptField(card.encCvv) ?? '') : '');
+    final pinCtrl = TextEditingController(text: cipher.isReady ? (cipher.decryptField(card.encPin) ?? '') : '');
     final isCredit = card.cardType == CardType.credit;
     final isDebit = card.cardType == CardType.debit;
     final linkableAccounts = ref
@@ -435,10 +444,17 @@ return SingleChildScrollView(
                   Icon(LucideIcons.lock, size: 13, color: AppColors.primary),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(card.encCardNumber != null ? 'Replace sensitive details' : 'Add sensitive details',
+                    child: Text(hasSecrets ? 'Sensitive details' : 'Add sensitive details',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
                   ),
                 ]),
+                if (secretsLocked) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Encrypted details are locked on this device — sign in again to view them. Leave fields blank to keep the saved values.',
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 TextField(
                   controller: numCtrl,
@@ -1563,7 +1579,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                           child: _buildDropdown<int>(
                             label: 'Statement Day',
                             value: _statementDay,
-                            items: List.generate(28, (i) => i + 1),
+                            items: List.generate(31, (i) => i + 1),
                             display: (v) => '${v}th',
                             onChanged: (v) {
                               if (v != null) setState(() => _statementDay = v);
@@ -1575,7 +1591,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                           child: _buildDropdown<int>(
                             label: 'Due Day',
                             value: _dueDay,
-                            items: List.generate(28, (i) => i + 1),
+                            items: List.generate(31, (i) => i + 1),
                             display: (v) => '${v}th',
                             onChanged: (v) {
                               if (v != null) setState(() => _dueDay = v);

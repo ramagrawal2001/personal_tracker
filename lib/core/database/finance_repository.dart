@@ -38,6 +38,7 @@ const List<String> _financeCloudTables = <String>[
   'recurring_payments',
   'investments',
   'goals',
+  'companies',
 ];
 
 /// Page size for [FinanceNotifier.refreshFromCloud]'s paginated fetch —
@@ -55,6 +56,7 @@ class FinanceState {
   final List<RecurringPaymentModel> recurringPayments;
   final List<InvestmentModel> investments;
   final List<GoalModel> goals;
+  final List<CompanyModel> companies;
   final double emergencyBuffer;
   final String currencySymbol;
   final bool isBiometricEnabled;
@@ -85,6 +87,7 @@ class FinanceState {
     required this.recurringPayments,
     required this.investments,
     required this.goals,
+    this.companies = const [],
     this.emergencyBuffer = 20000.0,
     this.currencySymbol = '₹',
     this.isBiometricEnabled = false,
@@ -108,6 +111,13 @@ class FinanceState {
 
   double get totalMonthlySipAmount {
     return investments.fold(0.0, (sum, i) => sum + i.monthlySipAmount);
+  }
+
+  /// PF balance is just an EPF-typed Investment row's currentValue — already
+  /// folded into totalInvestmentCurrentValue/totalAssets automatically. This
+  /// getter exists purely so a PF-specific UI tile doesn't need its own filter.
+  double get totalProvidentFundValue {
+    return investments.where((i) => i.type == InvestmentType.epf).fold(0.0, (sum, i) => sum + i.currentValue);
   }
 
   /// Returns all descendant category IDs (including self) for a given category ID.
@@ -134,20 +144,34 @@ class FinanceState {
   /// Dynamic Balance Calculation rule:
   /// Calculated Balance = Opening Balance + Income + Transfers In - Expenses - Transfers Out - Payments
   List<AccountModel> get accountsWithCalculatedBalances {
+    // A credit-card charge/refund needs *some* real `accountId` (the cloud
+    // schema's FK requires one), but that account is just a reference — the
+    // actual money movement is the card's own `currentOutstanding` (mutated
+    // in add/update/deleteTransaction). Skip those rows here so the
+    // reference account isn't double-counted.
+    final creditCardIds = {for (final c in creditCards) if (c.cardType == CardType.credit) c.id};
     return accounts.map((acc) {
       double calc = acc.openingBalance;
 
       for (var tx in transactions) {
         if (tx.accountId == acc.id) {
-          if (tx.type == TransactionType.income || tx.type == TransactionType.refund) {
-            calc += tx.amount;
-          } else if (tx.type == TransactionType.expense ||
-              tx.type == TransactionType.transfer ||
-              tx.type == TransactionType.creditCardPayment ||
-              tx.type == TransactionType.loanPayment ||
-              tx.type == TransactionType.investment ||
-              tx.type == TransactionType.adjustment) {
-            calc -= tx.amount;
+          final isCardCharge = tx.creditCardId != null &&
+              creditCardIds.contains(tx.creditCardId) &&
+              (tx.type == TransactionType.expense || tx.type == TransactionType.refund);
+          // A salary-linked PF contribution (isExternalToAccount): the money
+          // was diverted by the employer before it ever reached this account,
+          // so it must not be debited here either — see logSalary.
+          if (!isCardCharge && !tx.isExternalToAccount) {
+            if (tx.type == TransactionType.income || tx.type == TransactionType.refund) {
+              calc += tx.amount;
+            } else if (tx.type == TransactionType.expense ||
+                tx.type == TransactionType.transfer ||
+                tx.type == TransactionType.creditCardPayment ||
+                tx.type == TransactionType.loanPayment ||
+                tx.type == TransactionType.investment ||
+                tx.type == TransactionType.adjustment) {
+              calc -= tx.amount;
+            }
           }
         }
 
@@ -192,6 +216,9 @@ class FinanceState {
     };
     final liquidAccounts = accounts.where((a) => a.isActive && liquidTypes.contains(a.type)).toList();
     final now = DateTime.now();
+    // See accountsWithCalculatedBalances: a credit-card charge/refund's
+    // `accountId` is just an FK reference, not real money movement.
+    final creditCardIds = {for (final c in creditCards) if (c.cardType == CardType.credit) c.id};
 
     return List.generate(months, (i) {
       final monthsAgo = months - 1 - i;
@@ -201,7 +228,10 @@ class FinanceState {
         double calc = acc.openingBalance;
         for (final tx in transactions) {
           if (tx.date.isAfter(monthEnd)) continue;
-          if (tx.accountId == acc.id) {
+          final isCardCharge = tx.creditCardId != null &&
+              creditCardIds.contains(tx.creditCardId) &&
+              (tx.type == TransactionType.expense || tx.type == TransactionType.refund);
+          if (tx.accountId == acc.id && !isCardCharge && !tx.isExternalToAccount) {
             if (tx.type == TransactionType.income || tx.type == TransactionType.refund) {
               calc += tx.amount;
             } else if (tx.type == TransactionType.expense ||
@@ -253,6 +283,23 @@ class FinanceState {
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
+  /// Net salary/other income logged this month, grouped by company. Only
+  /// `income`-type transactions count (a linked PF-contribution leg is
+  /// `TransactionType.investment`, already excluded here — see logSalary).
+  Map<String, double> monthlyIncomeByCompany({DateTime? month}) {
+    final m = month ?? DateTime.now();
+    return {
+      for (final c in companies)
+        c.id: transactions
+            .where((t) =>
+                t.companyId == c.id &&
+                t.type == TransactionType.income &&
+                t.date.month == m.month &&
+                t.date.year == m.year)
+            .fold(0.0, (sum, t) => sum + t.amount),
+    };
+  }
+
   /// Monthly Expenses (Current Month) - uses local time for consistency with transaction dates
   double get monthlyExpenses {
     final now = DateTime.now();
@@ -301,6 +348,9 @@ class FinanceState {
     final cutoff = now.add(const Duration(days: 30));
     double total = 0.0;
     for (final p in recurringPayments) {
+      // An expected incoming credit (e.g. a payday reminder) is not a
+      // liability — it must not reduce Safe-to-Spend the way a bill does.
+      if (p.isIncome) continue;
       // Calculate all occurrences within the next 30 days
       DateTime occurrence = p.nextDueDate;
       while (!occurrence.isAfter(cutoff)) {
@@ -347,6 +397,7 @@ class FinanceState {
     List<RecurringPaymentModel>? recurringPayments,
     List<InvestmentModel>? investments,
     List<GoalModel>? goals,
+    List<CompanyModel>? companies,
     double? emergencyBuffer,
     String? currencySymbol,
     bool? isBiometricEnabled,
@@ -366,6 +417,7 @@ class FinanceState {
       recurringPayments: recurringPayments ?? this.recurringPayments,
       investments: investments ?? this.investments,
       goals: goals ?? this.goals,
+      companies: companies ?? this.companies,
       emergencyBuffer: emergencyBuffer ?? this.emergencyBuffer,
       currencySymbol: currencySymbol ?? this.currencySymbol,
       isBiometricEnabled: isBiometricEnabled ?? this.isBiometricEnabled,
@@ -467,6 +519,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       recurringPayments: [],
       investments: [],
       goals: [],
+      companies: [],
     );
   }
 
@@ -516,6 +569,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       final goals = (await (_db.select(_db.goals)..where((t) => t.isDeleted.equals(false))).get())
           .map((e) => e.toModel())
           .toList();
+      final companies = (await (_db.select(_db.companies)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
 
       if (categories.isEmpty) {
         await ensureDefaultCategoriesSeeded(_db);
@@ -534,6 +590,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         recurringPayments: recurringPayments,
         investments: investments,
         goals: goals,
+        companies: companies,
         emergencyBuffer: prefs.getDouble(_kEmergencyBuffer) ?? 20000.0,
         currencySymbol: prefs.getString(_kCurrencySymbol) ?? '₹',
         isBiometricEnabled: prefs.getBool(_kBiometricEnabled) ?? false,
@@ -619,6 +676,10 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         for (final r in fetched['goals']!) {
           await _db.into(_db.goals).insertOnConflictUpdate(GoalCloud.fromCloud(r).toCompanion());
         }
+        await _db.delete(_db.companies).go();
+        for (final r in fetched['companies']!) {
+          await _db.into(_db.companies).insertOnConflictUpdate(CompanyCloud.fromCloud(r).toCompanion());
+        }
       });
 
       var categories = fetched['categories']!.map(CategoryCloud.fromCloud).toList();
@@ -640,6 +701,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         recurringPayments: fetched['recurring_payments']!.map(RecurringPaymentCloud.fromCloud).toList(),
         investments: fetched['investments']!.map(InvestmentCloud.fromCloud).toList(),
         goals: fetched['goals']!.map(GoalCloud.fromCloud).toList(),
+        companies: fetched['companies']!.map(CompanyCloud.fromCloud).toList(),
         emergencyBuffer: settings?.emergencyBuffer,
         currencySymbol: settings?.currencySymbol,
         isRoundUpEnabled: settings?.isRoundUpEnabled,
@@ -738,6 +800,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     await pushAll('recurring_payments', state.recurringPayments, (p) => p.toCloudJson());
     await pushAll('investments', state.investments, (i) => i.toCloudJson());
     await pushAll('goals', state.goals, (g) => g.toCloudJson());
+    await pushAll('companies', state.companies, (c) => c.toCloudJson());
   }
 
   void _fireAndForget(Future<void> Function() op, String label) {
@@ -851,6 +914,11 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         await _db.into(_db.goals).insertOnConflictUpdate(m.toCompanion());
         state = state.copyWith(goals: _spliceById(state.goals, m, (g) => g.id, false));
         break;
+      case 'companies':
+        final m = CompanyCloud.fromCloud(row);
+        await _db.into(_db.companies).insertOnConflictUpdate(m.toCompanion());
+        state = state.copyWith(companies: _spliceById(state.companies, m, (c) => c.id, false));
+        break;
       default:
         debugPrint('FinanceNotifier._applyRowLocally: unknown table "$table"');
     }
@@ -887,6 +955,8 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     String? creditCardId,
     String? loanId,
     String? investmentId,
+    String? companyId,
+    bool isExternalToAccount = false,
     bool isOnline = true,
   }) async {
     final now = DateTime.now();
@@ -905,6 +975,8 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       creditCardId: creditCardId,
       loanId: loanId,
       investmentId: investmentId,
+      companyId: companyId,
+      isExternalToAccount: isExternalToAccount,
       syncStatus: isOnline ? SyncStatus.synced : SyncStatus.pending,
       createdAt: now,
       updatedAt: now,
@@ -1388,6 +1460,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     required double currentValue,
     double monthlySipAmount = 0.0,
     int sipDay = 1,
+    String? referenceNumber,
   }) async {
     final draft = InvestmentModel(
       id: _uuid.v4(),
@@ -1397,16 +1470,11 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       currentValue: currentValue,
       monthlySipAmount: monthlySipAmount,
       sipDay: sipDay,
+      referenceNumber: referenceNumber,
     );
 
     final serverTs = await pushToCloud('investments', draft.toCloudJson());
-    final saved = serverTs == null
-        ? draft
-        : InvestmentModel(
-            id: draft.id, name: draft.name, type: draft.type,
-            investedAmount: draft.investedAmount, currentValue: draft.currentValue,
-            monthlySipAmount: draft.monthlySipAmount, sipDay: draft.sipDay, updatedAt: serverTs,
-          );
+    final saved = serverTs == null ? draft : draft.copyWith(updatedAt: serverTs);
 
     await _db.into(_db.investments).insertOnConflictUpdate(saved.toCompanion());
     state = state.copyWith(investments: [...state.investments, saved]);
@@ -1460,6 +1528,177 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       GoalsCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now)),
     );
     state = state.copyWith(goals: state.goals.where((g) => g.id != id).toList());
+  }
+
+  // ── Companies (employers) ────────────────────────────────────────────────
+
+  Future<void> addCompany({
+    required String name,
+    DateTime? joinedDate,
+    bool isCurrentEmployer = false,
+    String? defaultBankAccountId,
+    double? defaultPfAmount,
+  }) async {
+    final draft = CompanyModel(
+      id: _uuid.v4(),
+      name: name,
+      joinedDate: joinedDate,
+      isCurrentEmployer: isCurrentEmployer,
+      defaultBankAccountId: defaultBankAccountId,
+      defaultPfAmount: defaultPfAmount,
+    );
+
+    final serverTs = await pushToCloud('companies', draft.toCloudJson());
+    var saved = serverTs != null ? draft.copyWith(updatedAt: serverTs) : draft;
+
+    await _db.into(_db.companies).insertOnConflictUpdate(saved.toCompanion());
+    state = state.copyWith(companies: [...state.companies, saved]);
+
+    if (isCurrentEmployer) await setCurrentEmployer(saved.id);
+  }
+
+  Future<void> updateCompany(
+    String id, {
+    String? name,
+    DateTime? joinedDate,
+    String? defaultBankAccountId,
+    double? defaultPfAmount,
+  }) async {
+    final existing = state.companies.where((c) => c.id == id).toList();
+    if (existing.isEmpty) return;
+    final draft = existing.first.copyWith(
+      name: name,
+      joinedDate: joinedDate,
+      defaultBankAccountId: defaultBankAccountId,
+      defaultPfAmount: defaultPfAmount,
+    );
+
+    final serverTs = await pushToCloud('companies', draft.toCloudJson());
+    final saved = serverTs != null ? draft.copyWith(updatedAt: serverTs) : draft;
+
+    await _db.into(_db.companies).insertOnConflictUpdate(saved.toCompanion());
+    state = state.copyWith(companies: state.companies.map((c) => c.id == id ? saved : c).toList());
+  }
+
+  /// Marks [id] as the current employer and every other company as not —
+  /// the "switch jobs" action. Pushes every changed row before touching
+  /// local state, same as every other mutator here; a partial failure logs
+  /// and stops rather than leaving two companies marked current.
+  Future<void> setCurrentEmployer(String id) async {
+    if (!state.companies.any((c) => c.id == id)) return;
+    final now = DateTime.now();
+    final updated = <CompanyModel>[];
+    for (final c in state.companies) {
+      final shouldBeCurrent = c.id == id;
+      if (c.isCurrentEmployer == shouldBeCurrent) {
+        updated.add(c);
+        continue;
+      }
+      final draft = c.copyWith(isCurrentEmployer: shouldBeCurrent, updatedAt: now);
+      final serverTs = await pushToCloud('companies', draft.toCloudJson());
+      final saved = serverTs != null ? draft.copyWith(updatedAt: serverTs) : draft;
+      await _db.into(_db.companies).insertOnConflictUpdate(saved.toCompanion());
+      updated.add(saved);
+    }
+    state = state.copyWith(companies: updated);
+  }
+
+  Future<void> deleteCompany(String id) async {
+    final gone = state.companies.where((c) => c.id == id).toList();
+    if (gone.isEmpty) return;
+    final now = DateTime.now();
+    final tombstone = gone.first.copyWith(isDeleted: true, updatedAt: now);
+
+    await pushToCloud('companies', tombstone.toCloudJson());
+    _stashDeleted('companies', gone.first.toCloudJson());
+
+    await (_db.update(_db.companies)..where((c) => c.id.equals(id))).write(
+      CompaniesCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now)),
+    );
+    state = state.copyWith(companies: state.companies.where((c) => c.id != id).toList());
+  }
+
+  // ── Salary logging ────────────────────────────────────────────────────────
+
+  /// Logs a salary credit: an income transaction for the net amount credited
+  /// to [bankAccountId], plus — if [pfContribution] is given — a linked
+  /// investment-type transaction that bumps [pfInvestmentId]'s balance
+  /// without touching the bank account (see accountsWithCalculatedBalances'
+  /// `isExternalToAccount` handling: that money was diverted by the employer
+  /// before it ever reached the bank).
+  Future<void> logSalary({
+    required String companyId,
+    required String bankAccountId,
+    required double netAmount,
+    double? pfContribution,
+    String? pfInvestmentId,
+    required DateTime date,
+    String? notes,
+  }) async {
+    // Built as one atomic push-then-write, same shape as addTransaction's own
+    // transaction+side-effect bundling — two separate addTransaction() calls
+    // would let the net-credit succeed while the PF leg fails (or vice
+    // versa), leaving a half-logged salary with no way to tell from the UI.
+    final now = DateTime.now();
+    final hasPf = pfContribution != null && pfContribution > 0 && pfInvestmentId != null;
+
+    final incomeDraft = TransactionModel(
+      id: _uuid.v4(),
+      accountId: bankAccountId,
+      type: TransactionType.income,
+      amount: netAmount,
+      categoryId: 'cat_salary',
+      date: date,
+      notes: notes,
+      companyId: companyId,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    TransactionModel? pfDraft;
+    InvestmentModel? adjustedInvestment;
+    if (hasPf) {
+      pfDraft = TransactionModel(
+        id: _uuid.v4(),
+        accountId: bankAccountId,
+        type: TransactionType.investment,
+        amount: pfContribution,
+        date: date,
+        investmentId: pfInvestmentId,
+        companyId: companyId,
+        isExternalToAccount: true,
+        createdAt: now,
+        updatedAt: now,
+      );
+      final invIdx = state.investments.indexWhere((i) => i.id == pfInvestmentId);
+      if (invIdx != -1) {
+        final inv = state.investments[invIdx];
+        adjustedInvestment = inv.copyWith(
+          investedAmount: inv.investedAmount + pfContribution,
+          currentValue: inv.currentValue + pfContribution,
+          updatedAt: now,
+        );
+      }
+    }
+
+    final incomeTs = await pushToCloud('transactions', incomeDraft.toCloudJson());
+    final pfTs = pfDraft == null ? null : await pushToCloud('transactions', pfDraft.toCloudJson());
+    final invTs = adjustedInvestment == null ? null : await pushToCloud('investments', adjustedInvestment.toCloudJson());
+
+    final savedIncome = incomeTs != null ? incomeDraft.copyWith(updatedAt: incomeTs) : incomeDraft;
+    final savedPf = pfDraft == null ? null : (pfTs != null ? pfDraft.copyWith(updatedAt: pfTs) : pfDraft);
+    final savedInvestment =
+        adjustedInvestment == null ? null : (invTs != null ? adjustedInvestment.copyWith(updatedAt: invTs) : adjustedInvestment);
+
+    await _db.into(_db.transactions).insertOnConflictUpdate(savedIncome.toCompanion());
+    if (savedPf != null) await _db.into(_db.transactions).insertOnConflictUpdate(savedPf.toCompanion());
+    if (savedInvestment != null) await _db.into(_db.investments).insertOnConflictUpdate(savedInvestment.toCompanion());
+
+    state = state.copyWith(
+      transactions: [savedIncome, if (savedPf != null) savedPf, ...state.transactions],
+      investments:
+          savedInvestment != null ? _spliceById(state.investments, savedInvestment, (i) => i.id, false) : state.investments,
+    );
   }
 
   // ── Settings / preferences ──────────────────────────────────────────────
@@ -1846,6 +2085,8 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     String? categoryId,
     String? accountId,
     bool isAutoPay = false,
+    bool isIncome = false,
+    String? companyId,
   }) async {
     final draft = RecurringPaymentModel(
       id: _uuid.v4(),
@@ -1856,16 +2097,12 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       categoryId: categoryId,
       accountId: accountId,
       isAutoPay: isAutoPay,
+      isIncome: isIncome,
+      companyId: companyId,
     );
 
     final serverTs = await pushToCloud('recurring_payments', draft.toCloudJson());
-    final saved = serverTs == null
-        ? draft
-        : RecurringPaymentModel(
-            id: draft.id, title: draft.title, amount: draft.amount, frequency: draft.frequency,
-            nextDueDate: draft.nextDueDate, categoryId: draft.categoryId, accountId: draft.accountId,
-            isAutoPay: draft.isAutoPay, updatedAt: serverTs,
-          );
+    final saved = serverTs == null ? draft : draft.copyWith(updatedAt: serverTs);
 
     await _db.into(_db.recurringPayments).insertOnConflictUpdate(saved.toCompanion());
     state = state.copyWith(recurringPayments: [...state.recurringPayments, saved]);
@@ -1879,29 +2116,25 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     String? categoryId,
     String? accountId,
     bool? isAutoPay,
+    bool? isIncome,
+    String? companyId,
   }) async {
     final existing = state.recurringPayments.where((p) => p.id == id).toList();
     if (existing.isEmpty) return;
-    final p = existing.first;
-    final draft = RecurringPaymentModel(
-      id: p.id,
-      title: title ?? p.title,
-      amount: amount ?? p.amount,
-      frequency: frequency ?? p.frequency,
-      nextDueDate: nextDueDate ?? p.nextDueDate,
-      categoryId: categoryId ?? p.categoryId,
-      accountId: accountId ?? p.accountId,
-      isAutoPay: isAutoPay ?? p.isAutoPay,
+    final draft = existing.first.copyWith(
+      title: title,
+      amount: amount,
+      frequency: frequency,
+      nextDueDate: nextDueDate,
+      categoryId: categoryId,
+      accountId: accountId,
+      isAutoPay: isAutoPay,
+      isIncome: isIncome,
+      companyId: companyId,
     );
 
     final serverTs = await pushToCloud('recurring_payments', draft.toCloudJson());
-    final saved = serverTs == null
-        ? draft
-        : RecurringPaymentModel(
-            id: draft.id, title: draft.title, amount: draft.amount, frequency: draft.frequency,
-            nextDueDate: draft.nextDueDate, categoryId: draft.categoryId, accountId: draft.accountId,
-            isAutoPay: draft.isAutoPay, updatedAt: serverTs,
-          );
+    final saved = serverTs == null ? draft : draft.copyWith(updatedAt: serverTs);
 
     await _db.into(_db.recurringPayments).insertOnConflictUpdate(saved.toCompanion());
     state = state.copyWith(recurringPayments: state.recurringPayments.map((x) => x.id == id ? saved : x).toList());
@@ -1947,28 +2180,26 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     state = state.copyWith(investments: state.investments.where((i) => i.id != id).toList());
   }
 
-  Future<void> updateInvestment(String id, {String? name, double? currentValue, double? investedAmount, double? monthlySipAmount}) async {
+  Future<void> updateInvestment(
+    String id, {
+    String? name,
+    double? currentValue,
+    double? investedAmount,
+    double? monthlySipAmount,
+    String? referenceNumber,
+  }) async {
     final existing = state.investments.where((inv) => inv.id == id).toList();
     if (existing.isEmpty) return;
-    final inv = existing.first;
-    final draft = InvestmentModel(
-      id: inv.id,
-      name: name ?? inv.name,
-      type: inv.type,
-      investedAmount: investedAmount ?? inv.investedAmount,
-      currentValue: currentValue ?? inv.currentValue,
-      monthlySipAmount: monthlySipAmount ?? inv.monthlySipAmount,
-      sipDay: inv.sipDay,
+    final draft = existing.first.copyWith(
+      name: name,
+      investedAmount: investedAmount,
+      currentValue: currentValue,
+      monthlySipAmount: monthlySipAmount,
+      referenceNumber: referenceNumber,
     );
 
     final serverTs = await pushToCloud('investments', draft.toCloudJson());
-    final saved = serverTs == null
-        ? draft
-        : InvestmentModel(
-            id: draft.id, name: draft.name, type: draft.type,
-            investedAmount: draft.investedAmount, currentValue: draft.currentValue,
-            monthlySipAmount: draft.monthlySipAmount, sipDay: draft.sipDay, updatedAt: serverTs,
-          );
+    final saved = serverTs == null ? draft : draft.copyWith(updatedAt: serverTs);
 
     await _db.into(_db.investments).insertOnConflictUpdate(saved.toCompanion());
     state = state.copyWith(investments: state.investments.map((x) => x.id == id ? saved : x).toList());

@@ -95,6 +95,7 @@ enum InvestmentType {
   recurringDeposit,
   gold,
   ppf,
+  epf,
   crypto,
   other;
 
@@ -112,6 +113,8 @@ enum InvestmentType {
         return 'Gold & Silver';
       case InvestmentType.ppf:
         return 'PPF / NPS';
+      case InvestmentType.epf:
+        return 'EPF / PF';
       case InvestmentType.crypto:
         return 'Crypto';
       case InvestmentType.other:

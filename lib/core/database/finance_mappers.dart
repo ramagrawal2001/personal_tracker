@@ -97,6 +97,8 @@ extension TransactionEntryMapper on TransactionEntry {
       tags: tags.isEmpty ? const [] : tags.split(',').where((t) => t.isNotEmpty).toList(),
       creditCardId: creditCardId,
       loanId: loanId,
+      companyId: companyId,
+      isExternalToAccount: isExternalToAccount,
       syncStatus: SyncStatus.values.byName(syncStatus),
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -121,6 +123,8 @@ extension TransactionModelMapper on TransactionModel {
       tags: Value(tags.join(',')),
       creditCardId: Value(creditCardId),
       loanId: Value(loanId),
+      companyId: Value(companyId),
+      isExternalToAccount: Value(isExternalToAccount),
       syncStatus: Value(syncStatus.name),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -278,6 +282,8 @@ extension RecurringPaymentEntryMapper on RecurringPaymentEntry {
       categoryId: categoryId,
       accountId: accountId,
       isAutoPay: isAutoPay,
+      isIncome: isIncome,
+      companyId: companyId,
       updatedAt: updatedAt,
       isDeleted: isDeleted,
     );
@@ -295,6 +301,8 @@ extension RecurringPaymentModelMapper on RecurringPaymentModel {
       categoryId: Value(categoryId),
       accountId: Value(accountId),
       isAutoPay: Value(isAutoPay),
+      isIncome: Value(isIncome),
+      companyId: Value(companyId),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: Value(isDeleted ? DateTime.now() : null),
@@ -312,6 +320,7 @@ extension InvestmentEntryMapper on InvestmentEntry {
       currentValue: currentValue,
       monthlySipAmount: monthlySipAmount,
       sipDay: sipDay,
+      referenceNumber: referenceNumber,
       updatedAt: updatedAt,
       isDeleted: isDeleted,
     );
@@ -328,6 +337,7 @@ extension InvestmentModelMapper on InvestmentModel {
       currentValue: Value(currentValue),
       monthlySipAmount: Value(monthlySipAmount),
       sipDay: Value(sipDay),
+      referenceNumber: Value(referenceNumber),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: Value(isDeleted ? DateTime.now() : null),
@@ -361,6 +371,37 @@ extension GoalModelMapper on GoalModel {
       targetDate: Value(targetDate),
       icon: Value(icon),
       colorHex: Value(colorHex),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
+    );
+  }
+}
+
+extension CompanyEntryMapper on CompanyEntry {
+  CompanyModel toModel() {
+    return CompanyModel(
+      id: id,
+      name: name,
+      joinedDate: joinedDate,
+      isCurrentEmployer: isCurrentEmployer,
+      defaultBankAccountId: defaultBankAccountId,
+      defaultPfAmount: defaultPfAmount,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
+    );
+  }
+}
+
+extension CompanyModelMapper on CompanyModel {
+  CompaniesCompanion toCompanion() {
+    return CompaniesCompanion(
+      id: Value(id),
+      name: Value(name),
+      joinedDate: Value(joinedDate),
+      isCurrentEmployer: Value(isCurrentEmployer),
+      defaultBankAccountId: Value(defaultBankAccountId),
+      defaultPfAmount: Value(defaultPfAmount),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: Value(isDeleted ? DateTime.now() : null),

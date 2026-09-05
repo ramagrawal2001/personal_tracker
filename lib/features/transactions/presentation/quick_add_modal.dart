@@ -8,6 +8,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../domain/models/models.dart';
+import 'log_salary_modal.dart';
 
 class QuickAddModal extends ConsumerStatefulWidget {
   final TransactionModel? existing;
@@ -61,10 +62,11 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
   String? _selectedCategoryId;
   String? _selectedCardId;
   String? _selectedLoanId;
-  // Debit card used as the payment instrument for an expense. When set, the
-  // spend is booked against the card's linked bank account (not a separate
-  // card outstanding) and the "From Account" picker is locked to it.
-  String? _selectedDebitCardId;
+  // Debit or credit card used as the payment instrument for an expense. A
+  // debit card books the spend against its linked bank account (not a
+  // separate card outstanding) and locks "From Account" to it; a credit card
+  // charges the card's outstanding balance directly and touches no account.
+  String? _selectedPayCardId;
 
   bool get _isEditing => widget.existing != null;
 
@@ -79,7 +81,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
     _selectedCategoryId = existing?.categoryId;
     _selectedCardId = existing?.creditCardId ?? widget.initialCreditCardId;
     _selectedLoanId = existing?.loanId ?? widget.initialLoanId;
-    _selectedDebitCardId =
+    _selectedPayCardId =
         (existing != null && existing.type == TransactionType.expense) ? existing.creditCardId : null;
     if (existing != null) {
       _amountController.text = existing.amount.toStringAsFixed(existing.amount.truncateToDouble() == existing.amount ? 0 : 2);
@@ -102,7 +104,10 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
     final accounts = financeState.accountsWithCalculatedBalances;
     final categories = financeState.categories;
     final creditCards = financeState.creditCards;
-    final debitCards = creditCards.where((c) => c.cardType == CardType.debit).toList();
+    // Cards selectable as the payment instrument for an expense — debit
+    // (deducts from its linked account) and credit (charges the card's
+    // outstanding balance). Prepaid/forex cards aren't wired for either.
+    final payCards = creditCards.where((c) => c.cardType == CardType.debit || c.cardType == CardType.credit).toList();
     final loans = financeState.loans;
 
     final filteredCategories = categories
@@ -126,29 +131,31 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       _selectedLoanId = loans.isNotEmpty ? loans.first.id : null;
     }
 
-    // Resolve the chosen debit card (expense only). When it has a valid linked
-    // account, lock "From Account" to that account so the spend deducts from it.
-    CardModel? selectedDebitCard;
-    if (_selectedType == TransactionType.expense && _selectedDebitCardId != null) {
-      for (final c in debitCards) {
-        if (c.id == _selectedDebitCardId) {
-          selectedDebitCard = c;
+    // Resolve the chosen pay card (expense only). A debit card with a valid
+    // linked account locks "From Account" to it; a credit card charges the
+    // card directly and needs no bank account at all.
+    CardModel? selectedPayCard;
+    if (_selectedType == TransactionType.expense && _selectedPayCardId != null) {
+      for (final c in payCards) {
+        if (c.id == _selectedPayCardId) {
+          selectedPayCard = c;
           break;
         }
       }
     }
-    if (selectedDebitCard == null) _selectedDebitCardId = null;
+    if (selectedPayCard == null) _selectedPayCardId = null;
+    final isCreditCharge = selectedPayCard?.cardType == CardType.credit;
     AccountModel? debitLinkedAccount;
-    if (selectedDebitCard?.linkedAccountId != null) {
+    if (selectedPayCard?.cardType == CardType.debit && selectedPayCard!.linkedAccountId != null) {
       for (final a in accounts) {
-        if (a.id == selectedDebitCard!.linkedAccountId) {
+        if (a.id == selectedPayCard.linkedAccountId) {
           debitLinkedAccount = a;
           break;
         }
       }
       if (debitLinkedAccount != null) _selectedAccountId = debitLinkedAccount.id;
     }
-    final accountLocked = _isEditing || debitLinkedAccount != null;
+    final accountLocked = _isEditing || debitLinkedAccount != null || isCreditCharge;
 
     final horizontalPadding = context.responsiveHorizontalPadding(mobile: 16, tablet: 24, desktop: 32);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -208,6 +215,23 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 ],
               ),
             ),
+            if (_selectedType == TransactionType.income && !_isEditing) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  icon: Icon(LucideIcons.briefcase, size: 15, color: AppColors.primary),
+                  label: Text(
+                    'Got a salary credit? Log it with a company & PF breakdown →',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    LogSalaryModal.show(context);
+                  },
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
 
             // Amount Input
@@ -308,6 +332,21 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 ],
               ),
             ],
+            if (isCreditCharge) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(LucideIcons.creditCard, size: 13, color: AppColors.textMuted),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Charged to ${selectedPayCard!.name} — no account balance affected',
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 14),
 
             // Destination / Specific Selectors based on Type
@@ -386,12 +425,12 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               const SizedBox(height: 14),
             ],
 
-            if (_selectedType == TransactionType.expense && debitCards.isNotEmpty) ...[
+            if (_selectedType == TransactionType.expense && payCards.isNotEmpty) ...[
               Text('Pay With', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String?>(
                 isExpanded: true,
-                value: _selectedDebitCardId,
+                value: _selectedPayCardId,
                 dropdownColor: AppColors.surface,
                 decoration: InputDecoration(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -405,14 +444,17 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                     value: null,
                     child: Text('Bank account (default)'),
                   ),
-                  ...debitCards.map((c) => DropdownMenuItem<String?>(
+                  ...payCards.map((c) => DropdownMenuItem<String?>(
                         value: c.id,
-                        child: Text('${c.bank} Debit ••${c.last4}', overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          c.cardType == CardType.credit ? '${c.name} ••${c.last4} (Credit)' : '${c.bank} Debit ••${c.last4}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       )),
                 ],
-                onChanged: _isEditing ? null : (val) => setState(() => _selectedDebitCardId = val),
+                onChanged: _isEditing ? null : (val) => setState(() => _selectedPayCardId = val),
               ),
-              if (selectedDebitCard != null && debitLinkedAccount == null) ...[
+              if (selectedPayCard != null && selectedPayCard.cardType == CardType.debit && debitLinkedAccount == null) ...[
                 const SizedBox(height: 6),
                 Text(
                   'Link this card to an account first (Cards → edit this card).',
@@ -448,8 +490,12 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
 
               TextField(
                 controller: _merchantController,
-                decoration: const InputDecoration(
-                  labelText: 'Merchant / Payee Name (e.g. Swiggy, Amazon)',
+                decoration: InputDecoration(
+                  labelText: _selectedType == TransactionType.income && _selectedCategoryId == 'cat_freelance'
+                      ? 'Client / Source (e.g. Acme LLC, Fiverr)'
+                      : _selectedType == TransactionType.income
+                          ? 'Source / Payer Name (Optional)'
+                          : 'Merchant / Payee Name (e.g. Swiggy, Amazon)',
                 ),
               ),
               const SizedBox(height: 14),
@@ -521,6 +567,23 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       return;
     }
 
+    // Resolve the chosen pay card up front.
+    CardModel? payCard;
+    if (_selectedType == TransactionType.expense && _selectedPayCardId != null && !_isEditing) {
+      final state = ref.read(financeNotifierProvider);
+      for (final c in state.creditCards) {
+        if (c.id == _selectedPayCardId) {
+          payCard = c;
+          break;
+        }
+      }
+    }
+    final isCreditCharge = payCard?.cardType == CardType.credit;
+
+    // Every transaction still needs a real `accountId` — the cloud schema's
+    // foreign key requires one, even for a credit-card charge where the
+    // account is just a reference and isn't actually debited (see
+    // accountsWithCalculatedBalances).
     if (_selectedAccountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select an account'), behavior: SnackBarBehavior.floating),
@@ -547,20 +610,16 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       return;
     }
 
-    // Debit-card spend: the card must be linked to an existing account, and the
-    // expense is booked against that account.
+    // Pay-card spend: a debit card must be linked to an existing account and
+    // the expense is booked against that account. A credit card charges the
+    // card's outstanding balance directly — `_selectedAccountId` still rides
+    // along as the required `accountId` reference, but `creditCardId` below
+    // tells `accountsWithCalculatedBalances` to skip debiting it.
     String effectiveAccountId = _selectedAccountId!;
-    String? debitCardId;
-    if (_selectedType == TransactionType.expense && _selectedDebitCardId != null && !_isEditing) {
+    String? payCardId;
+    if (payCard != null && payCard.cardType == CardType.debit) {
+      final linkedId = payCard.linkedAccountId;
       final state = ref.read(financeNotifierProvider);
-      CardModel? card;
-      for (final c in state.creditCards) {
-        if (c.id == _selectedDebitCardId) {
-          card = c;
-          break;
-        }
-      }
-      final linkedId = card?.linkedAccountId;
       final linkOk = linkedId != null && state.accounts.any((a) => a.id == linkedId && !a.isDeleted);
       if (!linkOk) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -569,7 +628,9 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
         return;
       }
       effectiveAccountId = linkedId;
-      debitCardId = card!.id;
+      payCardId = payCard.id;
+    } else if (isCreditCharge) {
+      payCardId = payCard!.id;
     }
 
     final notifier = ref.read(financeNotifierProvider.notifier);
@@ -593,7 +654,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
           merchant: _merchantController.text.trim().isNotEmpty ? _merchantController.text.trim() : null,
           date: _selectedDate,
           description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
-          creditCardId: _selectedType == TransactionType.creditCardPayment ? _selectedCardId : debitCardId,
+          creditCardId: _selectedType == TransactionType.creditCardPayment ? _selectedCardId : payCardId,
           loanId: _selectedType == TransactionType.loanPayment ? _selectedLoanId : null,
         );
       }

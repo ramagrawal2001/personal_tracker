@@ -12,6 +12,7 @@ import '../../features/loans/presentation/loans_screen.dart';
 import '../../features/budgets/presentation/budgets_screen.dart';
 import '../../features/goals/presentation/goals_screen.dart';
 import '../../features/goals/presentation/add_goal_screen.dart';
+import '../../features/companies/presentation/companies_screen.dart';
 
 import '../../features/categories/presentation/categories_screen.dart';
 
@@ -109,6 +110,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         GoRoute(path: '/budgets',      builder: (_, __) => const BudgetsScreen()),
         GoRoute(path: '/goals',        builder: (_, __) => const GoalsScreen()),
         GoRoute(path: '/goals/add',    builder: (_, __) => const AddGoalScreen()),
+        GoRoute(path: '/companies',    builder: (_, __) => const CompaniesScreen()),
         GoRoute(path: '/categories',   builder: (_, __) => const CategoriesScreen()),
         GoRoute(path: '/investments',  builder: (_, __) => const InvestmentsScreen()),
         GoRoute(path: '/recurring',    builder: (_, __) => const CalendarScreen()),

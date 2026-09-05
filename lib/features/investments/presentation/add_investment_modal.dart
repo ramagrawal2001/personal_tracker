@@ -31,8 +31,11 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
   final TextEditingController _currentValController = TextEditingController();
   final TextEditingController _sipController = TextEditingController();
   final TextEditingController _sipDayController = TextEditingController(text: '1');
+  final TextEditingController _referenceNumberController = TextEditingController();
 
   InvestmentType _selectedType = InvestmentType.mutualFundSip;
+
+  bool get _showsReferenceNumber => _selectedType == InvestmentType.epf || _selectedType == InvestmentType.ppf;
 
   @override
   void dispose() {
@@ -41,6 +44,7 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
     _currentValController.dispose();
     _sipController.dispose();
     _sipDayController.dispose();
+    _referenceNumberController.dispose();
     super.dispose();
   }
 
@@ -109,6 +113,16 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                 if (val != null) setState(() => _selectedType = val);
               },
             ),
+            if (_showsReferenceNumber) ...[
+              const SizedBox(height: 14),
+              TextField(
+                controller: _referenceNumberController,
+                decoration: const InputDecoration(
+                  labelText: 'UAN / Reference Number (Optional)',
+                  prefixIcon: Icon(LucideIcons.hash, size: 18),
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
             Row(
               children: [
@@ -203,6 +217,7 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
             currentValue: current,
             monthlySipAmount: sip,
             sipDay: day,
+            referenceNumber: _referenceNumberController.text.trim().isEmpty ? null : _referenceNumberController.text.trim(),
           );
     } catch (e) {
       if (!mounted) return;

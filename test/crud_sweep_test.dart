@@ -368,6 +368,100 @@ void main() {
     });
   });
 
+  group('Companies CRUD', () {
+    test('create → switch current employer → edit → delete', () async {
+      await finance.addCompany(name: 'Acme Corp', isCurrentEmployer: true);
+      await finance.addCompany(name: 'Globex Inc');
+      expect(finance.state.companies.length, 2);
+      expect(finance.state.companies.firstWhere((c) => c.name == 'Acme Corp').isCurrentEmployer, isTrue);
+      expect(finance.state.companies.firstWhere((c) => c.name == 'Globex Inc').isCurrentEmployer, isFalse);
+
+      // Switching jobs: only the new company stays current.
+      final globex = finance.state.companies.firstWhere((c) => c.name == 'Globex Inc');
+      await finance.setCurrentEmployer(globex.id);
+      expect(finance.state.companies.firstWhere((c) => c.name == 'Acme Corp').isCurrentEmployer, isFalse);
+      expect(finance.state.companies.firstWhere((c) => c.name == 'Globex Inc').isCurrentEmployer, isTrue);
+
+      await finance.updateCompany(globex.id, name: 'Globex International');
+      expect(finance.state.companies.firstWhere((c) => c.id == globex.id).name, 'Globex International');
+
+      await finance.deleteCompany(globex.id);
+      expect(finance.state.companies.length, 1);
+      expect(finance.state.companies.single.name, 'Acme Corp');
+    });
+  });
+
+  group('Salary logging', () {
+    test('net amount credits the bank; PF contribution bumps the PF investment without double-debiting',
+        () async {
+      await finance.addAccount(name: 'HDFC Salary', type: AccountType.savingsAccount, openingBalance: 0);
+      final account = finance.state.accounts.single.id;
+      await finance.addCompany(name: 'Acme Corp', isCurrentEmployer: true);
+      final company = finance.state.companies.single.id;
+      await finance.addInvestment(
+        name: 'My EPF',
+        type: InvestmentType.epf,
+        investedAmount: 50000,
+        currentValue: 50000,
+      );
+      final pf = finance.state.investments.single.id;
+
+      await finance.logSalary(
+        companyId: company,
+        bankAccountId: account,
+        netAmount: 80000,
+        pfContribution: 3600,
+        pfInvestmentId: pf,
+        date: DateTime.now(),
+      );
+
+      // Two transactions: the net credit and the PF-contribution leg.
+      expect(finance.state.transactions.length, 2);
+
+      // The bank account reflects only the net amount — the PF leg must not
+      // also debit it (that would double-count a deduction that never
+      // touched the account).
+      expect(finance.state.accountsWithCalculatedBalances.single.calculatedBalance, 80000);
+
+      // The PF investment grew by exactly the contribution.
+      final updatedPf = finance.state.investments.single;
+      expect(updatedPf.currentValue, 53600);
+      expect(updatedPf.investedAmount, 53600);
+
+      // Net salary counts as this month's income for the company.
+      expect(finance.state.monthlyIncomeByCompany()[company], 80000);
+      expect(finance.state.monthlyIncome, 80000);
+    });
+  });
+
+  group('Payday reminders', () {
+    test('an income-type recurring entry does not reduce Safe-to-Spend', () async {
+      await finance.addAccount(name: 'Cash', type: AccountType.cash, openingBalance: 100000);
+      await finance.addRecurringPayment(
+        title: 'Rent',
+        amount: 20000,
+        frequency: PaymentFrequency.monthly,
+        nextDueDate: DateTime.now().add(const Duration(days: 5)),
+      );
+      final billOnlyTotal = finance.state.upcomingPaymentsTotal;
+      expect(billOnlyTotal, greaterThan(0));
+
+      await finance.addCompany(name: 'Acme Corp', isCurrentEmployer: true);
+      final company = finance.state.companies.single.id;
+      await finance.addRecurringPayment(
+        title: 'Acme Corp salary',
+        amount: 80000,
+        frequency: PaymentFrequency.monthly,
+        nextDueDate: DateTime.now().add(const Duration(days: 5)),
+        isIncome: true,
+        companyId: company,
+      );
+
+      // The payday reminder must not be summed in — only the bill did.
+      expect(finance.state.upcomingPaymentsTotal, billOnlyTotal);
+    });
+  });
+
   group('Notes CRUD', () {
     test('text note: create → edit → pin → archive → delete', () async {
       final notes = NotesNotifier(db);

@@ -150,6 +150,14 @@ class TransactionModel {
   final String? creditCardId;
   final String? loanId;
   final String? investmentId;
+  // Which employer this income/contribution came from — set by the Log
+  // Salary flow, null for every other transaction.
+  final String? companyId;
+  // True only for a salary-linked PF contribution leg: `accountId` is a
+  // required reference (the bank the salary was credited to), not real money
+  // movement — that money was diverted before it ever reached the bank, so
+  // accountsWithCalculatedBalances/liquidBalanceTrend must not debit it.
+  final bool isExternalToAccount;
   final SyncStatus syncStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -172,6 +180,8 @@ class TransactionModel {
     this.creditCardId,
     this.loanId,
     this.investmentId,
+    this.companyId,
+    this.isExternalToAccount = false,
     this.syncStatus = SyncStatus.synced,
     required this.createdAt,
     DateTime? updatedAt,
@@ -195,6 +205,8 @@ class TransactionModel {
     String? creditCardId,
     String? loanId,
     String? investmentId,
+    String? companyId,
+    bool? isExternalToAccount,
     SyncStatus? syncStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -217,6 +229,8 @@ class TransactionModel {
       creditCardId: creditCardId ?? this.creditCardId,
       loanId: loanId ?? this.loanId,
       investmentId: investmentId ?? this.investmentId,
+      companyId: companyId ?? this.companyId,
+      isExternalToAccount: isExternalToAccount ?? this.isExternalToAccount,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
@@ -535,6 +549,12 @@ class RecurringPaymentModel {
   final String? categoryId;
   final String? accountId;
   final bool isAutoPay;
+  // True for an expected incoming credit (e.g. a payday reminder) rather than
+  // an outgoing bill/EMI. upcomingPaymentsTotal must skip these — an expected
+  // salary credit is not a liability and must not reduce Safe-to-Spend.
+  final bool isIncome;
+  // Employer this reminder belongs to, when isIncome is true.
+  final String? companyId;
   final DateTime updatedAt;
   final bool isDeleted;
 
@@ -547,9 +567,41 @@ class RecurringPaymentModel {
     this.categoryId,
     this.accountId,
     this.isAutoPay = false,
+    this.isIncome = false,
+    this.companyId,
     DateTime? updatedAt,
     this.isDeleted = false,
   }) : updatedAt = updatedAt ?? DateTime.now();
+
+  RecurringPaymentModel copyWith({
+    String? id,
+    String? title,
+    double? amount,
+    PaymentFrequency? frequency,
+    DateTime? nextDueDate,
+    String? categoryId,
+    String? accountId,
+    bool? isAutoPay,
+    bool? isIncome,
+    String? companyId,
+    DateTime? updatedAt,
+    bool? isDeleted,
+  }) {
+    return RecurringPaymentModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      amount: amount ?? this.amount,
+      frequency: frequency ?? this.frequency,
+      nextDueDate: nextDueDate ?? this.nextDueDate,
+      categoryId: categoryId ?? this.categoryId,
+      accountId: accountId ?? this.accountId,
+      isAutoPay: isAutoPay ?? this.isAutoPay,
+      isIncome: isIncome ?? this.isIncome,
+      companyId: companyId ?? this.companyId,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
 }
 
 class InvestmentModel {
@@ -560,6 +612,9 @@ class InvestmentModel {
   final double currentValue;
   final double monthlySipAmount;
   final int sipDay;
+  // UAN (for EPF) or a PPF/NPS account number — plain reference data, not
+  // secret enough to warrant the encrypted-card-secrets pipeline.
+  final String? referenceNumber;
   final DateTime updatedAt;
   final bool isDeleted;
 
@@ -574,9 +629,36 @@ class InvestmentModel {
     required this.currentValue,
     this.monthlySipAmount = 0.0,
     this.sipDay = 1,
+    this.referenceNumber,
     DateTime? updatedAt,
     this.isDeleted = false,
   }) : updatedAt = updatedAt ?? DateTime.now();
+
+  InvestmentModel copyWith({
+    String? id,
+    String? name,
+    InvestmentType? type,
+    double? investedAmount,
+    double? currentValue,
+    double? monthlySipAmount,
+    int? sipDay,
+    String? referenceNumber,
+    DateTime? updatedAt,
+    bool? isDeleted,
+  }) {
+    return InvestmentModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      investedAmount: investedAmount ?? this.investedAmount,
+      currentValue: currentValue ?? this.currentValue,
+      monthlySipAmount: monthlySipAmount ?? this.monthlySipAmount,
+      sipDay: sipDay ?? this.sipDay,
+      referenceNumber: referenceNumber ?? this.referenceNumber,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
 }
 
 class GoalModel {
@@ -624,6 +706,57 @@ class GoalModel {
       targetDate: targetDate ?? this.targetDate,
       icon: icon ?? this.icon,
       colorHex: colorHex ?? this.colorHex,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
+}
+
+/// An employer. Salary transactions and payday reminders attach to one of
+/// these, so switching jobs is "pick a different company" rather than
+/// editing a single mutable "my employer" field.
+class CompanyModel {
+  final String id;
+  final String name;
+  final DateTime? joinedDate;
+  // Exactly one company is expected to have this true at a time — enforced
+  // by FinanceNotifier.setCurrentEmployer, not by the schema.
+  final bool isCurrentEmployer;
+  // Pre-fills the Log Salary form; both optional since a company can be
+  // added before its salary details are known.
+  final String? defaultBankAccountId;
+  final double? defaultPfAmount;
+  final DateTime updatedAt;
+  final bool isDeleted;
+
+  CompanyModel({
+    required this.id,
+    required this.name,
+    this.joinedDate,
+    this.isCurrentEmployer = false,
+    this.defaultBankAccountId,
+    this.defaultPfAmount,
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
+
+  CompanyModel copyWith({
+    String? id,
+    String? name,
+    DateTime? joinedDate,
+    bool? isCurrentEmployer,
+    String? defaultBankAccountId,
+    double? defaultPfAmount,
+    DateTime? updatedAt,
+    bool? isDeleted,
+  }) {
+    return CompanyModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      joinedDate: joinedDate ?? this.joinedDate,
+      isCurrentEmployer: isCurrentEmployer ?? this.isCurrentEmployer,
+      defaultBankAccountId: defaultBankAccountId ?? this.defaultBankAccountId,
+      defaultPfAmount: defaultPfAmount ?? this.defaultPfAmount,
       updatedAt: updatedAt ?? DateTime.now(),
       isDeleted: isDeleted ?? this.isDeleted,
     );

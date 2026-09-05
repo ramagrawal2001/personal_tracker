@@ -1509,6 +1509,31 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _companyIdMeta = const VerificationMeta(
+    'companyId',
+  );
+  @override
+  late final GeneratedColumn<String> companyId = GeneratedColumn<String>(
+    'company_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isExternalToAccountMeta =
+      const VerificationMeta('isExternalToAccount');
+  @override
+  late final GeneratedColumn<bool> isExternalToAccount = GeneratedColumn<bool>(
+    'is_external_to_account',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_external_to_account" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _syncStatusMeta = const VerificationMeta(
     'syncStatus',
   );
@@ -1585,6 +1610,8 @@ class $TransactionsTable extends Transactions
     tags,
     creditCardId,
     loanId,
+    companyId,
+    isExternalToAccount,
     syncStatus,
     createdAt,
     updatedAt,
@@ -1697,6 +1724,21 @@ class $TransactionsTable extends Transactions
         loanId.isAcceptableOrUnknown(data['loan_id']!, _loanIdMeta),
       );
     }
+    if (data.containsKey('company_id')) {
+      context.handle(
+        _companyIdMeta,
+        companyId.isAcceptableOrUnknown(data['company_id']!, _companyIdMeta),
+      );
+    }
+    if (data.containsKey('is_external_to_account')) {
+      context.handle(
+        _isExternalToAccountMeta,
+        isExternalToAccount.isAcceptableOrUnknown(
+          data['is_external_to_account']!,
+          _isExternalToAccountMeta,
+        ),
+      );
+    }
     if (data.containsKey('sync_status')) {
       context.handle(
         _syncStatusMeta,
@@ -1790,6 +1832,14 @@ class $TransactionsTable extends Transactions
         DriftSqlType.string,
         data['${effectivePrefix}loan_id'],
       ),
+      companyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}company_id'],
+      ),
+      isExternalToAccount: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_external_to_account'],
+      )!,
       syncStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sync_status'],
@@ -1834,6 +1884,8 @@ class TransactionEntry extends DataClass
   final String tags;
   final String? creditCardId;
   final String? loanId;
+  final String? companyId;
+  final bool isExternalToAccount;
   final String syncStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -1853,6 +1905,8 @@ class TransactionEntry extends DataClass
     required this.tags,
     this.creditCardId,
     this.loanId,
+    this.companyId,
+    required this.isExternalToAccount,
     required this.syncStatus,
     required this.createdAt,
     required this.updatedAt,
@@ -1889,6 +1943,10 @@ class TransactionEntry extends DataClass
     if (!nullToAbsent || loanId != null) {
       map['loan_id'] = Variable<String>(loanId);
     }
+    if (!nullToAbsent || companyId != null) {
+      map['company_id'] = Variable<String>(companyId);
+    }
+    map['is_external_to_account'] = Variable<bool>(isExternalToAccount);
     map['sync_status'] = Variable<String>(syncStatus);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -1928,6 +1986,10 @@ class TransactionEntry extends DataClass
       loanId: loanId == null && nullToAbsent
           ? const Value.absent()
           : Value(loanId),
+      companyId: companyId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(companyId),
+      isExternalToAccount: Value(isExternalToAccount),
       syncStatus: Value(syncStatus),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -1957,6 +2019,10 @@ class TransactionEntry extends DataClass
       tags: serializer.fromJson<String>(json['tags']),
       creditCardId: serializer.fromJson<String?>(json['creditCardId']),
       loanId: serializer.fromJson<String?>(json['loanId']),
+      companyId: serializer.fromJson<String?>(json['companyId']),
+      isExternalToAccount: serializer.fromJson<bool>(
+        json['isExternalToAccount'],
+      ),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -1981,6 +2047,8 @@ class TransactionEntry extends DataClass
       'tags': serializer.toJson<String>(tags),
       'creditCardId': serializer.toJson<String?>(creditCardId),
       'loanId': serializer.toJson<String?>(loanId),
+      'companyId': serializer.toJson<String?>(companyId),
+      'isExternalToAccount': serializer.toJson<bool>(isExternalToAccount),
       'syncStatus': serializer.toJson<String>(syncStatus),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -2003,6 +2071,8 @@ class TransactionEntry extends DataClass
     String? tags,
     Value<String?> creditCardId = const Value.absent(),
     Value<String?> loanId = const Value.absent(),
+    Value<String?> companyId = const Value.absent(),
+    bool? isExternalToAccount,
     String? syncStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -2022,6 +2092,8 @@ class TransactionEntry extends DataClass
     tags: tags ?? this.tags,
     creditCardId: creditCardId.present ? creditCardId.value : this.creditCardId,
     loanId: loanId.present ? loanId.value : this.loanId,
+    companyId: companyId.present ? companyId.value : this.companyId,
+    isExternalToAccount: isExternalToAccount ?? this.isExternalToAccount,
     syncStatus: syncStatus ?? this.syncStatus,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -2051,6 +2123,10 @@ class TransactionEntry extends DataClass
           ? data.creditCardId.value
           : this.creditCardId,
       loanId: data.loanId.present ? data.loanId.value : this.loanId,
+      companyId: data.companyId.present ? data.companyId.value : this.companyId,
+      isExternalToAccount: data.isExternalToAccount.present
+          ? data.isExternalToAccount.value
+          : this.isExternalToAccount,
       syncStatus: data.syncStatus.present
           ? data.syncStatus.value
           : this.syncStatus,
@@ -2077,6 +2153,8 @@ class TransactionEntry extends DataClass
           ..write('tags: $tags, ')
           ..write('creditCardId: $creditCardId, ')
           ..write('loanId: $loanId, ')
+          ..write('companyId: $companyId, ')
+          ..write('isExternalToAccount: $isExternalToAccount, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2101,6 +2179,8 @@ class TransactionEntry extends DataClass
     tags,
     creditCardId,
     loanId,
+    companyId,
+    isExternalToAccount,
     syncStatus,
     createdAt,
     updatedAt,
@@ -2124,6 +2204,8 @@ class TransactionEntry extends DataClass
           other.tags == this.tags &&
           other.creditCardId == this.creditCardId &&
           other.loanId == this.loanId &&
+          other.companyId == this.companyId &&
+          other.isExternalToAccount == this.isExternalToAccount &&
           other.syncStatus == this.syncStatus &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -2145,6 +2227,8 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
   final Value<String> tags;
   final Value<String?> creditCardId;
   final Value<String?> loanId;
+  final Value<String?> companyId;
+  final Value<bool> isExternalToAccount;
   final Value<String> syncStatus;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -2165,6 +2249,8 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     this.tags = const Value.absent(),
     this.creditCardId = const Value.absent(),
     this.loanId = const Value.absent(),
+    this.companyId = const Value.absent(),
+    this.isExternalToAccount = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -2186,6 +2272,8 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     this.tags = const Value.absent(),
     this.creditCardId = const Value.absent(),
     this.loanId = const Value.absent(),
+    this.companyId = const Value.absent(),
+    this.isExternalToAccount = const Value.absent(),
     this.syncStatus = const Value.absent(),
     required DateTime createdAt,
     this.updatedAt = const Value.absent(),
@@ -2212,6 +2300,8 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     Expression<String>? tags,
     Expression<String>? creditCardId,
     Expression<String>? loanId,
+    Expression<String>? companyId,
+    Expression<bool>? isExternalToAccount,
     Expression<String>? syncStatus,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -2233,6 +2323,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
       if (tags != null) 'tags': tags,
       if (creditCardId != null) 'credit_card_id': creditCardId,
       if (loanId != null) 'loan_id': loanId,
+      if (companyId != null) 'company_id': companyId,
+      if (isExternalToAccount != null)
+        'is_external_to_account': isExternalToAccount,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -2256,6 +2349,8 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     Value<String>? tags,
     Value<String?>? creditCardId,
     Value<String?>? loanId,
+    Value<String?>? companyId,
+    Value<bool>? isExternalToAccount,
     Value<String>? syncStatus,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -2277,6 +2372,8 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
       tags: tags ?? this.tags,
       creditCardId: creditCardId ?? this.creditCardId,
       loanId: loanId ?? this.loanId,
+      companyId: companyId ?? this.companyId,
+      isExternalToAccount: isExternalToAccount ?? this.isExternalToAccount,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -2328,6 +2425,12 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     if (loanId.present) {
       map['loan_id'] = Variable<String>(loanId.value);
     }
+    if (companyId.present) {
+      map['company_id'] = Variable<String>(companyId.value);
+    }
+    if (isExternalToAccount.present) {
+      map['is_external_to_account'] = Variable<bool>(isExternalToAccount.value);
+    }
     if (syncStatus.present) {
       map['sync_status'] = Variable<String>(syncStatus.value);
     }
@@ -2365,6 +2468,8 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
           ..write('tags: $tags, ')
           ..write('creditCardId: $creditCardId, ')
           ..write('loanId: $loanId, ')
+          ..write('companyId: $companyId, ')
+          ..write('isExternalToAccount: $isExternalToAccount, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -5285,6 +5390,32 @@ class $RecurringPaymentsTable extends RecurringPayments
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isIncomeMeta = const VerificationMeta(
+    'isIncome',
+  );
+  @override
+  late final GeneratedColumn<bool> isIncome = GeneratedColumn<bool>(
+    'is_income',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_income" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _companyIdMeta = const VerificationMeta(
+    'companyId',
+  );
+  @override
+  late final GeneratedColumn<String> companyId = GeneratedColumn<String>(
+    'company_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -5333,6 +5464,8 @@ class $RecurringPaymentsTable extends RecurringPayments
     categoryId,
     accountId,
     isAutoPay,
+    isIncome,
+    companyId,
     updatedAt,
     isDeleted,
     deletedAt,
@@ -5407,6 +5540,18 @@ class $RecurringPaymentsTable extends RecurringPayments
         isAutoPay.isAcceptableOrUnknown(data['is_auto_pay']!, _isAutoPayMeta),
       );
     }
+    if (data.containsKey('is_income')) {
+      context.handle(
+        _isIncomeMeta,
+        isIncome.isAcceptableOrUnknown(data['is_income']!, _isIncomeMeta),
+      );
+    }
+    if (data.containsKey('company_id')) {
+      context.handle(
+        _companyIdMeta,
+        companyId.isAcceptableOrUnknown(data['company_id']!, _companyIdMeta),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -5466,6 +5611,14 @@ class $RecurringPaymentsTable extends RecurringPayments
         DriftSqlType.bool,
         data['${effectivePrefix}is_auto_pay'],
       )!,
+      isIncome: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_income'],
+      )!,
+      companyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}company_id'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -5497,6 +5650,8 @@ class RecurringPaymentEntry extends DataClass
   final String? categoryId;
   final String? accountId;
   final bool isAutoPay;
+  final bool isIncome;
+  final String? companyId;
   final DateTime updatedAt;
   final bool isDeleted;
   final DateTime? deletedAt;
@@ -5509,6 +5664,8 @@ class RecurringPaymentEntry extends DataClass
     this.categoryId,
     this.accountId,
     required this.isAutoPay,
+    required this.isIncome,
+    this.companyId,
     required this.updatedAt,
     required this.isDeleted,
     this.deletedAt,
@@ -5528,6 +5685,10 @@ class RecurringPaymentEntry extends DataClass
       map['account_id'] = Variable<String>(accountId);
     }
     map['is_auto_pay'] = Variable<bool>(isAutoPay);
+    map['is_income'] = Variable<bool>(isIncome);
+    if (!nullToAbsent || companyId != null) {
+      map['company_id'] = Variable<String>(companyId);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || deletedAt != null) {
@@ -5550,6 +5711,10 @@ class RecurringPaymentEntry extends DataClass
           ? const Value.absent()
           : Value(accountId),
       isAutoPay: Value(isAutoPay),
+      isIncome: Value(isIncome),
+      companyId: companyId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(companyId),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: deletedAt == null && nullToAbsent
@@ -5572,6 +5737,8 @@ class RecurringPaymentEntry extends DataClass
       categoryId: serializer.fromJson<String?>(json['categoryId']),
       accountId: serializer.fromJson<String?>(json['accountId']),
       isAutoPay: serializer.fromJson<bool>(json['isAutoPay']),
+      isIncome: serializer.fromJson<bool>(json['isIncome']),
+      companyId: serializer.fromJson<String?>(json['companyId']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -5589,6 +5756,8 @@ class RecurringPaymentEntry extends DataClass
       'categoryId': serializer.toJson<String?>(categoryId),
       'accountId': serializer.toJson<String?>(accountId),
       'isAutoPay': serializer.toJson<bool>(isAutoPay),
+      'isIncome': serializer.toJson<bool>(isIncome),
+      'companyId': serializer.toJson<String?>(companyId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -5604,6 +5773,8 @@ class RecurringPaymentEntry extends DataClass
     Value<String?> categoryId = const Value.absent(),
     Value<String?> accountId = const Value.absent(),
     bool? isAutoPay,
+    bool? isIncome,
+    Value<String?> companyId = const Value.absent(),
     DateTime? updatedAt,
     bool? isDeleted,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -5616,6 +5787,8 @@ class RecurringPaymentEntry extends DataClass
     categoryId: categoryId.present ? categoryId.value : this.categoryId,
     accountId: accountId.present ? accountId.value : this.accountId,
     isAutoPay: isAutoPay ?? this.isAutoPay,
+    isIncome: isIncome ?? this.isIncome,
+    companyId: companyId.present ? companyId.value : this.companyId,
     updatedAt: updatedAt ?? this.updatedAt,
     isDeleted: isDeleted ?? this.isDeleted,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -5634,6 +5807,8 @@ class RecurringPaymentEntry extends DataClass
           : this.categoryId,
       accountId: data.accountId.present ? data.accountId.value : this.accountId,
       isAutoPay: data.isAutoPay.present ? data.isAutoPay.value : this.isAutoPay,
+      isIncome: data.isIncome.present ? data.isIncome.value : this.isIncome,
+      companyId: data.companyId.present ? data.companyId.value : this.companyId,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -5651,6 +5826,8 @@ class RecurringPaymentEntry extends DataClass
           ..write('categoryId: $categoryId, ')
           ..write('accountId: $accountId, ')
           ..write('isAutoPay: $isAutoPay, ')
+          ..write('isIncome: $isIncome, ')
+          ..write('companyId: $companyId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt')
@@ -5668,6 +5845,8 @@ class RecurringPaymentEntry extends DataClass
     categoryId,
     accountId,
     isAutoPay,
+    isIncome,
+    companyId,
     updatedAt,
     isDeleted,
     deletedAt,
@@ -5684,6 +5863,8 @@ class RecurringPaymentEntry extends DataClass
           other.categoryId == this.categoryId &&
           other.accountId == this.accountId &&
           other.isAutoPay == this.isAutoPay &&
+          other.isIncome == this.isIncome &&
+          other.companyId == this.companyId &&
           other.updatedAt == this.updatedAt &&
           other.isDeleted == this.isDeleted &&
           other.deletedAt == this.deletedAt);
@@ -5699,6 +5880,8 @@ class RecurringPaymentsCompanion
   final Value<String?> categoryId;
   final Value<String?> accountId;
   final Value<bool> isAutoPay;
+  final Value<bool> isIncome;
+  final Value<String?> companyId;
   final Value<DateTime> updatedAt;
   final Value<bool> isDeleted;
   final Value<DateTime?> deletedAt;
@@ -5712,6 +5895,8 @@ class RecurringPaymentsCompanion
     this.categoryId = const Value.absent(),
     this.accountId = const Value.absent(),
     this.isAutoPay = const Value.absent(),
+    this.isIncome = const Value.absent(),
+    this.companyId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -5726,6 +5911,8 @@ class RecurringPaymentsCompanion
     this.categoryId = const Value.absent(),
     this.accountId = const Value.absent(),
     this.isAutoPay = const Value.absent(),
+    this.isIncome = const Value.absent(),
+    this.companyId = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -5744,6 +5931,8 @@ class RecurringPaymentsCompanion
     Expression<String>? categoryId,
     Expression<String>? accountId,
     Expression<bool>? isAutoPay,
+    Expression<bool>? isIncome,
+    Expression<String>? companyId,
     Expression<DateTime>? updatedAt,
     Expression<bool>? isDeleted,
     Expression<DateTime>? deletedAt,
@@ -5758,6 +5947,8 @@ class RecurringPaymentsCompanion
       if (categoryId != null) 'category_id': categoryId,
       if (accountId != null) 'account_id': accountId,
       if (isAutoPay != null) 'is_auto_pay': isAutoPay,
+      if (isIncome != null) 'is_income': isIncome,
+      if (companyId != null) 'company_id': companyId,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -5774,6 +5965,8 @@ class RecurringPaymentsCompanion
     Value<String?>? categoryId,
     Value<String?>? accountId,
     Value<bool>? isAutoPay,
+    Value<bool>? isIncome,
+    Value<String?>? companyId,
     Value<DateTime>? updatedAt,
     Value<bool>? isDeleted,
     Value<DateTime?>? deletedAt,
@@ -5788,6 +5981,8 @@ class RecurringPaymentsCompanion
       categoryId: categoryId ?? this.categoryId,
       accountId: accountId ?? this.accountId,
       isAutoPay: isAutoPay ?? this.isAutoPay,
+      isIncome: isIncome ?? this.isIncome,
+      companyId: companyId ?? this.companyId,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -5822,6 +6017,12 @@ class RecurringPaymentsCompanion
     if (isAutoPay.present) {
       map['is_auto_pay'] = Variable<bool>(isAutoPay.value);
     }
+    if (isIncome.present) {
+      map['is_income'] = Variable<bool>(isIncome.value);
+    }
+    if (companyId.present) {
+      map['company_id'] = Variable<String>(companyId.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -5848,6 +6049,8 @@ class RecurringPaymentsCompanion
           ..write('categoryId: $categoryId, ')
           ..write('accountId: $accountId, ')
           ..write('isAutoPay: $isAutoPay, ')
+          ..write('isIncome: $isIncome, ')
+          ..write('companyId: $companyId, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt, ')
@@ -5934,6 +6137,17 @@ class $InvestmentsTable extends Investments
     requiredDuringInsert: false,
     defaultValue: const Constant(1),
   );
+  static const VerificationMeta _referenceNumberMeta = const VerificationMeta(
+    'referenceNumber',
+  );
+  @override
+  late final GeneratedColumn<String> referenceNumber = GeneratedColumn<String>(
+    'reference_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -5981,6 +6195,7 @@ class $InvestmentsTable extends Investments
     currentValue,
     monthlySipAmount,
     sipDay,
+    referenceNumber,
     updatedAt,
     isDeleted,
     deletedAt,
@@ -6055,6 +6270,15 @@ class $InvestmentsTable extends Investments
         sipDay.isAcceptableOrUnknown(data['sip_day']!, _sipDayMeta),
       );
     }
+    if (data.containsKey('reference_number')) {
+      context.handle(
+        _referenceNumberMeta,
+        referenceNumber.isAcceptableOrUnknown(
+          data['reference_number']!,
+          _referenceNumberMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -6110,6 +6334,10 @@ class $InvestmentsTable extends Investments
         DriftSqlType.int,
         data['${effectivePrefix}sip_day'],
       )!,
+      referenceNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference_number'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -6139,6 +6367,7 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
   final double currentValue;
   final double monthlySipAmount;
   final int sipDay;
+  final String? referenceNumber;
   final DateTime updatedAt;
   final bool isDeleted;
   final DateTime? deletedAt;
@@ -6150,6 +6379,7 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     required this.currentValue,
     required this.monthlySipAmount,
     required this.sipDay,
+    this.referenceNumber,
     required this.updatedAt,
     required this.isDeleted,
     this.deletedAt,
@@ -6164,6 +6394,9 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     map['current_value'] = Variable<double>(currentValue);
     map['monthly_sip_amount'] = Variable<double>(monthlySipAmount);
     map['sip_day'] = Variable<int>(sipDay);
+    if (!nullToAbsent || referenceNumber != null) {
+      map['reference_number'] = Variable<String>(referenceNumber);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || deletedAt != null) {
@@ -6181,6 +6414,9 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
       currentValue: Value(currentValue),
       monthlySipAmount: Value(monthlySipAmount),
       sipDay: Value(sipDay),
+      referenceNumber: referenceNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(referenceNumber),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: deletedAt == null && nullToAbsent
@@ -6202,6 +6438,7 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
       currentValue: serializer.fromJson<double>(json['currentValue']),
       monthlySipAmount: serializer.fromJson<double>(json['monthlySipAmount']),
       sipDay: serializer.fromJson<int>(json['sipDay']),
+      referenceNumber: serializer.fromJson<String?>(json['referenceNumber']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -6218,6 +6455,7 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
       'currentValue': serializer.toJson<double>(currentValue),
       'monthlySipAmount': serializer.toJson<double>(monthlySipAmount),
       'sipDay': serializer.toJson<int>(sipDay),
+      'referenceNumber': serializer.toJson<String?>(referenceNumber),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -6232,6 +6470,7 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     double? currentValue,
     double? monthlySipAmount,
     int? sipDay,
+    Value<String?> referenceNumber = const Value.absent(),
     DateTime? updatedAt,
     bool? isDeleted,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -6243,6 +6482,9 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     currentValue: currentValue ?? this.currentValue,
     monthlySipAmount: monthlySipAmount ?? this.monthlySipAmount,
     sipDay: sipDay ?? this.sipDay,
+    referenceNumber: referenceNumber.present
+        ? referenceNumber.value
+        : this.referenceNumber,
     updatedAt: updatedAt ?? this.updatedAt,
     isDeleted: isDeleted ?? this.isDeleted,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -6262,6 +6504,9 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
           ? data.monthlySipAmount.value
           : this.monthlySipAmount,
       sipDay: data.sipDay.present ? data.sipDay.value : this.sipDay,
+      referenceNumber: data.referenceNumber.present
+          ? data.referenceNumber.value
+          : this.referenceNumber,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -6278,6 +6523,7 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
           ..write('currentValue: $currentValue, ')
           ..write('monthlySipAmount: $monthlySipAmount, ')
           ..write('sipDay: $sipDay, ')
+          ..write('referenceNumber: $referenceNumber, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt')
@@ -6294,6 +6540,7 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     currentValue,
     monthlySipAmount,
     sipDay,
+    referenceNumber,
     updatedAt,
     isDeleted,
     deletedAt,
@@ -6309,6 +6556,7 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
           other.currentValue == this.currentValue &&
           other.monthlySipAmount == this.monthlySipAmount &&
           other.sipDay == this.sipDay &&
+          other.referenceNumber == this.referenceNumber &&
           other.updatedAt == this.updatedAt &&
           other.isDeleted == this.isDeleted &&
           other.deletedAt == this.deletedAt);
@@ -6322,6 +6570,7 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
   final Value<double> currentValue;
   final Value<double> monthlySipAmount;
   final Value<int> sipDay;
+  final Value<String?> referenceNumber;
   final Value<DateTime> updatedAt;
   final Value<bool> isDeleted;
   final Value<DateTime?> deletedAt;
@@ -6334,6 +6583,7 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     this.currentValue = const Value.absent(),
     this.monthlySipAmount = const Value.absent(),
     this.sipDay = const Value.absent(),
+    this.referenceNumber = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -6347,6 +6597,7 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     required double currentValue,
     this.monthlySipAmount = const Value.absent(),
     this.sipDay = const Value.absent(),
+    this.referenceNumber = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -6364,6 +6615,7 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     Expression<double>? currentValue,
     Expression<double>? monthlySipAmount,
     Expression<int>? sipDay,
+    Expression<String>? referenceNumber,
     Expression<DateTime>? updatedAt,
     Expression<bool>? isDeleted,
     Expression<DateTime>? deletedAt,
@@ -6377,6 +6629,7 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
       if (currentValue != null) 'current_value': currentValue,
       if (monthlySipAmount != null) 'monthly_sip_amount': monthlySipAmount,
       if (sipDay != null) 'sip_day': sipDay,
+      if (referenceNumber != null) 'reference_number': referenceNumber,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -6392,6 +6645,7 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     Value<double>? currentValue,
     Value<double>? monthlySipAmount,
     Value<int>? sipDay,
+    Value<String?>? referenceNumber,
     Value<DateTime>? updatedAt,
     Value<bool>? isDeleted,
     Value<DateTime?>? deletedAt,
@@ -6405,6 +6659,7 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
       currentValue: currentValue ?? this.currentValue,
       monthlySipAmount: monthlySipAmount ?? this.monthlySipAmount,
       sipDay: sipDay ?? this.sipDay,
+      referenceNumber: referenceNumber ?? this.referenceNumber,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -6436,6 +6691,9 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     if (sipDay.present) {
       map['sip_day'] = Variable<int>(sipDay.value);
     }
+    if (referenceNumber.present) {
+      map['reference_number'] = Variable<String>(referenceNumber.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
@@ -6461,6 +6719,7 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
           ..write('currentValue: $currentValue, ')
           ..write('monthlySipAmount: $monthlySipAmount, ')
           ..write('sipDay: $sipDay, ')
+          ..write('referenceNumber: $referenceNumber, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt, ')
@@ -8050,6 +8309,594 @@ class SyncMetaCompanion extends UpdateCompanion<SyncMetaEntry> {
   }
 }
 
+class $CompaniesTable extends Companies
+    with TableInfo<$CompaniesTable, CompanyEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CompaniesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _joinedDateMeta = const VerificationMeta(
+    'joinedDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> joinedDate = GeneratedColumn<DateTime>(
+    'joined_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isCurrentEmployerMeta = const VerificationMeta(
+    'isCurrentEmployer',
+  );
+  @override
+  late final GeneratedColumn<bool> isCurrentEmployer = GeneratedColumn<bool>(
+    'is_current_employer',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_current_employer" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _defaultBankAccountIdMeta =
+      const VerificationMeta('defaultBankAccountId');
+  @override
+  late final GeneratedColumn<String> defaultBankAccountId =
+      GeneratedColumn<String>(
+        'default_bank_account_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _defaultPfAmountMeta = const VerificationMeta(
+    'defaultPfAmount',
+  );
+  @override
+  late final GeneratedColumn<double> defaultPfAmount = GeneratedColumn<double>(
+    'default_pf_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    joinedDate,
+    isCurrentEmployer,
+    defaultBankAccountId,
+    defaultPfAmount,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'companies';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CompanyEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('joined_date')) {
+      context.handle(
+        _joinedDateMeta,
+        joinedDate.isAcceptableOrUnknown(data['joined_date']!, _joinedDateMeta),
+      );
+    }
+    if (data.containsKey('is_current_employer')) {
+      context.handle(
+        _isCurrentEmployerMeta,
+        isCurrentEmployer.isAcceptableOrUnknown(
+          data['is_current_employer']!,
+          _isCurrentEmployerMeta,
+        ),
+      );
+    }
+    if (data.containsKey('default_bank_account_id')) {
+      context.handle(
+        _defaultBankAccountIdMeta,
+        defaultBankAccountId.isAcceptableOrUnknown(
+          data['default_bank_account_id']!,
+          _defaultBankAccountIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('default_pf_amount')) {
+      context.handle(
+        _defaultPfAmountMeta,
+        defaultPfAmount.isAcceptableOrUnknown(
+          data['default_pf_amount']!,
+          _defaultPfAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CompanyEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CompanyEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      joinedDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}joined_date'],
+      ),
+      isCurrentEmployer: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_current_employer'],
+      )!,
+      defaultBankAccountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}default_bank_account_id'],
+      ),
+      defaultPfAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}default_pf_amount'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $CompaniesTable createAlias(String alias) {
+    return $CompaniesTable(attachedDatabase, alias);
+  }
+}
+
+class CompanyEntry extends DataClass implements Insertable<CompanyEntry> {
+  final String id;
+  final String name;
+  final DateTime? joinedDate;
+  final bool isCurrentEmployer;
+  final String? defaultBankAccountId;
+  final double? defaultPfAmount;
+  final DateTime updatedAt;
+  final bool isDeleted;
+  final DateTime? deletedAt;
+  const CompanyEntry({
+    required this.id,
+    required this.name,
+    this.joinedDate,
+    required this.isCurrentEmployer,
+    this.defaultBankAccountId,
+    this.defaultPfAmount,
+    required this.updatedAt,
+    required this.isDeleted,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || joinedDate != null) {
+      map['joined_date'] = Variable<DateTime>(joinedDate);
+    }
+    map['is_current_employer'] = Variable<bool>(isCurrentEmployer);
+    if (!nullToAbsent || defaultBankAccountId != null) {
+      map['default_bank_account_id'] = Variable<String>(defaultBankAccountId);
+    }
+    if (!nullToAbsent || defaultPfAmount != null) {
+      map['default_pf_amount'] = Variable<double>(defaultPfAmount);
+    }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  CompaniesCompanion toCompanion(bool nullToAbsent) {
+    return CompaniesCompanion(
+      id: Value(id),
+      name: Value(name),
+      joinedDate: joinedDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(joinedDate),
+      isCurrentEmployer: Value(isCurrentEmployer),
+      defaultBankAccountId: defaultBankAccountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(defaultBankAccountId),
+      defaultPfAmount: defaultPfAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(defaultPfAmount),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory CompanyEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CompanyEntry(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      joinedDate: serializer.fromJson<DateTime?>(json['joinedDate']),
+      isCurrentEmployer: serializer.fromJson<bool>(json['isCurrentEmployer']),
+      defaultBankAccountId: serializer.fromJson<String?>(
+        json['defaultBankAccountId'],
+      ),
+      defaultPfAmount: serializer.fromJson<double?>(json['defaultPfAmount']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'joinedDate': serializer.toJson<DateTime?>(joinedDate),
+      'isCurrentEmployer': serializer.toJson<bool>(isCurrentEmployer),
+      'defaultBankAccountId': serializer.toJson<String?>(defaultBankAccountId),
+      'defaultPfAmount': serializer.toJson<double?>(defaultPfAmount),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  CompanyEntry copyWith({
+    String? id,
+    String? name,
+    Value<DateTime?> joinedDate = const Value.absent(),
+    bool? isCurrentEmployer,
+    Value<String?> defaultBankAccountId = const Value.absent(),
+    Value<double?> defaultPfAmount = const Value.absent(),
+    DateTime? updatedAt,
+    bool? isDeleted,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => CompanyEntry(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    joinedDate: joinedDate.present ? joinedDate.value : this.joinedDate,
+    isCurrentEmployer: isCurrentEmployer ?? this.isCurrentEmployer,
+    defaultBankAccountId: defaultBankAccountId.present
+        ? defaultBankAccountId.value
+        : this.defaultBankAccountId,
+    defaultPfAmount: defaultPfAmount.present
+        ? defaultPfAmount.value
+        : this.defaultPfAmount,
+    updatedAt: updatedAt ?? this.updatedAt,
+    isDeleted: isDeleted ?? this.isDeleted,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  CompanyEntry copyWithCompanion(CompaniesCompanion data) {
+    return CompanyEntry(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      joinedDate: data.joinedDate.present
+          ? data.joinedDate.value
+          : this.joinedDate,
+      isCurrentEmployer: data.isCurrentEmployer.present
+          ? data.isCurrentEmployer.value
+          : this.isCurrentEmployer,
+      defaultBankAccountId: data.defaultBankAccountId.present
+          ? data.defaultBankAccountId.value
+          : this.defaultBankAccountId,
+      defaultPfAmount: data.defaultPfAmount.present
+          ? data.defaultPfAmount.value
+          : this.defaultPfAmount,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CompanyEntry(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('joinedDate: $joinedDate, ')
+          ..write('isCurrentEmployer: $isCurrentEmployer, ')
+          ..write('defaultBankAccountId: $defaultBankAccountId, ')
+          ..write('defaultPfAmount: $defaultPfAmount, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    joinedDate,
+    isCurrentEmployer,
+    defaultBankAccountId,
+    defaultPfAmount,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CompanyEntry &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.joinedDate == this.joinedDate &&
+          other.isCurrentEmployer == this.isCurrentEmployer &&
+          other.defaultBankAccountId == this.defaultBankAccountId &&
+          other.defaultPfAmount == this.defaultPfAmount &&
+          other.updatedAt == this.updatedAt &&
+          other.isDeleted == this.isDeleted &&
+          other.deletedAt == this.deletedAt);
+}
+
+class CompaniesCompanion extends UpdateCompanion<CompanyEntry> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<DateTime?> joinedDate;
+  final Value<bool> isCurrentEmployer;
+  final Value<String?> defaultBankAccountId;
+  final Value<double?> defaultPfAmount;
+  final Value<DateTime> updatedAt;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const CompaniesCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.joinedDate = const Value.absent(),
+    this.isCurrentEmployer = const Value.absent(),
+    this.defaultBankAccountId = const Value.absent(),
+    this.defaultPfAmount = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CompaniesCompanion.insert({
+    required String id,
+    required String name,
+    this.joinedDate = const Value.absent(),
+    this.isCurrentEmployer = const Value.absent(),
+    this.defaultBankAccountId = const Value.absent(),
+    this.defaultPfAmount = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name);
+  static Insertable<CompanyEntry> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<DateTime>? joinedDate,
+    Expression<bool>? isCurrentEmployer,
+    Expression<String>? defaultBankAccountId,
+    Expression<double>? defaultPfAmount,
+    Expression<DateTime>? updatedAt,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (joinedDate != null) 'joined_date': joinedDate,
+      if (isCurrentEmployer != null) 'is_current_employer': isCurrentEmployer,
+      if (defaultBankAccountId != null)
+        'default_bank_account_id': defaultBankAccountId,
+      if (defaultPfAmount != null) 'default_pf_amount': defaultPfAmount,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CompaniesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<DateTime?>? joinedDate,
+    Value<bool>? isCurrentEmployer,
+    Value<String?>? defaultBankAccountId,
+    Value<double?>? defaultPfAmount,
+    Value<DateTime>? updatedAt,
+    Value<bool>? isDeleted,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return CompaniesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      joinedDate: joinedDate ?? this.joinedDate,
+      isCurrentEmployer: isCurrentEmployer ?? this.isCurrentEmployer,
+      defaultBankAccountId: defaultBankAccountId ?? this.defaultBankAccountId,
+      defaultPfAmount: defaultPfAmount ?? this.defaultPfAmount,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (joinedDate.present) {
+      map['joined_date'] = Variable<DateTime>(joinedDate.value);
+    }
+    if (isCurrentEmployer.present) {
+      map['is_current_employer'] = Variable<bool>(isCurrentEmployer.value);
+    }
+    if (defaultBankAccountId.present) {
+      map['default_bank_account_id'] = Variable<String>(
+        defaultBankAccountId.value,
+      );
+    }
+    if (defaultPfAmount.present) {
+      map['default_pf_amount'] = Variable<double>(defaultPfAmount.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CompaniesCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('joinedDate: $joinedDate, ')
+          ..write('isCurrentEmployer: $isCurrentEmployer, ')
+          ..write('defaultBankAccountId: $defaultBankAccountId, ')
+          ..write('defaultPfAmount: $defaultPfAmount, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8065,6 +8912,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GoalsTable goals = $GoalsTable(this);
   late final $NotesTable notes = $NotesTable(this);
   late final $SyncMetaTable syncMeta = $SyncMetaTable(this);
+  late final $CompaniesTable companies = $CompaniesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8081,6 +8929,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     goals,
     notes,
     syncMeta,
+    companies,
   ];
 }
 
@@ -8752,6 +9601,8 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String> tags,
       Value<String?> creditCardId,
       Value<String?> loanId,
+      Value<String?> companyId,
+      Value<bool> isExternalToAccount,
       Value<String> syncStatus,
       required DateTime createdAt,
       Value<DateTime> updatedAt,
@@ -8774,6 +9625,8 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String> tags,
       Value<String?> creditCardId,
       Value<String?> loanId,
+      Value<String?> companyId,
+      Value<bool> isExternalToAccount,
       Value<String> syncStatus,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -8853,6 +9706,16 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get loanId => $composableBuilder(
     column: $table.loanId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get companyId => $composableBuilder(
+    column: $table.companyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isExternalToAccount => $composableBuilder(
+    column: $table.isExternalToAccount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8956,6 +9819,16 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get companyId => $composableBuilder(
+    column: $table.companyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isExternalToAccount => $composableBuilder(
+    column: $table.isExternalToAccount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
@@ -9038,6 +9911,14 @@ class $$TransactionsTableAnnotationComposer
   GeneratedColumn<String> get loanId =>
       $composableBuilder(column: $table.loanId, builder: (column) => column);
 
+  GeneratedColumn<String> get companyId =>
+      $composableBuilder(column: $table.companyId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isExternalToAccount => $composableBuilder(
+    column: $table.isExternalToAccount,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => column,
@@ -9100,6 +9981,8 @@ class $$TransactionsTableTableManager
                 Value<String> tags = const Value.absent(),
                 Value<String?> creditCardId = const Value.absent(),
                 Value<String?> loanId = const Value.absent(),
+                Value<String?> companyId = const Value.absent(),
+                Value<bool> isExternalToAccount = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -9120,6 +10003,8 @@ class $$TransactionsTableTableManager
                 tags: tags,
                 creditCardId: creditCardId,
                 loanId: loanId,
+                companyId: companyId,
+                isExternalToAccount: isExternalToAccount,
                 syncStatus: syncStatus,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -9142,6 +10027,8 @@ class $$TransactionsTableTableManager
                 Value<String> tags = const Value.absent(),
                 Value<String?> creditCardId = const Value.absent(),
                 Value<String?> loanId = const Value.absent(),
+                Value<String?> companyId = const Value.absent(),
+                Value<bool> isExternalToAccount = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 required DateTime createdAt,
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -9162,6 +10049,8 @@ class $$TransactionsTableTableManager
                 tags: tags,
                 creditCardId: creditCardId,
                 loanId: loanId,
+                companyId: companyId,
+                isExternalToAccount: isExternalToAccount,
                 syncStatus: syncStatus,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -10478,6 +11367,8 @@ typedef $$RecurringPaymentsTableCreateCompanionBuilder =
       Value<String?> categoryId,
       Value<String?> accountId,
       Value<bool> isAutoPay,
+      Value<bool> isIncome,
+      Value<String?> companyId,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
@@ -10493,6 +11384,8 @@ typedef $$RecurringPaymentsTableUpdateCompanionBuilder =
       Value<String?> categoryId,
       Value<String?> accountId,
       Value<bool> isAutoPay,
+      Value<bool> isIncome,
+      Value<String?> companyId,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
@@ -10545,6 +11438,16 @@ class $$RecurringPaymentsTableFilterComposer
 
   ColumnFilters<bool> get isAutoPay => $composableBuilder(
     column: $table.isAutoPay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isIncome => $composableBuilder(
+    column: $table.isIncome,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get companyId => $composableBuilder(
+    column: $table.companyId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10613,6 +11516,16 @@ class $$RecurringPaymentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isIncome => $composableBuilder(
+    column: $table.isIncome,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get companyId => $composableBuilder(
+    column: $table.companyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -10665,6 +11578,12 @@ class $$RecurringPaymentsTableAnnotationComposer
 
   GeneratedColumn<bool> get isAutoPay =>
       $composableBuilder(column: $table.isAutoPay, builder: (column) => column);
+
+  GeneratedColumn<bool> get isIncome =>
+      $composableBuilder(column: $table.isIncome, builder: (column) => column);
+
+  GeneratedColumn<String> get companyId =>
+      $composableBuilder(column: $table.companyId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -10724,6 +11643,8 @@ class $$RecurringPaymentsTableTableManager
                 Value<String?> categoryId = const Value.absent(),
                 Value<String?> accountId = const Value.absent(),
                 Value<bool> isAutoPay = const Value.absent(),
+                Value<bool> isIncome = const Value.absent(),
+                Value<String?> companyId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -10737,6 +11658,8 @@ class $$RecurringPaymentsTableTableManager
                 categoryId: categoryId,
                 accountId: accountId,
                 isAutoPay: isAutoPay,
+                isIncome: isIncome,
+                companyId: companyId,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,
@@ -10752,6 +11675,8 @@ class $$RecurringPaymentsTableTableManager
                 Value<String?> categoryId = const Value.absent(),
                 Value<String?> accountId = const Value.absent(),
                 Value<bool> isAutoPay = const Value.absent(),
+                Value<bool> isIncome = const Value.absent(),
+                Value<String?> companyId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -10765,6 +11690,8 @@ class $$RecurringPaymentsTableTableManager
                 categoryId: categoryId,
                 accountId: accountId,
                 isAutoPay: isAutoPay,
+                isIncome: isIncome,
+                companyId: companyId,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,
@@ -10808,6 +11735,7 @@ typedef $$InvestmentsTableCreateCompanionBuilder =
       required double currentValue,
       Value<double> monthlySipAmount,
       Value<int> sipDay,
+      Value<String?> referenceNumber,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
@@ -10822,6 +11750,7 @@ typedef $$InvestmentsTableUpdateCompanionBuilder =
       Value<double> currentValue,
       Value<double> monthlySipAmount,
       Value<int> sipDay,
+      Value<String?> referenceNumber,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
@@ -10869,6 +11798,11 @@ class $$InvestmentsTableFilterComposer
 
   ColumnFilters<int> get sipDay => $composableBuilder(
     column: $table.sipDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get referenceNumber => $composableBuilder(
+    column: $table.referenceNumber,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10932,6 +11866,11 @@ class $$InvestmentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get referenceNumber => $composableBuilder(
+    column: $table.referenceNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -10984,6 +11923,11 @@ class $$InvestmentsTableAnnotationComposer
   GeneratedColumn<int> get sipDay =>
       $composableBuilder(column: $table.sipDay, builder: (column) => column);
 
+  GeneratedColumn<String> get referenceNumber => $composableBuilder(
+    column: $table.referenceNumber,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -11032,6 +11976,7 @@ class $$InvestmentsTableTableManager
                 Value<double> currentValue = const Value.absent(),
                 Value<double> monthlySipAmount = const Value.absent(),
                 Value<int> sipDay = const Value.absent(),
+                Value<String?> referenceNumber = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -11044,6 +11989,7 @@ class $$InvestmentsTableTableManager
                 currentValue: currentValue,
                 monthlySipAmount: monthlySipAmount,
                 sipDay: sipDay,
+                referenceNumber: referenceNumber,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,
@@ -11058,6 +12004,7 @@ class $$InvestmentsTableTableManager
                 required double currentValue,
                 Value<double> monthlySipAmount = const Value.absent(),
                 Value<int> sipDay = const Value.absent(),
+                Value<String?> referenceNumber = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -11070,6 +12017,7 @@ class $$InvestmentsTableTableManager
                 currentValue: currentValue,
                 monthlySipAmount: monthlySipAmount,
                 sipDay: sipDay,
+                referenceNumber: referenceNumber,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,
@@ -11886,6 +12834,290 @@ typedef $$SyncMetaTableProcessedTableManager =
       SyncMetaEntry,
       PrefetchHooks Function()
     >;
+typedef $$CompaniesTableCreateCompanionBuilder =
+    CompaniesCompanion Function({
+      required String id,
+      required String name,
+      Value<DateTime?> joinedDate,
+      Value<bool> isCurrentEmployer,
+      Value<String?> defaultBankAccountId,
+      Value<double?> defaultPfAmount,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$CompaniesTableUpdateCompanionBuilder =
+    CompaniesCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<DateTime?> joinedDate,
+      Value<bool> isCurrentEmployer,
+      Value<String?> defaultBankAccountId,
+      Value<double?> defaultPfAmount,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $$CompaniesTableFilterComposer
+    extends Composer<_$AppDatabase, $CompaniesTable> {
+  $$CompaniesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get joinedDate => $composableBuilder(
+    column: $table.joinedDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCurrentEmployer => $composableBuilder(
+    column: $table.isCurrentEmployer,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get defaultBankAccountId => $composableBuilder(
+    column: $table.defaultBankAccountId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get defaultPfAmount => $composableBuilder(
+    column: $table.defaultPfAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CompaniesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CompaniesTable> {
+  $$CompaniesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get joinedDate => $composableBuilder(
+    column: $table.joinedDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCurrentEmployer => $composableBuilder(
+    column: $table.isCurrentEmployer,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get defaultBankAccountId => $composableBuilder(
+    column: $table.defaultBankAccountId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get defaultPfAmount => $composableBuilder(
+    column: $table.defaultPfAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CompaniesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CompaniesTable> {
+  $$CompaniesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get joinedDate => $composableBuilder(
+    column: $table.joinedDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isCurrentEmployer => $composableBuilder(
+    column: $table.isCurrentEmployer,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get defaultBankAccountId => $composableBuilder(
+    column: $table.defaultBankAccountId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get defaultPfAmount => $composableBuilder(
+    column: $table.defaultPfAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$CompaniesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CompaniesTable,
+          CompanyEntry,
+          $$CompaniesTableFilterComposer,
+          $$CompaniesTableOrderingComposer,
+          $$CompaniesTableAnnotationComposer,
+          $$CompaniesTableCreateCompanionBuilder,
+          $$CompaniesTableUpdateCompanionBuilder,
+          (
+            CompanyEntry,
+            BaseReferences<_$AppDatabase, $CompaniesTable, CompanyEntry>,
+          ),
+          CompanyEntry,
+          PrefetchHooks Function()
+        > {
+  $$CompaniesTableTableManager(_$AppDatabase db, $CompaniesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CompaniesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CompaniesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CompaniesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<DateTime?> joinedDate = const Value.absent(),
+                Value<bool> isCurrentEmployer = const Value.absent(),
+                Value<String?> defaultBankAccountId = const Value.absent(),
+                Value<double?> defaultPfAmount = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CompaniesCompanion(
+                id: id,
+                name: name,
+                joinedDate: joinedDate,
+                isCurrentEmployer: isCurrentEmployer,
+                defaultBankAccountId: defaultBankAccountId,
+                defaultPfAmount: defaultPfAmount,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<DateTime?> joinedDate = const Value.absent(),
+                Value<bool> isCurrentEmployer = const Value.absent(),
+                Value<String?> defaultBankAccountId = const Value.absent(),
+                Value<double?> defaultPfAmount = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CompaniesCompanion.insert(
+                id: id,
+                name: name,
+                joinedDate: joinedDate,
+                isCurrentEmployer: isCurrentEmployer,
+                defaultBankAccountId: defaultBankAccountId,
+                defaultPfAmount: defaultPfAmount,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CompaniesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CompaniesTable,
+      CompanyEntry,
+      $$CompaniesTableFilterComposer,
+      $$CompaniesTableOrderingComposer,
+      $$CompaniesTableAnnotationComposer,
+      $$CompaniesTableCreateCompanionBuilder,
+      $$CompaniesTableUpdateCompanionBuilder,
+      (
+        CompanyEntry,
+        BaseReferences<_$AppDatabase, $CompaniesTable, CompanyEntry>,
+      ),
+      CompanyEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11912,4 +13144,6 @@ class $AppDatabaseManager {
       $$NotesTableTableManager(_db, _db.notes);
   $$SyncMetaTableTableManager get syncMeta =>
       $$SyncMetaTableTableManager(_db, _db.syncMeta);
+  $$CompaniesTableTableManager get companies =>
+      $$CompaniesTableTableManager(_db, _db.companies);
 }

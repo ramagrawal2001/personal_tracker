@@ -54,6 +54,8 @@ class Transactions extends Table {
   TextColumn get tags => text().withDefault(const Constant(''))(); // comma-joined
   TextColumn get creditCardId => text().nullable()();
   TextColumn get loanId => text().nullable()();
+  TextColumn get companyId => text().nullable()();
+  BoolColumn get isExternalToAccount => boolean().withDefault(const Constant(false))();
   TextColumn get syncStatus => text().withDefault(const Constant('synced'))(); // SyncStatus enum name
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -146,6 +148,8 @@ class RecurringPayments extends Table {
   TextColumn get categoryId => text().nullable()();
   TextColumn get accountId => text().nullable()();
   BoolColumn get isAutoPay => boolean().withDefault(const Constant(false))();
+  BoolColumn get isIncome => boolean().withDefault(const Constant(false))();
+  TextColumn get companyId => text().nullable()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -163,6 +167,23 @@ class Investments extends Table {
   RealColumn get currentValue => real()();
   RealColumn get monthlySipAmount => real().withDefault(const Constant(0.0))();
   IntColumn get sipDay => integer().withDefault(const Constant(1))();
+  TextColumn get referenceNumber => text().nullable()(); // UAN / PPF-NPS account number
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('CompanyEntry')
+class Companies extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  DateTimeColumn get joinedDate => dateTime().nullable()();
+  BoolColumn get isCurrentEmployer => boolean().withDefault(const Constant(false))();
+  TextColumn get defaultBankAccountId => text().nullable()();
+  RealColumn get defaultPfAmount => real().nullable()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get deletedAt => dateTime().nullable()();

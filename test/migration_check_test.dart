@@ -54,7 +54,7 @@ void main() {
     expect(notes, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 6);
+    expect(versionRow.data['user_version'], 7);
 
     // v3 additions: the tombstone column is present (the sync_outbox table it
     // shipped alongside is gone again as of v6 — checked below).
@@ -148,5 +148,70 @@ void main() {
 
     final row = await (phase2.select(phase2.syncMeta)..where((t) => t.key.equals('sec_wrapped_dek'))).getSingle();
     expect(row.value, 'keep-me-ciphertext');
+  });
+
+  test('v6 -> v7 upgrade adds companies + the Salary/PF columns without losing existing data', () async {
+    final file = File('${Directory.systemTemp.path}/migration_check_v7_${DateTime.now().microsecondsSinceEpoch}.sqlite');
+    addTearDown(() {
+      if (file.existsSync()) file.deleteSync();
+    });
+
+    // ── Phase 1: simulate a real v6 install (11 tables, no `companies`) ──
+    final phase1 = AppDatabase.forTesting(NativeDatabase(file));
+    final m = Migrator(phase1);
+    await phase1.customStatement('PRAGMA journal_mode=WAL');
+    await m.createTable(phase1.accounts);
+    await m.createTable(phase1.categories);
+    await m.createTable(phase1.transactions);
+    await m.createTable(phase1.creditCards);
+    await m.createTable(phase1.loans);
+    await m.createTable(phase1.budgets);
+    await m.createTable(phase1.recurringPayments);
+    await m.createTable(phase1.investments);
+    await m.createTable(phase1.goals);
+    await m.createTable(phase1.notes);
+    await m.createTable(phase1.syncMeta);
+    // deliberately NOT creating `companies` — that's the v7 addition
+    await phase1.customStatement('PRAGMA user_version = 6');
+
+    final inv = InvestmentModel(
+      id: 'inv1',
+      name: 'Test PPF',
+      type: InvestmentType.ppf,
+      investedAmount: 5000,
+      currentValue: 5200,
+    );
+    await phase1.into(phase1.investments).insertOnConflictUpdate(inv.toCompanion());
+    await phase1.close();
+
+    // ── Phase 2: open with the real (v7) AppDatabase against the same file ──
+    final phase2 = AppDatabase.forTesting(NativeDatabase(file));
+    addTearDown(phase2.close);
+
+    final investments = await phase2.select(phase2.investments).get();
+    expect(investments.length, 1, reason: 'pre-existing data must survive the upgrade');
+    expect(investments.first.name, 'Test PPF');
+
+    // This throws "no such table: companies" if the migration didn't run.
+    final companies = await phase2.select(phase2.companies).get();
+    expect(companies, isEmpty);
+
+    final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
+    expect(versionRow.data['user_version'], 7);
+
+    final txCols = (await phase2.customSelect('PRAGMA table_info(transactions)').get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(txCols.containsAll({'company_id', 'is_external_to_account'}), isTrue);
+
+    final recurringCols = (await phase2.customSelect('PRAGMA table_info(recurring_payments)').get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(recurringCols.containsAll({'is_income', 'company_id'}), isTrue);
+
+    final investmentCols = (await phase2.customSelect('PRAGMA table_info(investments)').get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(investmentCols.contains('reference_number'), isTrue);
   });
 }

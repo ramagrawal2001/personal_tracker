@@ -152,26 +152,45 @@ class PaymentReminders {
       ));
     }
 
-    // ── Recurring payments ─────────────────────────────────────────────
+    // ── Recurring payments (bills, and payday reminders when isIncome) ──
     for (final r in state.recurringPayments) {
       if (r.isDeleted) continue;
       final d = DateTime(r.nextDueDate.year, r.nextDueDate.month, r.nextDueDate.day, _dueHour);
       if (d.isBefore(DateTime(now.year, now.month, now.day))) continue; // stale
       final soon = d.subtract(const Duration(days: _daysBefore)).copyWithHour(_reminderHour);
-      if (soon.isAfter(now)) {
+      if (r.isIncome) {
+        // Notify-only, like every other reminder here — nothing auto-posts a
+        // transaction. Tapping it should take the user to Log Salary.
+        if (soon.isAfter(now)) {
+          out.add(ReminderSpec(
+            id: idFor(r.id, _Kind.dueSoon.index),
+            when: soon,
+            title: '💰 ${r.title} expected soon',
+            body: '${_amt(r.amount)} expected in $_daysBefore days.',
+          ));
+        }
         out.add(ReminderSpec(
-          id: idFor(r.id, _Kind.dueSoon.index),
-          when: soon,
-          title: '${r.title} due soon',
-          body: '${_amt(r.amount)} due in $_daysBefore days.',
+          id: idFor(r.id, _Kind.dueToday.index),
+          when: d,
+          title: '💰 ${r.title} expected today',
+          body: 'Log it once it lands — ${_amt(r.amount)} expected.',
+        ));
+      } else {
+        if (soon.isAfter(now)) {
+          out.add(ReminderSpec(
+            id: idFor(r.id, _Kind.dueSoon.index),
+            when: soon,
+            title: '${r.title} due soon',
+            body: '${_amt(r.amount)} due in $_daysBefore days.',
+          ));
+        }
+        out.add(ReminderSpec(
+          id: idFor(r.id, _Kind.dueToday.index),
+          when: d,
+          title: '${r.title} due today',
+          body: 'Scheduled payment of ${_amt(r.amount)}.',
         ));
       }
-      out.add(ReminderSpec(
-        id: idFor(r.id, _Kind.dueToday.index),
-        when: d,
-        title: '${r.title} due today',
-        body: 'Scheduled payment of ${_amt(r.amount)}.',
-      ));
     }
 
     return out;

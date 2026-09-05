@@ -21,6 +21,7 @@ part 'app_database.g.dart';
   Goals,
   Notes,
   SyncMeta,
+  Companies,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -34,7 +35,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -153,6 +154,34 @@ class AppDatabase extends _$AppDatabase {
               "OR key = 'settings_updated_at'",
             );
           }
+          if (from < 7) {
+            // v7: Companies (employer registry) + the Salary/PF workflow's
+            // supporting columns. Added defensively — a synthetic upgrade
+            // path may have already created tables from the current schema.
+            final v7Cache = <String, Set<String>>{};
+            Future<Set<String>> v7Cols(String table) async {
+              return v7Cache[table] ??= (await customSelect('PRAGMA table_info($table)').get())
+                  .map((row) => row.read<String>('name'))
+                  .toSet();
+            }
+
+            Future<void> addV7(TableInfo table, GeneratedColumn column) async {
+              final cols = await v7Cols(table.actualTableName);
+              if (!cols.contains(column.name)) {
+                await m.addColumn(table, column);
+                cols.add(column.name);
+              }
+            }
+
+            if (!(await v7Cols('companies')).isNotEmpty) {
+              await m.createTable(companies);
+            }
+            await addV7(transactions, transactions.companyId);
+            await addV7(transactions, transactions.isExternalToAccount);
+            await addV7(recurringPayments, recurringPayments.isIncome);
+            await addV7(recurringPayments, recurringPayments.companyId);
+            await addV7(investments, investments.referenceNumber);
+          }
         },
       );
 
@@ -165,6 +194,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(recurringPayments).go();
       await delete(investments).go();
       await delete(goals).go();
+      await delete(companies).go();
       await delete(accounts).go();
       await delete(categories).go();
       await delete(notes).go();
@@ -186,6 +216,7 @@ class AppDatabase extends _$AppDatabase {
       'recurringPayments': (await select(recurringPayments).get()).map((e) => e.toJson()).toList(),
       'investments': (await select(investments).get()).map((e) => e.toJson()).toList(),
       'goals': (await select(goals).get()).map((e) => e.toJson()).toList(),
+      'companies': (await select(companies).get()).map((e) => e.toJson()).toList(),
       'notes': (await select(notes).get()).map((e) => e.toJson()).toList(),
     };
   }
@@ -228,6 +259,9 @@ class AppDatabase extends _$AppDatabase {
       }
       for (final row in rows('goals')) {
         await into(goals).insertOnConflictUpdate(GoalEntry.fromJson(row).toCompanion(true));
+      }
+      for (final row in rows('companies')) {
+        await into(companies).insertOnConflictUpdate(CompanyEntry.fromJson(row).toCompanion(true));
       }
       for (final row in rows('notes')) {
         await into(notes).insertOnConflictUpdate(NoteEntry.fromJson(row).toCompanion(true));

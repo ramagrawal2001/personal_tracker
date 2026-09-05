@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
@@ -199,6 +200,8 @@ class InvestmentsScreen extends ConsumerWidget {
     final investedCtrl = TextEditingController(text: inv.investedAmount.toStringAsFixed(0));
     final currentCtrl = TextEditingController(text: inv.currentValue.toStringAsFixed(0));
     final sipCtrl = TextEditingController(text: inv.monthlySipAmount > 0 ? inv.monthlySipAmount.toStringAsFixed(0) : '');
+    final referenceNumberCtrl = TextEditingController(text: inv.referenceNumber ?? '');
+    final showsReferenceNumber = inv.type == InvestmentType.epf || inv.type == InvestmentType.ppf;
     String? error;
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
@@ -221,6 +224,10 @@ class InvestmentsScreen extends ConsumerWidget {
                 ]),
                 const SizedBox(height: 12),
                 TextField(controller: sipCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Monthly SIP (${CurrencyFormatter.symbol})', prefixIcon: const Icon(LucideIcons.repeat, size: 16))),
+                if (showsReferenceNumber) ...[
+                  const SizedBox(height: 12),
+                  TextField(controller: referenceNumberCtrl, decoration: const InputDecoration(labelText: 'UAN / Reference Number', prefixIcon: Icon(LucideIcons.hash, size: 16))),
+                ],
                 if (error != null) ...[
                   const SizedBox(height: 8),
                   Text(error!, style: TextStyle(color: AppColors.expense, fontSize: 12)),
@@ -253,6 +260,9 @@ class InvestmentsScreen extends ConsumerWidget {
                         investedAmount: invested,
                         currentValue: current,
                         monthlySipAmount: sip,
+                        referenceNumber: showsReferenceNumber && referenceNumberCtrl.text.trim().isNotEmpty
+                            ? referenceNumberCtrl.text.trim()
+                            : null,
                       );
                       if (!ctx.mounted) return;
                       Navigator.pop(ctx);
