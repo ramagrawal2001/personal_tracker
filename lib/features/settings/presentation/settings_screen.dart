@@ -17,6 +17,7 @@ import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../auth/presentation/auth_repository.dart';
+import '../../auth/presentation/cipher_recovery_prompt.dart';
 import '../../../core/services/biometric_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -416,6 +417,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   subtitle: Text('Recovers your encrypted card & bank details on a new device', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
                   onTap: () => _showRecoveryCodeDialog(null),
+                ),
+                Divider(color: AppColors.border, height: 1),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: AppDecorations.iconBadge(AppColors.primary),
+                    child: Icon(LucideIcons.keyRound, color: AppColors.primary, size: 18),
+                  ),
+                  title: Text('Restore Encrypted Data', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text('Card/CVV/PIN showing blank or wrong? Unlock them with a recovery code or previous password', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                  onTap: () {
+                    final userId = ref.read(authNotifierProvider).user?.id;
+                    if (userId == null) return;
+                    CipherRecoveryPrompt.show(context, userId: userId);
+                  },
                 ),
                 Divider(color: AppColors.border, height: 1),
                 SwitchListTile(

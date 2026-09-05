@@ -341,8 +341,8 @@ class SecretCipherService {
     var wrapped = await _readMeta(_metaWrappedDek);
     var saltB64 = await _readMeta(_metaKekSalt);
     if (wrapped == null || saltB64 == null) {
-      final cloud = await _fetchCloudKeyRow(userId);
-      if (cloud == null) {
+      final synced = await _syncWrapperFromCloud(userId);
+      if (!synced) {
         // Couldn't reach the cloud to check — every sign-out clears the local
         // wrapper copy, so this is the ONLY place a wrapper for an existing
         // account would show up. Treating a failed lookup the same as
@@ -355,18 +355,8 @@ class SecretCipherService {
         needsRecoveryListenable.value = true;
         return;
       }
-      wrapped = cloud['sec_wrapped_dek'] as String?;
-      saltB64 = cloud['sec_kek_salt'] as String?;
-      if (wrapped != null && saltB64 != null) {
-        await _writeMeta(_metaWrappedDek, wrapped);
-        await _writeMeta(_metaKekSalt, saltB64);
-      }
-      final rcWrapped = cloud['sec_wrapped_dek_rc'] as String?;
-      final rcSalt = cloud['sec_rc_salt'] as String?;
-      if (rcWrapped != null && rcSalt != null) {
-        await _writeMeta(_metaWrappedDekRc, rcWrapped);
-        await _writeMeta(_metaRcSalt, rcSalt);
-      }
+      wrapped = await _readMeta(_metaWrappedDek);
+      saltB64 = await _readMeta(_metaKekSalt);
     }
 
     if (wrapped != null && saltB64 != null) {
@@ -407,10 +397,38 @@ class SecretCipherService {
     return true;
   }
 
+  /// Always re-fetches the wrapper material from the cloud and overwrites
+  /// whatever this device has cached locally for it — the cloud row is the
+  /// server-authoritative copy (unlike the raw DEK itself, which is meant to
+  /// stay device-local once unlocked, per the class doc). A local copy can
+  /// go stale or simply wrong (e.g. this exact device silently minted its
+  /// own wrapper during the bug this fixes), so any *recovery* attempt must
+  /// prefer the server over whatever is sitting on-device. Returns false
+  /// only when the lookup itself failed (offline etc.) — local meta is left
+  /// untouched in that case so an existing local copy still gets a chance.
+  Future<bool> _syncWrapperFromCloud(String userId) async {
+    final cloud = await _fetchCloudKeyRow(userId);
+    if (cloud == null) return false;
+    final wrapped = cloud['sec_wrapped_dek'] as String?;
+    final saltB64 = cloud['sec_kek_salt'] as String?;
+    if (wrapped != null && saltB64 != null) {
+      await _writeMeta(_metaWrappedDek, wrapped);
+      await _writeMeta(_metaKekSalt, saltB64);
+    }
+    final rcWrapped = cloud['sec_wrapped_dek_rc'] as String?;
+    final rcSalt = cloud['sec_rc_salt'] as String?;
+    if (rcWrapped != null && rcSalt != null) {
+      await _writeMeta(_metaWrappedDekRc, rcWrapped);
+      await _writeMeta(_metaRcSalt, rcSalt);
+    }
+    return true;
+  }
+
   /// Fresh device after an email reset: unwrap with the previous password, then
   /// re-wrap under the current one.
   Future<bool> restoreWithPreviousPassword(
       String userId, String previousPassword, String currentPassword) async {
+    await _syncWrapperFromCloud(userId); // best-effort — see doc above
     final wrapped = await _readMeta(_metaWrappedDek);
     final saltB64 = await _readMeta(_metaKekSalt);
     if (wrapped == null || saltB64 == null) return false;
@@ -426,6 +444,7 @@ class SecretCipherService {
   /// the current password.
   Future<bool> restoreWithRecoveryCode(
       String userId, String recoveryCode, String currentPassword) async {
+    await _syncWrapperFromCloud(userId); // best-effort — see doc above
     final wrapped = await _readMeta(_metaWrappedDekRc);
     final saltB64 = await _readMeta(_metaRcSalt);
     if (wrapped == null || saltB64 == null) return false;
