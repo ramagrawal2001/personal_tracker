@@ -97,12 +97,25 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
     final categoriesById = {for (final c in financeState.categories) c.id: c};
 
+    // Group by calendar day, then order within the day by when the row was
+    // added — a transaction backdated to (or logged for) a given day lands at
+    // the TOP of that day's entries, not the bottom. `date` alone can't do
+    // this: a backdated row's time defaults to midnight, so a plain
+    // date-descending sort would bury it under everything logged live that
+    // day.
+    DateTime dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
     switch (_sortOption) {
       case _SortOption.dateDesc:
-        filtered.sort((a, b) => b.date.compareTo(a.date));
+        filtered.sort((a, b) {
+          final dayCmp = dayOf(b.date).compareTo(dayOf(a.date));
+          return dayCmp != 0 ? dayCmp : b.createdAt.compareTo(a.createdAt);
+        });
         break;
       case _SortOption.dateAsc:
-        filtered.sort((a, b) => a.date.compareTo(b.date));
+        filtered.sort((a, b) {
+          final dayCmp = dayOf(a.date).compareTo(dayOf(b.date));
+          return dayCmp != 0 ? dayCmp : a.createdAt.compareTo(b.createdAt);
+        });
         break;
       case _SortOption.amountDesc:
         filtered.sort((a, b) => b.amount.compareTo(a.amount));

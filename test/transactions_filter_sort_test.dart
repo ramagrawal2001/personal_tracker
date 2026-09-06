@@ -143,4 +143,38 @@ void main() {
     expect(find.text('Lunch'), findsOneWidget);
     expect(find.text('Cab Ride'), findsNothing);
   });
+
+  testWidgets('a transaction added later for the same day renders above the earlier ones', (tester) async {
+    final notifier = createTestFinanceNotifier();
+    await notifier.addAccount(name: 'Wallet', type: AccountType.savingsAccount, openingBalance: 0);
+    final accountId = notifier.state.accounts.first.id;
+
+    // Both dated the same calendar day, added in sequence. The second call
+    // gets a later createdAt, so it must sort first within that day — a
+    // backdated entry lands at the TOP of its day, not the bottom.
+    await notifier.addTransaction(
+      accountId: accountId,
+      type: TransactionType.expense,
+      amount: 100,
+      categoryId: 'cat_food',
+      merchant: 'Logged First',
+      date: DateTime(2026, 9, 5),
+    );
+    await notifier.addTransaction(
+      accountId: accountId,
+      type: TransactionType.expense,
+      amount: 200,
+      categoryId: 'cat_food',
+      merchant: 'Logged Second',
+      date: DateTime(2026, 9, 5),
+    );
+
+    await tester.pumpWidget(wrapApp(notifier));
+    await tester.pumpAndSettle();
+
+    final secondY = tester.getTopLeft(find.text('Logged Second')).dy;
+    final firstY = tester.getTopLeft(find.text('Logged First')).dy;
+    expect(secondY, lessThan(firstY),
+        reason: 'the later-added entry for the same day should be on top');
+  });
 }
