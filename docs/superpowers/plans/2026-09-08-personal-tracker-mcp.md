@@ -2257,6 +2257,18 @@ git commit -m "docs(mcp): deploy + connect walkthrough and integration checklist
 
 ---
 
+## Execution deviations (recorded 2026-09-09, all 11 tasks complete)
+
+- **zod 4, not 3.** `agents@0.22` peer-requires `zod@^4`; `@modelcontextprotocol/sdk@1.30` accepts it. Consequences applied throughout:
+  - `z.record(z.string())` → `z.record(z.string(), z.string())` / `z.record(z.string(), z.unknown())` (two-arg form).
+  - `z.string().uuid()` → `z.guid()` for `account_id` / `to_account_id` — Postgres `uuid` columns accept any RFC-shaped value and `crypto.randomUUID()` always passes; zod 4's `.uuid()` enforces version/variant and rejected valid ids.
+  - `EntityDef.createSchema/updateSchema` typed `z.ZodType` (not `z.ZodTypeAny`).
+- **`update_record` defaults bug fixed.** `createSchema.partial()` still injects `.default()` values for absent keys, which would clobber unrelated columns. `update_record` now forwards only the keys the caller actually supplied. Extra test added.
+- **No separate Durable Object state.** The agent keeps the session in `this.props` and persists refreshed tokens via `McpAgent.updateProps(...)` (the library's documented primitive) rather than `this.setState`. `AuthProps = Session & { connectedAt: string } & Record<string, unknown>` (index signature satisfies McpAgent's `Props` constraint; `connectedAt` set at grant time in the login handler).
+- **No `OAUTH_ENCRYPTION_KEY` secret** (already removed from the spec pre-execution) — `@cloudflare/workers-oauth-provider@0.10` manages its own key in KV.
+- **Test-helper fix:** GoTrue/REST fetch stubs must return a *fresh* `Response` per call (a body can only be read once).
+- **Task 10** carries `as never` casts on `apiHandlers` / `defaultHandler` to bridge Hono's and `McpAgent.serve()`'s handler types to `OAuthProviderOptions`; verified with `wrangler deploy --dry-run` (builds clean, 611 KiB gzip — within the free-plan limit).
+
 ## Post-implementation (manual, by the user)
 
 These require the user's Cloudflare account and are **not** code tasks — the
