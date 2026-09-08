@@ -55,7 +55,7 @@ loginApp.post("/authorize", async (c) => {
       userId: session.supabaseUserId,
       metadata: { email: session.email },
       scope: Array.isArray(authRequest.scope) ? authRequest.scope : ["personal-tracker"],
-      props: { ...session },
+      props: { ...session, connectedAt: new Date().toISOString() },
     });
     return c.redirect(redirectTo, 302);
   } catch (e) {
