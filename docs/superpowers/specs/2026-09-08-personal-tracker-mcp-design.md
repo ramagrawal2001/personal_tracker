@@ -26,8 +26,14 @@ per-user isolation.
 - **No encrypted fields.** `enc_account_number`, `enc_ifsc`, and card PAN/CVV-ish
   fields require the client-side cipher key the server cannot hold. Reads omit
   them; writes reject them.
-- **Scope:** all 11 entities — accounts, transactions, credit_cards, loans,
-  budgets, goals, categories, investments, companies, recurring_payments, notes.
+- **No `notes`.** Amendment (2026-09-08, discovered during planning): `notes`
+  rows are stored **fully encrypted at rest** — `title`, `body`,
+  `checklist_items`, `labels` are ciphertext from the app's on-device
+  `SecretCipherService` (see `cloud_mappers.dart` `NoteCloud`). The server has
+  no key, so notes are excluded for the same reason as the `enc_*` fields.
+- **Scope:** 10 entities — accounts, transactions, credit_cards, loans,
+  budgets, goals, categories, investments, companies, recurring_payments.
+  (`notes` deferred — see above.)
 
 ## Prerequisites (outside our control)
 
@@ -138,10 +144,13 @@ itself (DCR, stored in KV), starts OAuth.
 
 - **KV:** OAuth client registrations, short-lived auth codes, encrypted grants
   (`supabaseUserId`, `email`, both Supabase tokens, `expiresAt`), MCP tokens.
+  `@cloudflare/workers-oauth-provider` manages its own token-encryption key
+  inside KV — no key secret to configure.
 - **`wrangler.jsonc` (committed):** `SUPABASE_URL`, `SUPABASE_ANON_KEY` (both
-  already public).
-- **`wrangler secret` (never committed):** `OAUTH_ENCRYPTION_KEY` (pinned for
-  reproducibility).
+  already public in the Flutter binary).
+- No Worker secrets required. The OAuth request params round-trip GET→POST on
+  `/authorize` as a plain hidden JSON field (not secret; `completeAuthorization`
+  re-validates them against the registered client + redirect URI).
 - The password is never stored or logged — forwarded once to GoTrue over TLS.
 
 ## Tool & schema layer
@@ -192,7 +201,8 @@ with a parity test asserting the hard-coded lists match.
 
 ### Excluded from v1
 
-`enc_account_number`, `enc_ifsc`, card PAN/CVV fields, `user_settings`.
+`enc_account_number`, `enc_ifsc`, card `enc_card_number` / `enc_cvv` / `enc_pin`,
+`user_settings`, and the entire `notes` entity (encrypted at rest).
 
 ## Derived values
 
@@ -261,7 +271,6 @@ cd personal-tracker-mcp
 npm install
 npx wrangler login
 npx wrangler kv namespace create OAUTH_KV        # paste id into wrangler.jsonc
-openssl rand -hex 32 | npx wrangler secret put OAUTH_ENCRYPTION_KEY
 npx wrangler deploy                              # prints the workers.dev URL
 npm test
 ```
@@ -275,6 +284,8 @@ encryption key, `npx wrangler dev`.
 
 ## Out of scope for v1 (possible follow-ups)
 
+- `notes` — needs a companion decrypt/encrypt path matching the app's
+  `SecretCipherService` (AES-256-GCM with a password/recovery-derived DEK).
 - `restore` tool (un-tombstone a soft-deleted row).
 - `user_settings` read/write.
 - Encrypted-field writes (would need a companion cipher mechanism).
