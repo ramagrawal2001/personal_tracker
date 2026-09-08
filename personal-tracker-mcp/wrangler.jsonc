@@ -1,19 +1,40 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "personal-tracker-mcp",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-09-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "vars": {
-    "SUPABASE_URL": "https://zztvtryevtzqmlfgiiir.supabase.co",
-    "SUPABASE_ANON_KEY": "sb_publishable_3TVjGyvtiCIUMkdZNOJMQw_PDC-slq_"
-  },
-  "kv_namespaces": [
-    { "binding": "OAUTH_KV", "id": "PLACEHOLDER_RUN_wrangler_kv_namespace_create_OAUTH_KV" }
-  ],
-  "durable_objects": {
-    "bindings": [{ "name": "MCP_OBJECT", "class_name": "PersonalTrackerMCP" }]
-  },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["PersonalTrackerMCP"] }],
-  "observability": { "enabled": true }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "personal-tracker-mcp",
+	"main": "src/index.ts",
+	"account_id": "999a991fce6942a7eb928da214711537",
+	"compatibility_date": "2025-09-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"vars": {
+		"SUPABASE_URL": "https://zztvtryevtzqmlfgiiir.supabase.co",
+		"SUPABASE_ANON_KEY": "sb_publishable_3TVjGyvtiCIUMkdZNOJMQw_PDC-slq_"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "OAUTH_KV",
+			"id": "bff8fee408474b728a9ac4056121c733",
+			"remote": true
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "MCP_OBJECT",
+				"class_name": "PersonalTrackerMCP"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"PersonalTrackerMCP"
+			]
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
 }
