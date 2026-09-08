@@ -1,0 +1,4 @@
+# Copy to .dev.vars for `wrangler dev`. Same public values as wrangler.jsonc;
+# override only when pointing at a different Supabase project.
+SUPABASE_URL=https://zztvtryevtzqmlfgiiir.supabase.co
+SUPABASE_ANON_KEY=sb_publishable_3TVjGyvtiCIUMkdZNOJMQw_PDC-slq_
