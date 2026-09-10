@@ -54,7 +54,7 @@ void main() {
     expect(notes, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 8);
+    expect(versionRow.data['user_version'], 9);
 
     // v3 additions: the tombstone column is present (the sync_outbox table it
     // shipped alongside is gone again as of v6 — checked below).
@@ -197,7 +197,7 @@ void main() {
     expect(companies, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 8);
+    expect(versionRow.data['user_version'], 9);
 
     final txCols = (await phase2.customSelect('PRAGMA table_info(transactions)').get())
         .map((r) => r.read<String>('name'))
@@ -260,11 +260,61 @@ void main() {
     expect(accounts.first.sortOrder, 0, reason: 'the new column must default to 0, not fail the migration');
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 8);
+    expect(versionRow.data['user_version'], 9);
 
     final acctCols = (await phase2.customSelect('PRAGMA table_info(accounts)').get())
         .map((r) => r.read<String>('name'))
         .toSet();
     expect(acctCols.contains('sort_order'), isTrue);
+  });
+
+  test('v8 -> v9 upgrade adds the SIP auto-invest columns without losing existing data', () async {
+    final file = File('${Directory.systemTemp.path}/migration_check_v9_${DateTime.now().microsecondsSinceEpoch}.sqlite');
+    addTearDown(() {
+      if (file.existsSync()) file.deleteSync();
+    });
+
+    // ── Phase 1: simulate a v8 install (same pattern as the v7->v8 test —
+    // Migrator.createTable is IF-NOT-EXISTS, so this just pins user_version) ──
+    final phase1 = AppDatabase.forTesting(NativeDatabase(file));
+    final m = Migrator(phase1);
+    await phase1.customStatement('PRAGMA journal_mode=WAL');
+    await m.createTable(phase1.accounts);
+    await m.createTable(phase1.categories);
+    await m.createTable(phase1.transactions);
+    await m.createTable(phase1.creditCards);
+    await m.createTable(phase1.loans);
+    await m.createTable(phase1.budgets);
+    await m.createTable(phase1.recurringPayments);
+    await m.createTable(phase1.investments);
+    await m.createTable(phase1.goals);
+    await m.createTable(phase1.notes);
+    await m.createTable(phase1.syncMeta);
+    await m.createTable(phase1.companies);
+    await phase1.customStatement(
+      "INSERT INTO investments (id, name, type, invested_amount, current_value) "
+      "VALUES ('inv1', 'Nifty 50', 'mutualFundSip', 100000, 115000)",
+    );
+    await phase1.customStatement('PRAGMA user_version = 8');
+    await phase1.close();
+
+    // ── Phase 2: open with the real (v9) AppDatabase against the same file ──
+    final phase2 = AppDatabase.forTesting(NativeDatabase(file));
+    addTearDown(phase2.close);
+
+    final investments = await phase2.select(phase2.investments).get();
+    expect(investments.length, 1, reason: 'pre-existing data must survive the upgrade');
+    expect(investments.first.name, 'Nifty 50');
+    expect(investments.first.autoInvestEnabled, false, reason: 'new bool column defaults to false');
+    expect(investments.first.lastAutoPostedMonth, null);
+
+    final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
+    expect(versionRow.data['user_version'], 9);
+
+    final invCols = (await phase2.customSelect('PRAGMA table_info(investments)').get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(invCols.contains('auto_invest_enabled'), isTrue);
+    expect(invCols.contains('last_auto_posted_month'), isTrue);
   });
 }

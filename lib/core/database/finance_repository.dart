@@ -24,6 +24,7 @@ const _kCurrencySymbol = kPrefCurrencySymbol;
 const _kBiometricEnabled = kPrefBiometricEnabled;
 const _kRoundUpEnabled = kPrefRoundUpEnabled;
 const _kAutoBackupEnabled = kPrefAutoBackupEnabled;
+const _kSipDebitAccount = kPrefSipDebitAccount;
 
 /// The finance entity tables synced with the cloud (`notes` is handled by
 /// `NotesNotifier` instead). Order mirrors the old sync engine's push/pull
@@ -63,6 +64,10 @@ class FinanceState {
   final bool isRoundUpEnabled;
   final bool isAutoBackupEnabled;
 
+  /// The account SIP auto-posts debit. Device-local (SharedPreferences), not
+  /// cloud-synced. Null ⇒ SIP auto-post is inert.
+  final String? sipDebitAccountId;
+
   /// True while [FinanceNotifier.refreshFromCloud] is in flight. Drives the
   /// "Refresh now" spinner in Settings.
   final bool isRefreshing;
@@ -93,6 +98,7 @@ class FinanceState {
     this.isBiometricEnabled = false,
     this.isRoundUpEnabled = false,
     this.isAutoBackupEnabled = false,
+    this.sipDebitAccountId,
     this.isRefreshing = false,
     this.lastRefreshedAt,
     this.lastRefreshError,
@@ -412,6 +418,7 @@ class FinanceState {
     bool? isBiometricEnabled,
     bool? isRoundUpEnabled,
     bool? isAutoBackupEnabled,
+    Object? sipDebitAccountId = _sentinel,
     bool? isRefreshing,
     DateTime? lastRefreshedAt,
     Object? lastRefreshError = _sentinel,
@@ -432,6 +439,7 @@ class FinanceState {
       isBiometricEnabled: isBiometricEnabled ?? this.isBiometricEnabled,
       isRoundUpEnabled: isRoundUpEnabled ?? this.isRoundUpEnabled,
       isAutoBackupEnabled: isAutoBackupEnabled ?? this.isAutoBackupEnabled,
+      sipDebitAccountId: identical(sipDebitAccountId, _sentinel) ? this.sipDebitAccountId : sipDebitAccountId as String?,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       lastRefreshedAt: lastRefreshedAt ?? this.lastRefreshedAt,
       lastRefreshError: identical(lastRefreshError, _sentinel) ? this.lastRefreshError : lastRefreshError as String?,
@@ -605,6 +613,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         isBiometricEnabled: prefs.getBool(_kBiometricEnabled) ?? false,
         isRoundUpEnabled: prefs.getBool(_kRoundUpEnabled) ?? false,
         isAutoBackupEnabled: prefs.getBool(_kAutoBackupEnabled) ?? false,
+        sipDebitAccountId: prefs.getString(_kSipDebitAccount),
       );
       // Push persisted symbol into the static formatter immediately.
       CurrencyFormatter.updateSymbol(state.currencySymbol);
@@ -1524,6 +1533,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     double monthlySipAmount = 0.0,
     int sipDay = 1,
     String? referenceNumber,
+    bool autoInvestEnabled = false,
   }) async {
     final draft = InvestmentModel(
       id: _uuid.v4(),
@@ -1534,6 +1544,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       monthlySipAmount: monthlySipAmount,
       sipDay: sipDay,
       referenceNumber: referenceNumber,
+      autoInvestEnabled: autoInvestEnabled,
     );
 
     final serverTs = await pushToCloud('investments', draft.toCloudJson());
@@ -1794,6 +1805,19 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     state = state.copyWith(emergencyBuffer: amount);
     _savePref((prefs) => prefs.setDouble(_kEmergencyBuffer, amount));
     _pushSettings();
+  }
+
+  /// The single account SIP auto-posts debit. Device-local (SharedPreferences),
+  /// NOT cloud-synced — the synced `lastAutoPostedMonth` marker is what keeps
+  /// two devices from double-posting. Null clears it (auto-post goes inert).
+  Future<void> setSipDebitAccount(String? accountId) async {
+    state = state.copyWith(sipDebitAccountId: accountId);
+    final prefs = await SharedPreferences.getInstance();
+    if (accountId == null) {
+      await prefs.remove(_kSipDebitAccount);
+    } else {
+      await prefs.setString(_kSipDebitAccount, accountId);
+    }
   }
 
   void setCurrencySymbol(String symbol) {
@@ -2283,6 +2307,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     double? investedAmount,
     double? monthlySipAmount,
     String? referenceNumber,
+    int? sipDay,
+    bool? autoInvestEnabled,
+    String? lastAutoPostedMonth,
   }) async {
     final existing = state.investments.where((inv) => inv.id == id).toList();
     if (existing.isEmpty) return;
@@ -2292,6 +2319,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       currentValue: currentValue,
       monthlySipAmount: monthlySipAmount,
       referenceNumber: referenceNumber,
+      sipDay: sipDay,
+      autoInvestEnabled: autoInvestEnabled,
+      lastAutoPostedMonth: lastAutoPostedMonth,
     );
 
     final serverTs = await pushToCloud('investments', draft.toCloudJson());

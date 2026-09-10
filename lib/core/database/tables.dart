@@ -169,6 +169,8 @@ class Investments extends Table {
   RealColumn get currentValue => real()();
   RealColumn get monthlySipAmount => real().withDefault(const Constant(0.0))();
   IntColumn get sipDay => integer().withDefault(const Constant(1))();
+  BoolColumn get autoInvestEnabled => boolean().withDefault(const Constant(false))();
+  TextColumn get lastAutoPostedMonth => text().nullable()(); // "YYYY-MM" of the last SIP auto-post
   TextColumn get referenceNumber => text().nullable()(); // UAN / PPF-NPS account number
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();

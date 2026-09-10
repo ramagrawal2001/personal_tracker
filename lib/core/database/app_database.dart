@@ -35,7 +35,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -189,6 +189,20 @@ class AppDatabase extends _$AppDatabase {
                 .toSet();
             if (!existing.contains(accounts.sortOrder.name)) {
               await m.addColumn(accounts, accounts.sortOrder);
+            }
+          }
+          if (from < 9) {
+            // v9: SIP auto-invest — per-investment toggle + monthly idempotency
+            // marker. Added defensively (a synthetic upgrade path may already be
+            // on the current schema).
+            final existing = (await customSelect('PRAGMA table_info(investments)').get())
+                .map((row) => row.read<String>('name'))
+                .toSet();
+            if (!existing.contains(investments.autoInvestEnabled.name)) {
+              await m.addColumn(investments, investments.autoInvestEnabled);
+            }
+            if (!existing.contains(investments.lastAutoPostedMonth.name)) {
+              await m.addColumn(investments, investments.lastAutoPostedMonth);
             }
           }
         },
