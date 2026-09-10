@@ -471,20 +471,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           // ── Budget & Safety ──────────────────────────────────────────
           const SectionLabel(label: 'Budget & Safety'),
           AppCard(
-            child: ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: AppDecorations.iconBadge(AppColors.income),
-                child: Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 18),
-              ),
-              title: Text('Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-              subtitle: Text(
-                '${CurrencyFormatter.format(financeState.emergencyBuffer)} held back from Safe to Spend',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12),
-              ),
-              trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
-              onTap: () => _showEmergencyBufferDialog(context, financeNotifier, financeState.emergencyBuffer),
+            child: Column(
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: AppDecorations.iconBadge(AppColors.income),
+                    child: Icon(LucideIcons.shieldCheck, color: AppColors.income, size: 18),
+                  ),
+                  title: Text('Emergency Buffer', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                  subtitle: Text(
+                    '${CurrencyFormatter.format(financeState.emergencyBuffer)} held back from Safe to Spend',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                  ),
+                  trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                  onTap: () => _showEmergencyBufferDialog(context, financeNotifier, financeState.emergencyBuffer),
+                ),
+                Divider(color: AppColors.border, height: 1),
+                Builder(builder: (context) {
+                  final accId = financeState.sipDebitAccountId;
+                  final acc = financeState.accountsWithCalculatedBalances
+                      .where((a) => a.id == accId)
+                      .toList();
+                  final label = acc.isEmpty ? 'Not set — auto-invest is paused' : acc.first.name;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: AppDecorations.iconBadge(AppColors.transfer),
+                      child: Icon(LucideIcons.repeat, color: AppColors.transfer, size: 18),
+                    ),
+                    title: Text('SIP debit account', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                    subtitle: Text(label, style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                    trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
+                    onTap: () => _showSipAccountPicker(context, financeNotifier, financeState),
+                  );
+                }),
+              ],
             ),
           ),
           const SizedBox(height: 18),
@@ -566,6 +590,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
     onTap: onTap,
   );
+
+  void _showSipAccountPicker(BuildContext context, FinanceNotifier notifier, FinanceState state) {
+    final accounts = state.accountsWithCalculatedBalances.where((a) => a.isActive).toList();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text('SIP debit account', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+            RadioListTile<String?>(
+              value: null,
+              groupValue: state.sipDebitAccountId,
+              title: Text('None (pause auto-invest)', style: TextStyle(color: AppColors.textPrimary)),
+              onChanged: (_) {
+                notifier.setSipDebitAccount(null);
+                Navigator.pop(ctx);
+              },
+            ),
+            ...accounts.map((a) => RadioListTile<String?>(
+                  value: a.id,
+                  groupValue: state.sipDebitAccountId,
+                  title: Text(a.name, style: TextStyle(color: AppColors.textPrimary)),
+                  subtitle: Text(CurrencyFormatter.format(a.calculatedBalance), style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  onChanged: (_) {
+                    notifier.setSipDebitAccount(a.id);
+                    Navigator.pop(ctx);
+                  },
+                )),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _showEmergencyBufferDialog(BuildContext context, FinanceNotifier notifier, double current) {
     final ctrl = TextEditingController(text: current.toStringAsFixed(0));
