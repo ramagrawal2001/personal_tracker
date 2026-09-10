@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
@@ -55,17 +56,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     final financeState = ref.watch(financeNotifierProvider);
-    final recurring = financeState.recurringPayments;
+    // Recurring payments + synthetic SIP occurrences for the shown month.
+    final obligations = financeState.upcomingObligations(_selectedMonth);
+    bool inSelectedMonth(DateTime d) =>
+        d.year == _selectedMonth.year && d.month == _selectedMonth.month;
 
     // Collect days in _selectedMonth that have a due payment — tracked
     // separately from income (payday) days so the strip can show a distinct
     // icon/color for "money in" vs "money out".
     final dueDays = <int>{};
     final incomeDays = <int>{};
-    for (final r in recurring) {
-      final d = r.nextDueDate;
-      if (d.year == _selectedMonth.year && d.month == _selectedMonth.month) {
-        (r.isIncome ? incomeDays : dueDays).add(d.day);
+    for (final o in obligations) {
+      if (inSelectedMonth(o.date)) {
+        (o.isIncome ? incomeDays : dueDays).add(o.date.day);
       }
     }
 
@@ -82,18 +85,26 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       },
     ).whereType<int>().toList();
 
-    // Upcoming schedule filtered to selected month
-    final upcoming = recurring.where((r) {
-      final d = r.nextDueDate;
-      return d.year == _selectedMonth.year && d.month == _selectedMonth.month;
-    }).toList()
-      ..sort((a, b) => a.nextDueDate.compareTo(b.nextDueDate));
+    // Upcoming schedule filtered to selected month, sorted.
+    final upcoming = obligations.where((o) => inSelectedMonth(o.date)).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
 
-    // All recurring for future months
-    final future = recurring.where((r) {
-      final d = r.nextDueDate;
-      return d.isAfter(DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0));
-    }).toList();
+    // Recurring payments landing in a later month (SIPs recur every month, so
+    // they always show under the current month — no future list needed).
+    final monthEnd = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
+    final future = [
+      for (final r in financeState.recurringPayments)
+        if (!r.isDeleted && r.nextDueDate.isAfter(monthEnd))
+          UpcomingObligation(
+            id: r.id,
+            sourceId: r.id,
+            kind: ObligationKind.recurring,
+            title: r.title,
+            amount: r.amount,
+            date: r.nextDueDate,
+            isIncome: r.isIncome,
+          ),
+    ]..sort((a, b) => a.date.compareTo(b.date));
 
     final scheduleItems = upcoming.isNotEmpty ? upcoming : future;
 
@@ -254,14 +265,34 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final item = scheduleItems[index];
-                final dueDate = item.nextDueDate;
+                final dueDate = item.date;
                 final isOverdue = dueDate.isBefore(today) && !isCurrentMonth;
                 final isIncome = item.isIncome;
+                final isSip = item.kind == ObligationKind.sip;
                 final accentColor = isIncome ? AppColors.income : AppColors.accent;
+                RecurringPaymentModel? recurringFor() {
+                  final matches = financeState.recurringPayments.where((r) => r.id == item.sourceId);
+                  return matches.isEmpty ? null : matches.first;
+                }
+                final cadence = isSip ? 'Monthly' : (recurringFor()?.frequency.displayName ?? 'Monthly');
                 return InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: () => _showRecurringSheet(context, ref, financeState, existing: item),
-                  onLongPress: () => _confirmDeleteRecurring(context, ref, item),
+                  onTap: () {
+                    if (isSip) {
+                      context.push('/investments');
+                    } else {
+                      final rp = recurringFor();
+                      if (rp != null) {
+                        _showRecurringSheet(context, ref, financeState, existing: rp);
+                      }
+                    }
+                  },
+                  onLongPress: isSip
+                      ? null
+                      : () {
+                          final rp = recurringFor();
+                          if (rp != null) _confirmDeleteRecurring(context, ref, rp);
+                        },
                   child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -278,7 +309,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: AppDecorations.iconBadge(accentColor),
-                        child: Icon(isIncome ? LucideIcons.wallet : LucideIcons.calendar, color: accentColor, size: 20),
+                        child: Icon(isIncome ? LucideIcons.wallet : (isSip ? LucideIcons.repeat : LucideIcons.calendar), color: accentColor, size: 20),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -298,7 +329,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${isIncome ? 'Expected' : 'Due'} ${DateFormatter.formatShort(dueDate)} • ${item.frequency.displayName}',
+                              '${isIncome ? 'Expected' : 'Due'} ${DateFormatter.formatShort(dueDate)} • $cadence',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(

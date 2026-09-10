@@ -16,6 +16,7 @@ import '../../domain/models/note_model.dart';
 const String kPrefEmergencyBuffer = 'finance_emergency_buffer';
 const String kPrefCurrencySymbol = 'finance_currency_symbol';
 const String kPrefBiometricEnabled = 'finance_biometric_enabled';
+const String kPrefSipDebitAccount = 'finance_sip_debit_account_id';
 const String kPrefRoundUpEnabled = 'finance_round_up_enabled';
 const String kPrefAutoBackupEnabled = 'finance_auto_backup_enabled';
 
@@ -372,6 +373,8 @@ extension InvestmentCloud on InvestmentModel {
         'current_value': currentValue,
         'monthly_sip_amount': monthlySipAmount,
         'sip_day': sipDay,
+        'auto_invest_enabled': autoInvestEnabled,
+        'last_auto_posted_month': lastAutoPostedMonth,
         'reference_number': referenceNumber,
         'is_deleted': isDeleted,
         'deleted_at': _isoN(isDeleted ? updatedAt : null),
@@ -387,6 +390,8 @@ extension InvestmentCloud on InvestmentModel {
         currentValue: _d(m['current_value'] ?? 0),
         monthlySipAmount: _d(m['monthly_sip_amount'] ?? 0),
         sipDay: _int(m['sip_day'] ?? 1),
+        autoInvestEnabled: _bool(m['auto_invest_enabled']),
+        lastAutoPostedMonth: m['last_auto_posted_month'] as String?,
         referenceNumber: m['reference_number'] as String?,
         updatedAt: _dt(m['updated_at']),
         isDeleted: _bool(m['is_deleted']),

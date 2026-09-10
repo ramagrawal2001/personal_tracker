@@ -150,6 +150,7 @@ void main() {
         bankBalance: bigValue,
         creditCardDue: bigValue,
         upcomingEmis: bigValue,
+        upcomingSips: bigValue,
         monthlyIncome: bigValue,
         monthlyExpenses: bigValue,
       ),

@@ -152,6 +152,39 @@ class PaymentReminders {
       ));
     }
 
+    // ── SIPs (investments with a monthly SIP) ───────────────────────────
+    for (final inv in state.investments) {
+      if (inv.isDeleted) continue;
+      if (inv.monthlySipAmount <= 0) continue;
+      final due = inv.sipDay.clamp(1, 31);
+      final dueDate = nextOnDay(due, now, _dueHour);
+      final soon = dueDate.subtract(const Duration(days: _daysBefore))
+          .copyWithHour(_reminderHour);
+      final auto = inv.autoInvestEnabled;
+      if (soon.isAfter(now)) {
+        out.add(ReminderSpec(
+          id: idFor('sip_${inv.id}', _Kind.dueSoon.index),
+          when: soon,
+          title: auto
+              ? '🔁 ${inv.name} SIP auto-invests soon'
+              : '${inv.name} SIP due soon',
+          body: auto
+              ? '${_amt(inv.monthlySipAmount)} will be invested in $_daysBefore days.'
+              : '${_amt(inv.monthlySipAmount)} SIP due in $_daysBefore days.',
+        ));
+      }
+      out.add(ReminderSpec(
+        id: idFor('sip_${inv.id}', _Kind.dueToday.index),
+        when: dueDate,
+        title: auto
+            ? '🔁 ${inv.name} SIP auto-invests today'
+            : '${inv.name} SIP due today',
+        body: auto
+            ? 'Investing ${_amt(inv.monthlySipAmount)} automatically.'
+            : 'Invest ${_amt(inv.monthlySipAmount)} — log it in Investments.',
+      ));
+    }
+
     // ── Recurring payments (bills, and payday reminders when isIncome) ──
     for (final r in state.recurringPayments) {
       if (r.isDeleted) continue;

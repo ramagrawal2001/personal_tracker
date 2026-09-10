@@ -632,6 +632,11 @@ class InvestmentModel {
   final String? referenceNumber;
   final DateTime updatedAt;
   final bool isDeleted;
+  /// Per-investment "auto-invest on SIP day" toggle. When true,
+  /// [FinanceNotifier.processDueSipAutoPosts] posts this SIP once a month.
+  final bool autoInvestEnabled;
+  /// "YYYY-MM" of the most recent auto-post — the monthly idempotency marker.
+  final String? lastAutoPostedMonth;
 
   double get netReturns => currentValue - investedAmount;
   double get returnsPercentage => investedAmount > 0 ? ((currentValue - investedAmount) / investedAmount) * 100 : 0.0;
@@ -647,6 +652,8 @@ class InvestmentModel {
     this.referenceNumber,
     DateTime? updatedAt,
     this.isDeleted = false,
+    this.autoInvestEnabled = false,
+    this.lastAutoPostedMonth,
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   InvestmentModel copyWith({
@@ -660,6 +667,8 @@ class InvestmentModel {
     String? referenceNumber,
     DateTime? updatedAt,
     bool? isDeleted,
+    bool? autoInvestEnabled,
+    String? lastAutoPostedMonth,
   }) {
     return InvestmentModel(
       id: id ?? this.id,
@@ -672,6 +681,8 @@ class InvestmentModel {
       referenceNumber: referenceNumber ?? this.referenceNumber,
       updatedAt: updatedAt ?? DateTime.now(),
       isDeleted: isDeleted ?? this.isDeleted,
+      autoInvestEnabled: autoInvestEnabled ?? this.autoInvestEnabled,
+      lastAutoPostedMonth: lastAutoPostedMonth ?? this.lastAutoPostedMonth,
     );
   }
 }

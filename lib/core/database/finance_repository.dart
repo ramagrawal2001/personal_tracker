@@ -24,6 +24,7 @@ const _kCurrencySymbol = kPrefCurrencySymbol;
 const _kBiometricEnabled = kPrefBiometricEnabled;
 const _kRoundUpEnabled = kPrefRoundUpEnabled;
 const _kAutoBackupEnabled = kPrefAutoBackupEnabled;
+const _kSipDebitAccount = kPrefSipDebitAccount;
 
 /// The finance entity tables synced with the cloud (`notes` is handled by
 /// `NotesNotifier` instead). Order mirrors the old sync engine's push/pull
@@ -46,6 +47,37 @@ const List<String> _financeCloudTables = <String>[
 /// used.
 const int _kRefreshPageSize = 500;
 
+/// What an [UpcomingObligation] came from.
+enum ObligationKind { recurring, sip }
+
+/// A single scheduled outflow (or expected credit) shown on the Financial
+/// Calendar — either a real [RecurringPaymentModel] or a synthetic SIP
+/// occurrence derived from an investment's `sipDay`.
+class UpcomingObligation {
+  /// `<recurring id>` or `'sip_<investmentId>'`.
+  final String id;
+
+  /// The underlying recurring-payment id, or the investment id.
+  final String sourceId;
+  final ObligationKind kind;
+  final String title;
+  final double amount;
+  final DateTime date;
+
+  /// Always false for SIP entries. SIP obligations never affect Safe-to-Spend.
+  final bool isIncome;
+
+  const UpcomingObligation({
+    required this.id,
+    required this.sourceId,
+    required this.kind,
+    required this.title,
+    required this.amount,
+    required this.date,
+    this.isIncome = false,
+  });
+}
+
 class FinanceState {
   final List<AccountModel> accounts;
   final List<CategoryModel> categories;
@@ -62,6 +94,10 @@ class FinanceState {
   final bool isBiometricEnabled;
   final bool isRoundUpEnabled;
   final bool isAutoBackupEnabled;
+
+  /// The account SIP auto-posts debit. Device-local (SharedPreferences), not
+  /// cloud-synced. Null ⇒ SIP auto-post is inert.
+  final String? sipDebitAccountId;
 
   /// True while [FinanceNotifier.refreshFromCloud] is in flight. Drives the
   /// "Refresh now" spinner in Settings.
@@ -93,6 +129,7 @@ class FinanceState {
     this.isBiometricEnabled = false,
     this.isRoundUpEnabled = false,
     this.isAutoBackupEnabled = false,
+    this.sipDebitAccountId,
     this.isRefreshing = false,
     this.lastRefreshedAt,
     this.lastRefreshError,
@@ -351,6 +388,40 @@ class FinanceState {
     }).toList();
   }
 
+  /// Recurring payments + SIP occurrences for [monthAnchor]'s month, merged and
+  /// sorted by date. Consumed by the Financial Calendar. SIP entries are always
+  /// outflows (`isIncome: false`) and never affect Safe-to-Spend.
+  List<UpcomingObligation> upcomingObligations(DateTime monthAnchor) {
+    final out = <UpcomingObligation>[];
+    for (final r in recurringPayments) {
+      if (r.isDeleted) continue;
+      out.add(UpcomingObligation(
+        id: r.id,
+        sourceId: r.id,
+        kind: ObligationKind.recurring,
+        title: r.title,
+        amount: r.amount,
+        date: r.nextDueDate,
+        isIncome: r.isIncome,
+      ));
+    }
+    final lastDay = DateTime(monthAnchor.year, monthAnchor.month + 1, 0).day;
+    for (final inv in investments) {
+      if (inv.isDeleted) continue;
+      if (inv.monthlySipAmount <= 0) continue;
+      out.add(UpcomingObligation(
+        id: 'sip_${inv.id}',
+        sourceId: inv.id,
+        kind: ObligationKind.sip,
+        title: '${inv.name} SIP',
+        amount: inv.monthlySipAmount,
+        date: DateTime(monthAnchor.year, monthAnchor.month, inv.sipDay.clamp(1, lastDay)),
+      ));
+    }
+    out.sort((a, b) => a.date.compareTo(b.date));
+    return out;
+  }
+
   /// Upcoming Payments total for the next 30 days
   double get upcomingPaymentsTotal {
     final now = DateTime.now();
@@ -412,6 +483,7 @@ class FinanceState {
     bool? isBiometricEnabled,
     bool? isRoundUpEnabled,
     bool? isAutoBackupEnabled,
+    Object? sipDebitAccountId = _sentinel,
     bool? isRefreshing,
     DateTime? lastRefreshedAt,
     Object? lastRefreshError = _sentinel,
@@ -432,6 +504,7 @@ class FinanceState {
       isBiometricEnabled: isBiometricEnabled ?? this.isBiometricEnabled,
       isRoundUpEnabled: isRoundUpEnabled ?? this.isRoundUpEnabled,
       isAutoBackupEnabled: isAutoBackupEnabled ?? this.isAutoBackupEnabled,
+      sipDebitAccountId: identical(sipDebitAccountId, _sentinel) ? this.sipDebitAccountId : sipDebitAccountId as String?,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       lastRefreshedAt: lastRefreshedAt ?? this.lastRefreshedAt,
       lastRefreshError: identical(lastRefreshError, _sentinel) ? this.lastRefreshError : lastRefreshError as String?,
@@ -449,6 +522,10 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
   /// Fired after every state change (wired by `financeNotifierProvider` to
   /// re-schedule payment reminders). Null in unit tests.
   void Function(FinanceState state)? onStateChanged;
+
+  /// Re-entrancy guard for [processDueSipAutoPosts] — it is kicked from both the
+  /// initial load and app-resume, which can overlap.
+  bool _sipAutoPostRunning = false;
 
   @override
   set state(FinanceState value) {
@@ -605,6 +682,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         isBiometricEnabled: prefs.getBool(_kBiometricEnabled) ?? false,
         isRoundUpEnabled: prefs.getBool(_kRoundUpEnabled) ?? false,
         isAutoBackupEnabled: prefs.getBool(_kAutoBackupEnabled) ?? false,
+        sipDebitAccountId: prefs.getString(_kSipDebitAccount),
       );
       // Push persisted symbol into the static formatter immediately.
       CurrencyFormatter.updateSymbol(state.currencySymbol);
@@ -612,6 +690,10 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       // Local cache is on screen — now reconcile with the cloud in the
       // background. No-ops instantly for demo/offline accounts.
       if (hasCloudSession) unawaited(refreshFromCloud());
+
+      // Catch up any SIP that fell due while the app was closed. Idempotent and
+      // a no-op without a configured SIP debit account.
+      unawaited(processDueSipAutoPosts());
     } catch (e, st) {
       debugPrint('FinanceNotifier: failed to load persisted data: $e\n$st');
     }
@@ -1062,14 +1144,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       final invIdx = state.investments.indexWhere((i) => i.id == investmentId);
       if (invIdx != -1) {
         final inv = state.investments[invIdx];
-        adjustedInvestment = InvestmentModel(
-          id: inv.id,
-          name: inv.name,
-          type: inv.type,
+        adjustedInvestment = inv.copyWith(
           investedAmount: inv.investedAmount + amount,
           currentValue: inv.currentValue + amount, // Assume current value increases by invested amount
-          monthlySipAmount: inv.monthlySipAmount,
-          sipDay: inv.sipDay,
           updatedAt: now,
         );
       }
@@ -1099,14 +1176,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
               ));
     final savedInvestment = adjustedInvestment == null
         ? null
-        : (invTs == null
-            ? adjustedInvestment
-            : InvestmentModel(
-                id: adjustedInvestment.id, name: adjustedInvestment.name, type: adjustedInvestment.type,
-                investedAmount: adjustedInvestment.investedAmount, currentValue: adjustedInvestment.currentValue,
-                monthlySipAmount: adjustedInvestment.monthlySipAmount, sipDay: adjustedInvestment.sipDay,
-                updatedAt: invTs,
-              ));
+        : (invTs == null ? adjustedInvestment : adjustedInvestment.copyWith(updatedAt: invTs));
 
     await _db.into(_db.transactions).insertOnConflictUpdate(savedTx.toCompanion());
     if (savedCard != null) await _db.into(_db.creditCards).insertOnConflictUpdate(savedCard.toCompanion());
@@ -1524,6 +1594,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     double monthlySipAmount = 0.0,
     int sipDay = 1,
     String? referenceNumber,
+    bool autoInvestEnabled = false,
   }) async {
     final draft = InvestmentModel(
       id: _uuid.v4(),
@@ -1534,6 +1605,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       monthlySipAmount: monthlySipAmount,
       sipDay: sipDay,
       referenceNumber: referenceNumber,
+      autoInvestEnabled: autoInvestEnabled,
     );
 
     final serverTs = await pushToCloud('investments', draft.toCloudJson());
@@ -1796,6 +1868,19 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     _pushSettings();
   }
 
+  /// The single account SIP auto-posts debit. Device-local (SharedPreferences),
+  /// NOT cloud-synced — the synced `lastAutoPostedMonth` marker is what keeps
+  /// two devices from double-posting. Null clears it (auto-post goes inert).
+  Future<void> setSipDebitAccount(String? accountId) async {
+    state = state.copyWith(sipDebitAccountId: accountId);
+    final prefs = await SharedPreferences.getInstance();
+    if (accountId == null) {
+      await prefs.remove(_kSipDebitAccount);
+    } else {
+      await prefs.setString(_kSipDebitAccount, accountId);
+    }
+  }
+
   void setCurrencySymbol(String symbol) {
     state = state.copyWith(currencySymbol: symbol);
     CurrencyFormatter.updateSymbol(symbol);
@@ -1952,14 +2037,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       final i = state.investments.indexWhere((v) => v.id == original.investmentId);
       if (i != -1) {
         final inv = state.investments[i];
-        adjustedInvestment = InvestmentModel(
-          id: inv.id,
-          name: inv.name,
-          type: inv.type,
+        adjustedInvestment = inv.copyWith(
           investedAmount: (inv.investedAmount - original.amount).clamp(0.0, double.infinity),
           currentValue: (inv.currentValue - original.amount).clamp(0.0, double.infinity),
-          monthlySipAmount: inv.monthlySipAmount,
-          sipDay: inv.sipDay,
           updatedAt: now,
         );
       }
@@ -2260,12 +2340,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     final gone = state.investments.where((i) => i.id == id).toList();
     if (gone.isEmpty) return;
     final now = DateTime.now();
-    final tombstone = InvestmentModel(
-      id: gone.first.id, name: gone.first.name, type: gone.first.type,
-      investedAmount: gone.first.investedAmount, currentValue: gone.first.currentValue,
-      monthlySipAmount: gone.first.monthlySipAmount, sipDay: gone.first.sipDay,
-      updatedAt: now, isDeleted: true,
-    );
+    final tombstone = gone.first.copyWith(updatedAt: now, isDeleted: true);
 
     await pushToCloud('investments', tombstone.toCloudJson());
     _stashDeleted('investments', gone.first.toCloudJson());
@@ -2283,6 +2358,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     double? investedAmount,
     double? monthlySipAmount,
     String? referenceNumber,
+    int? sipDay,
+    bool? autoInvestEnabled,
+    String? lastAutoPostedMonth,
   }) async {
     final existing = state.investments.where((inv) => inv.id == id).toList();
     if (existing.isEmpty) return;
@@ -2292,6 +2370,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       currentValue: currentValue,
       monthlySipAmount: monthlySipAmount,
       referenceNumber: referenceNumber,
+      sipDay: sipDay,
+      autoInvestEnabled: autoInvestEnabled,
+      lastAutoPostedMonth: lastAutoPostedMonth,
     );
 
     final serverTs = await pushToCloud('investments', draft.toCloudJson());
@@ -2299,6 +2380,65 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
 
     await _db.into(_db.investments).insertOnConflictUpdate(saved.toCompanion());
     state = state.copyWith(investments: state.investments.map((x) => x.id == id ? saved : x).toList());
+  }
+
+  /// Posts this calendar month's SIP for every investment with auto-invest on,
+  /// whose `sipDay` has arrived and that has not been auto-posted this month.
+  /// Idempotent — safe to call on every load / resume. A no-op without a valid
+  /// [FinanceState.sipDebitAccountId]. A per-investment failure (e.g. a cloud
+  /// write while offline) leaves that month unmarked so it is retried next time.
+  Future<void> processDueSipAutoPosts([DateTime? clock]) async {
+    if (_sipAutoPostRunning) return;
+    final now = clock ?? DateTime.now();
+    final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final accountId = state.sipDebitAccountId;
+    if (accountId == null) return;
+    if (!state.accounts.any((a) => a.id == accountId && !a.isDeleted)) return;
+
+    _sipAutoPostRunning = true;
+    try {
+      for (final inv in List<InvestmentModel>.from(state.investments)) {
+        if (inv.isDeleted || !inv.autoInvestEnabled || inv.monthlySipAmount <= 0) {
+          continue;
+        }
+        if (inv.lastAutoPostedMonth == monthKey) continue;
+
+        final lastDay = DateTime(now.year, now.month + 1, 0).day;
+        final sipDate = DateTime(now.year, now.month, inv.sipDay.clamp(1, lastDay));
+        if (now.isBefore(sipDate)) continue;
+
+        final alreadyPosted = state.transactions.any((t) =>
+            !t.isDeleted &&
+            t.type == TransactionType.investment &&
+            t.investmentId == inv.id &&
+            t.tags.contains('sip-auto') &&
+            t.date.year == now.year &&
+            t.date.month == now.month);
+        if (alreadyPosted) {
+          await updateInvestment(inv.id, lastAutoPostedMonth: monthKey);
+          continue;
+        }
+
+        try {
+          await addTransaction(
+            accountId: accountId,
+            type: TransactionType.investment,
+            amount: inv.monthlySipAmount,
+            categoryId: 'cat_investment',
+            date: sipDate,
+            description: 'Auto SIP — ${inv.name}',
+            tags: const ['sip-auto'],
+            investmentId: inv.id,
+          );
+          await updateInvestment(inv.id, lastAutoPostedMonth: monthKey);
+        } catch (e) {
+          debugPrint('FinanceNotifier.processDueSipAutoPosts(${inv.id}) failed: $e');
+          // leave the month unmarked — retried on the next load / resume
+        }
+      }
+    } finally {
+      _sipAutoPostRunning = false;
+    }
   }
 
   // ── Goals (update) ─────────────────────────────────────────────────────────
@@ -2360,6 +2500,9 @@ final financeNotifierProvider = StateNotifierProvider<FinanceNotifier, FinanceSt
         if (!l.isDeleted) 'L${l.id}:${l.dueDay}:${l.outstandingAmount}',
       for (final r in s.recurringPayments)
         if (!r.isDeleted) 'R${r.id}:${r.nextDueDate}:${r.amount}',
+      for (final i in s.investments)
+        if (!i.isDeleted && i.monthlySipAmount > 0)
+          'S${i.id}:${i.sipDay}:${i.monthlySipAmount}:${i.autoInvestEnabled}',
     ].join('|');
     if (sig == lastSig) return;
     lastSig = sig;

@@ -6183,6 +6183,32 @@ class $InvestmentsTable extends Investments
     requiredDuringInsert: false,
     defaultValue: const Constant(1),
   );
+  static const VerificationMeta _autoInvestEnabledMeta = const VerificationMeta(
+    'autoInvestEnabled',
+  );
+  @override
+  late final GeneratedColumn<bool> autoInvestEnabled = GeneratedColumn<bool>(
+    'auto_invest_enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("auto_invest_enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _lastAutoPostedMonthMeta =
+      const VerificationMeta('lastAutoPostedMonth');
+  @override
+  late final GeneratedColumn<String> lastAutoPostedMonth =
+      GeneratedColumn<String>(
+        'last_auto_posted_month',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _referenceNumberMeta = const VerificationMeta(
     'referenceNumber',
   );
@@ -6241,6 +6267,8 @@ class $InvestmentsTable extends Investments
     currentValue,
     monthlySipAmount,
     sipDay,
+    autoInvestEnabled,
+    lastAutoPostedMonth,
     referenceNumber,
     updatedAt,
     isDeleted,
@@ -6316,6 +6344,24 @@ class $InvestmentsTable extends Investments
         sipDay.isAcceptableOrUnknown(data['sip_day']!, _sipDayMeta),
       );
     }
+    if (data.containsKey('auto_invest_enabled')) {
+      context.handle(
+        _autoInvestEnabledMeta,
+        autoInvestEnabled.isAcceptableOrUnknown(
+          data['auto_invest_enabled']!,
+          _autoInvestEnabledMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_auto_posted_month')) {
+      context.handle(
+        _lastAutoPostedMonthMeta,
+        lastAutoPostedMonth.isAcceptableOrUnknown(
+          data['last_auto_posted_month']!,
+          _lastAutoPostedMonthMeta,
+        ),
+      );
+    }
     if (data.containsKey('reference_number')) {
       context.handle(
         _referenceNumberMeta,
@@ -6380,6 +6426,14 @@ class $InvestmentsTable extends Investments
         DriftSqlType.int,
         data['${effectivePrefix}sip_day'],
       )!,
+      autoInvestEnabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}auto_invest_enabled'],
+      )!,
+      lastAutoPostedMonth: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_auto_posted_month'],
+      ),
       referenceNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}reference_number'],
@@ -6413,6 +6467,8 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
   final double currentValue;
   final double monthlySipAmount;
   final int sipDay;
+  final bool autoInvestEnabled;
+  final String? lastAutoPostedMonth;
   final String? referenceNumber;
   final DateTime updatedAt;
   final bool isDeleted;
@@ -6425,6 +6481,8 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     required this.currentValue,
     required this.monthlySipAmount,
     required this.sipDay,
+    required this.autoInvestEnabled,
+    this.lastAutoPostedMonth,
     this.referenceNumber,
     required this.updatedAt,
     required this.isDeleted,
@@ -6440,6 +6498,10 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     map['current_value'] = Variable<double>(currentValue);
     map['monthly_sip_amount'] = Variable<double>(monthlySipAmount);
     map['sip_day'] = Variable<int>(sipDay);
+    map['auto_invest_enabled'] = Variable<bool>(autoInvestEnabled);
+    if (!nullToAbsent || lastAutoPostedMonth != null) {
+      map['last_auto_posted_month'] = Variable<String>(lastAutoPostedMonth);
+    }
     if (!nullToAbsent || referenceNumber != null) {
       map['reference_number'] = Variable<String>(referenceNumber);
     }
@@ -6460,6 +6522,10 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
       currentValue: Value(currentValue),
       monthlySipAmount: Value(monthlySipAmount),
       sipDay: Value(sipDay),
+      autoInvestEnabled: Value(autoInvestEnabled),
+      lastAutoPostedMonth: lastAutoPostedMonth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAutoPostedMonth),
       referenceNumber: referenceNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(referenceNumber),
@@ -6484,6 +6550,10 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
       currentValue: serializer.fromJson<double>(json['currentValue']),
       monthlySipAmount: serializer.fromJson<double>(json['monthlySipAmount']),
       sipDay: serializer.fromJson<int>(json['sipDay']),
+      autoInvestEnabled: serializer.fromJson<bool>(json['autoInvestEnabled']),
+      lastAutoPostedMonth: serializer.fromJson<String?>(
+        json['lastAutoPostedMonth'],
+      ),
       referenceNumber: serializer.fromJson<String?>(json['referenceNumber']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
@@ -6501,6 +6571,8 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
       'currentValue': serializer.toJson<double>(currentValue),
       'monthlySipAmount': serializer.toJson<double>(monthlySipAmount),
       'sipDay': serializer.toJson<int>(sipDay),
+      'autoInvestEnabled': serializer.toJson<bool>(autoInvestEnabled),
+      'lastAutoPostedMonth': serializer.toJson<String?>(lastAutoPostedMonth),
       'referenceNumber': serializer.toJson<String?>(referenceNumber),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isDeleted': serializer.toJson<bool>(isDeleted),
@@ -6516,6 +6588,8 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     double? currentValue,
     double? monthlySipAmount,
     int? sipDay,
+    bool? autoInvestEnabled,
+    Value<String?> lastAutoPostedMonth = const Value.absent(),
     Value<String?> referenceNumber = const Value.absent(),
     DateTime? updatedAt,
     bool? isDeleted,
@@ -6528,6 +6602,10 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     currentValue: currentValue ?? this.currentValue,
     monthlySipAmount: monthlySipAmount ?? this.monthlySipAmount,
     sipDay: sipDay ?? this.sipDay,
+    autoInvestEnabled: autoInvestEnabled ?? this.autoInvestEnabled,
+    lastAutoPostedMonth: lastAutoPostedMonth.present
+        ? lastAutoPostedMonth.value
+        : this.lastAutoPostedMonth,
     referenceNumber: referenceNumber.present
         ? referenceNumber.value
         : this.referenceNumber,
@@ -6550,6 +6628,12 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
           ? data.monthlySipAmount.value
           : this.monthlySipAmount,
       sipDay: data.sipDay.present ? data.sipDay.value : this.sipDay,
+      autoInvestEnabled: data.autoInvestEnabled.present
+          ? data.autoInvestEnabled.value
+          : this.autoInvestEnabled,
+      lastAutoPostedMonth: data.lastAutoPostedMonth.present
+          ? data.lastAutoPostedMonth.value
+          : this.lastAutoPostedMonth,
       referenceNumber: data.referenceNumber.present
           ? data.referenceNumber.value
           : this.referenceNumber,
@@ -6569,6 +6653,8 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
           ..write('currentValue: $currentValue, ')
           ..write('monthlySipAmount: $monthlySipAmount, ')
           ..write('sipDay: $sipDay, ')
+          ..write('autoInvestEnabled: $autoInvestEnabled, ')
+          ..write('lastAutoPostedMonth: $lastAutoPostedMonth, ')
           ..write('referenceNumber: $referenceNumber, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
@@ -6586,6 +6672,8 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
     currentValue,
     monthlySipAmount,
     sipDay,
+    autoInvestEnabled,
+    lastAutoPostedMonth,
     referenceNumber,
     updatedAt,
     isDeleted,
@@ -6602,6 +6690,8 @@ class InvestmentEntry extends DataClass implements Insertable<InvestmentEntry> {
           other.currentValue == this.currentValue &&
           other.monthlySipAmount == this.monthlySipAmount &&
           other.sipDay == this.sipDay &&
+          other.autoInvestEnabled == this.autoInvestEnabled &&
+          other.lastAutoPostedMonth == this.lastAutoPostedMonth &&
           other.referenceNumber == this.referenceNumber &&
           other.updatedAt == this.updatedAt &&
           other.isDeleted == this.isDeleted &&
@@ -6616,6 +6706,8 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
   final Value<double> currentValue;
   final Value<double> monthlySipAmount;
   final Value<int> sipDay;
+  final Value<bool> autoInvestEnabled;
+  final Value<String?> lastAutoPostedMonth;
   final Value<String?> referenceNumber;
   final Value<DateTime> updatedAt;
   final Value<bool> isDeleted;
@@ -6629,6 +6721,8 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     this.currentValue = const Value.absent(),
     this.monthlySipAmount = const Value.absent(),
     this.sipDay = const Value.absent(),
+    this.autoInvestEnabled = const Value.absent(),
+    this.lastAutoPostedMonth = const Value.absent(),
     this.referenceNumber = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
@@ -6643,6 +6737,8 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     required double currentValue,
     this.monthlySipAmount = const Value.absent(),
     this.sipDay = const Value.absent(),
+    this.autoInvestEnabled = const Value.absent(),
+    this.lastAutoPostedMonth = const Value.absent(),
     this.referenceNumber = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
@@ -6661,6 +6757,8 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     Expression<double>? currentValue,
     Expression<double>? monthlySipAmount,
     Expression<int>? sipDay,
+    Expression<bool>? autoInvestEnabled,
+    Expression<String>? lastAutoPostedMonth,
     Expression<String>? referenceNumber,
     Expression<DateTime>? updatedAt,
     Expression<bool>? isDeleted,
@@ -6675,6 +6773,9 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
       if (currentValue != null) 'current_value': currentValue,
       if (monthlySipAmount != null) 'monthly_sip_amount': monthlySipAmount,
       if (sipDay != null) 'sip_day': sipDay,
+      if (autoInvestEnabled != null) 'auto_invest_enabled': autoInvestEnabled,
+      if (lastAutoPostedMonth != null)
+        'last_auto_posted_month': lastAutoPostedMonth,
       if (referenceNumber != null) 'reference_number': referenceNumber,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isDeleted != null) 'is_deleted': isDeleted,
@@ -6691,6 +6792,8 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     Value<double>? currentValue,
     Value<double>? monthlySipAmount,
     Value<int>? sipDay,
+    Value<bool>? autoInvestEnabled,
+    Value<String?>? lastAutoPostedMonth,
     Value<String?>? referenceNumber,
     Value<DateTime>? updatedAt,
     Value<bool>? isDeleted,
@@ -6705,6 +6808,8 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
       currentValue: currentValue ?? this.currentValue,
       monthlySipAmount: monthlySipAmount ?? this.monthlySipAmount,
       sipDay: sipDay ?? this.sipDay,
+      autoInvestEnabled: autoInvestEnabled ?? this.autoInvestEnabled,
+      lastAutoPostedMonth: lastAutoPostedMonth ?? this.lastAutoPostedMonth,
       referenceNumber: referenceNumber ?? this.referenceNumber,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
@@ -6737,6 +6842,14 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
     if (sipDay.present) {
       map['sip_day'] = Variable<int>(sipDay.value);
     }
+    if (autoInvestEnabled.present) {
+      map['auto_invest_enabled'] = Variable<bool>(autoInvestEnabled.value);
+    }
+    if (lastAutoPostedMonth.present) {
+      map['last_auto_posted_month'] = Variable<String>(
+        lastAutoPostedMonth.value,
+      );
+    }
     if (referenceNumber.present) {
       map['reference_number'] = Variable<String>(referenceNumber.value);
     }
@@ -6765,6 +6878,8 @@ class InvestmentsCompanion extends UpdateCompanion<InvestmentEntry> {
           ..write('currentValue: $currentValue, ')
           ..write('monthlySipAmount: $monthlySipAmount, ')
           ..write('sipDay: $sipDay, ')
+          ..write('autoInvestEnabled: $autoInvestEnabled, ')
+          ..write('lastAutoPostedMonth: $lastAutoPostedMonth, ')
           ..write('referenceNumber: $referenceNumber, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
@@ -11800,6 +11915,8 @@ typedef $$InvestmentsTableCreateCompanionBuilder =
       required double currentValue,
       Value<double> monthlySipAmount,
       Value<int> sipDay,
+      Value<bool> autoInvestEnabled,
+      Value<String?> lastAutoPostedMonth,
       Value<String?> referenceNumber,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
@@ -11815,6 +11932,8 @@ typedef $$InvestmentsTableUpdateCompanionBuilder =
       Value<double> currentValue,
       Value<double> monthlySipAmount,
       Value<int> sipDay,
+      Value<bool> autoInvestEnabled,
+      Value<String?> lastAutoPostedMonth,
       Value<String?> referenceNumber,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
@@ -11863,6 +11982,16 @@ class $$InvestmentsTableFilterComposer
 
   ColumnFilters<int> get sipDay => $composableBuilder(
     column: $table.sipDay,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get autoInvestEnabled => $composableBuilder(
+    column: $table.autoInvestEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get lastAutoPostedMonth => $composableBuilder(
+    column: $table.lastAutoPostedMonth,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11931,6 +12060,16 @@ class $$InvestmentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get autoInvestEnabled => $composableBuilder(
+    column: $table.autoInvestEnabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get lastAutoPostedMonth => $composableBuilder(
+    column: $table.lastAutoPostedMonth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get referenceNumber => $composableBuilder(
     column: $table.referenceNumber,
     builder: (column) => ColumnOrderings(column),
@@ -11988,6 +12127,16 @@ class $$InvestmentsTableAnnotationComposer
   GeneratedColumn<int> get sipDay =>
       $composableBuilder(column: $table.sipDay, builder: (column) => column);
 
+  GeneratedColumn<bool> get autoInvestEnabled => $composableBuilder(
+    column: $table.autoInvestEnabled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get lastAutoPostedMonth => $composableBuilder(
+    column: $table.lastAutoPostedMonth,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get referenceNumber => $composableBuilder(
     column: $table.referenceNumber,
     builder: (column) => column,
@@ -12041,6 +12190,8 @@ class $$InvestmentsTableTableManager
                 Value<double> currentValue = const Value.absent(),
                 Value<double> monthlySipAmount = const Value.absent(),
                 Value<int> sipDay = const Value.absent(),
+                Value<bool> autoInvestEnabled = const Value.absent(),
+                Value<String?> lastAutoPostedMonth = const Value.absent(),
                 Value<String?> referenceNumber = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
@@ -12054,6 +12205,8 @@ class $$InvestmentsTableTableManager
                 currentValue: currentValue,
                 monthlySipAmount: monthlySipAmount,
                 sipDay: sipDay,
+                autoInvestEnabled: autoInvestEnabled,
+                lastAutoPostedMonth: lastAutoPostedMonth,
                 referenceNumber: referenceNumber,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
@@ -12069,6 +12222,8 @@ class $$InvestmentsTableTableManager
                 required double currentValue,
                 Value<double> monthlySipAmount = const Value.absent(),
                 Value<int> sipDay = const Value.absent(),
+                Value<bool> autoInvestEnabled = const Value.absent(),
+                Value<String?> lastAutoPostedMonth = const Value.absent(),
                 Value<String?> referenceNumber = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
@@ -12082,6 +12237,8 @@ class $$InvestmentsTableTableManager
                 currentValue: currentValue,
                 monthlySipAmount: monthlySipAmount,
                 sipDay: sipDay,
+                autoInvestEnabled: autoInvestEnabled,
+                lastAutoPostedMonth: lastAutoPostedMonth,
                 referenceNumber: referenceNumber,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,

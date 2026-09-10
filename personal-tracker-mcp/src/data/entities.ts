@@ -142,7 +142,11 @@ const investmentCreate = z.object({
   current_value: z.number().default(0),
   monthly_sip_amount: z.number().default(0),
   sip_day: z.number().int().min(1).max(31).default(1),
+  // "Auto-invest on SIP day" — when true the app auto-posts this SIP monthly.
+  auto_invest_enabled: z.boolean().default(false),
   reference_number: optStr,
+  // last_auto_posted_month is an app-managed idempotency marker: readable on
+  // list/get, but intentionally NOT writable here.
 }).strict();
 
 const goalCreate = z.object({
