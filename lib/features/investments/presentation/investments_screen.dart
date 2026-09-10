@@ -200,8 +200,10 @@ class InvestmentsScreen extends ConsumerWidget {
     final investedCtrl = TextEditingController(text: inv.investedAmount.toStringAsFixed(0));
     final currentCtrl = TextEditingController(text: inv.currentValue.toStringAsFixed(0));
     final sipCtrl = TextEditingController(text: inv.monthlySipAmount > 0 ? inv.monthlySipAmount.toStringAsFixed(0) : '');
+    final sipDayCtrl = TextEditingController(text: inv.sipDay.toString());
     final referenceNumberCtrl = TextEditingController(text: inv.referenceNumber ?? '');
     final showsReferenceNumber = inv.type == InvestmentType.epf || inv.type == InvestmentType.ppf;
+    bool autoInvest = inv.autoInvestEnabled;
     String? error;
     showModalBottomSheet(
       context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
@@ -223,7 +225,20 @@ class InvestmentsScreen extends ConsumerWidget {
                   Expanded(child: TextField(controller: currentCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Current Value (${CurrencyFormatter.symbol})', prefixIcon: const Icon(LucideIcons.indianRupee, size: 16)))),
                 ]),
                 const SizedBox(height: 12),
-                TextField(controller: sipCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Monthly SIP (${CurrencyFormatter.symbol})', prefixIcon: const Icon(LucideIcons.repeat, size: 16))),
+                Row(children: [
+                  Expanded(child: TextField(controller: sipCtrl, keyboardType: TextInputType.number, onChanged: (_) => setSheetState(() {}), decoration: InputDecoration(labelText: 'Monthly SIP (${CurrencyFormatter.symbol})', prefixIcon: const Icon(LucideIcons.repeat, size: 16)))),
+                  const SizedBox(width: 12),
+                  Expanded(child: TextField(controller: sipDayCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'SIP Day (1-28)', prefixIcon: Icon(LucideIcons.calendar, size: 16)))),
+                ]),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Auto-invest on SIP day'),
+                  subtitle: const Text('Post this SIP automatically each month'),
+                  value: autoInvest && (double.tryParse(sipCtrl.text.trim()) ?? 0) > 0,
+                  onChanged: (double.tryParse(sipCtrl.text.trim()) ?? 0) > 0
+                      ? (v) => setSheetState(() => autoInvest = v)
+                      : null,
+                ),
                 if (showsReferenceNumber) ...[
                   const SizedBox(height: 12),
                   TextField(controller: referenceNumberCtrl, decoration: const InputDecoration(labelText: 'UAN / Reference Number', prefixIcon: Icon(LucideIcons.hash, size: 16))),
@@ -260,6 +275,8 @@ class InvestmentsScreen extends ConsumerWidget {
                         investedAmount: invested,
                         currentValue: current,
                         monthlySipAmount: sip,
+                        sipDay: int.tryParse(sipDayCtrl.text.trim()),
+                        autoInvestEnabled: autoInvest && sip > 0,
                         referenceNumber: showsReferenceNumber && referenceNumberCtrl.text.trim().isNotEmpty
                             ? referenceNumberCtrl.text.trim()
                             : null,
