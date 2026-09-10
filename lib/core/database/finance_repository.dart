@@ -523,6 +523,10 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
   /// re-schedule payment reminders). Null in unit tests.
   void Function(FinanceState state)? onStateChanged;
 
+  /// Re-entrancy guard for [processDueSipAutoPosts] — it is kicked from both the
+  /// initial load and app-resume, which can overlap.
+  bool _sipAutoPostRunning = false;
+
   @override
   set state(FinanceState value) {
     super.state = value;
@@ -1136,14 +1140,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       final invIdx = state.investments.indexWhere((i) => i.id == investmentId);
       if (invIdx != -1) {
         final inv = state.investments[invIdx];
-        adjustedInvestment = InvestmentModel(
-          id: inv.id,
-          name: inv.name,
-          type: inv.type,
+        adjustedInvestment = inv.copyWith(
           investedAmount: inv.investedAmount + amount,
           currentValue: inv.currentValue + amount, // Assume current value increases by invested amount
-          monthlySipAmount: inv.monthlySipAmount,
-          sipDay: inv.sipDay,
           updatedAt: now,
         );
       }
@@ -1173,14 +1172,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
               ));
     final savedInvestment = adjustedInvestment == null
         ? null
-        : (invTs == null
-            ? adjustedInvestment
-            : InvestmentModel(
-                id: adjustedInvestment.id, name: adjustedInvestment.name, type: adjustedInvestment.type,
-                investedAmount: adjustedInvestment.investedAmount, currentValue: adjustedInvestment.currentValue,
-                monthlySipAmount: adjustedInvestment.monthlySipAmount, sipDay: adjustedInvestment.sipDay,
-                updatedAt: invTs,
-              ));
+        : (invTs == null ? adjustedInvestment : adjustedInvestment.copyWith(updatedAt: invTs));
 
     await _db.into(_db.transactions).insertOnConflictUpdate(savedTx.toCompanion());
     if (savedCard != null) await _db.into(_db.creditCards).insertOnConflictUpdate(savedCard.toCompanion());
@@ -2041,14 +2033,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       final i = state.investments.indexWhere((v) => v.id == original.investmentId);
       if (i != -1) {
         final inv = state.investments[i];
-        adjustedInvestment = InvestmentModel(
-          id: inv.id,
-          name: inv.name,
-          type: inv.type,
+        adjustedInvestment = inv.copyWith(
           investedAmount: (inv.investedAmount - original.amount).clamp(0.0, double.infinity),
           currentValue: (inv.currentValue - original.amount).clamp(0.0, double.infinity),
-          monthlySipAmount: inv.monthlySipAmount,
-          sipDay: inv.sipDay,
           updatedAt: now,
         );
       }
@@ -2349,12 +2336,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     final gone = state.investments.where((i) => i.id == id).toList();
     if (gone.isEmpty) return;
     final now = DateTime.now();
-    final tombstone = InvestmentModel(
-      id: gone.first.id, name: gone.first.name, type: gone.first.type,
-      investedAmount: gone.first.investedAmount, currentValue: gone.first.currentValue,
-      monthlySipAmount: gone.first.monthlySipAmount, sipDay: gone.first.sipDay,
-      updatedAt: now, isDeleted: true,
-    );
+    final tombstone = gone.first.copyWith(updatedAt: now, isDeleted: true);
 
     await pushToCloud('investments', tombstone.toCloudJson());
     _stashDeleted('investments', gone.first.toCloudJson());
@@ -2394,6 +2376,65 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
 
     await _db.into(_db.investments).insertOnConflictUpdate(saved.toCompanion());
     state = state.copyWith(investments: state.investments.map((x) => x.id == id ? saved : x).toList());
+  }
+
+  /// Posts this calendar month's SIP for every investment with auto-invest on,
+  /// whose `sipDay` has arrived and that has not been auto-posted this month.
+  /// Idempotent — safe to call on every load / resume. A no-op without a valid
+  /// [FinanceState.sipDebitAccountId]. A per-investment failure (e.g. a cloud
+  /// write while offline) leaves that month unmarked so it is retried next time.
+  Future<void> processDueSipAutoPosts([DateTime? clock]) async {
+    if (_sipAutoPostRunning) return;
+    final now = clock ?? DateTime.now();
+    final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    final accountId = state.sipDebitAccountId;
+    if (accountId == null) return;
+    if (!state.accounts.any((a) => a.id == accountId && !a.isDeleted)) return;
+
+    _sipAutoPostRunning = true;
+    try {
+      for (final inv in List<InvestmentModel>.from(state.investments)) {
+        if (inv.isDeleted || !inv.autoInvestEnabled || inv.monthlySipAmount <= 0) {
+          continue;
+        }
+        if (inv.lastAutoPostedMonth == monthKey) continue;
+
+        final lastDay = DateTime(now.year, now.month + 1, 0).day;
+        final sipDate = DateTime(now.year, now.month, inv.sipDay.clamp(1, lastDay));
+        if (now.isBefore(sipDate)) continue;
+
+        final alreadyPosted = state.transactions.any((t) =>
+            !t.isDeleted &&
+            t.type == TransactionType.investment &&
+            t.investmentId == inv.id &&
+            t.tags.contains('sip-auto') &&
+            t.date.year == now.year &&
+            t.date.month == now.month);
+        if (alreadyPosted) {
+          await updateInvestment(inv.id, lastAutoPostedMonth: monthKey);
+          continue;
+        }
+
+        try {
+          await addTransaction(
+            accountId: accountId,
+            type: TransactionType.investment,
+            amount: inv.monthlySipAmount,
+            categoryId: 'cat_investment',
+            date: sipDate,
+            description: 'Auto SIP — ${inv.name}',
+            tags: const ['sip-auto'],
+            investmentId: inv.id,
+          );
+          await updateInvestment(inv.id, lastAutoPostedMonth: monthKey);
+        } catch (e) {
+          debugPrint('FinanceNotifier.processDueSipAutoPosts(${inv.id}) failed: $e');
+          // leave the month unmarked — retried on the next load / resume
+        }
+      }
+    } finally {
+      _sipAutoPostRunning = false;
+    }
   }
 
   // ── Goals (update) ─────────────────────────────────────────────────────────
