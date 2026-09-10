@@ -76,7 +76,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      ref.read(financeNotifierProvider.notifier).refreshFromCloud();
+      final finance = ref.read(financeNotifierProvider.notifier);
+      finance.refreshFromCloud().then((_) => finance.processDueSipAutoPosts());
       ref.read(notesProvider.notifier).refreshFromCloud();
     }
   }

@@ -690,6 +690,10 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       // Local cache is on screen — now reconcile with the cloud in the
       // background. No-ops instantly for demo/offline accounts.
       if (hasCloudSession) unawaited(refreshFromCloud());
+
+      // Catch up any SIP that fell due while the app was closed. Idempotent and
+      // a no-op without a configured SIP debit account.
+      unawaited(processDueSipAutoPosts());
     } catch (e, st) {
       debugPrint('FinanceNotifier: failed to load persisted data: $e\n$st');
     }
