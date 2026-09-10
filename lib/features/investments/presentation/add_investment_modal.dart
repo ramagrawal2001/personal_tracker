@@ -34,6 +34,9 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
   final TextEditingController _referenceNumberController = TextEditingController();
 
   InvestmentType _selectedType = InvestmentType.mutualFundSip;
+  bool _autoInvest = false;
+
+  double get _sipAmount => double.tryParse(_sipController.text.trim()) ?? 0.0;
 
   bool get _showsReferenceNumber => _selectedType == InvestmentType.epf || _selectedType == InvestmentType.ppf;
 
@@ -156,6 +159,7 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                   child: TextField(
                     controller: _sipController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: 'Monthly SIP (${CurrencyFormatter.symbol}) (Optional)',
                       prefixText: '${CurrencyFormatter.symbol} ',
@@ -175,7 +179,14 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Auto-invest on SIP day'),
+              subtitle: const Text('Post this SIP automatically each month'),
+              value: _autoInvest && _sipAmount > 0,
+              onChanged: _sipAmount > 0 ? (v) => setState(() => _autoInvest = v) : null,
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -217,6 +228,7 @@ class _AddInvestmentModalState extends ConsumerState<AddInvestmentModal> {
             currentValue: current,
             monthlySipAmount: sip,
             sipDay: day,
+            autoInvestEnabled: _autoInvest && sip > 0,
             referenceNumber: _referenceNumberController.text.trim().isEmpty ? null : _referenceNumberController.text.trim(),
           );
     } catch (e) {
