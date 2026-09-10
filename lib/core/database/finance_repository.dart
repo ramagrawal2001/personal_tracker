@@ -2390,6 +2390,9 @@ final financeNotifierProvider = StateNotifierProvider<FinanceNotifier, FinanceSt
         if (!l.isDeleted) 'L${l.id}:${l.dueDay}:${l.outstandingAmount}',
       for (final r in s.recurringPayments)
         if (!r.isDeleted) 'R${r.id}:${r.nextDueDate}:${r.amount}',
+      for (final i in s.investments)
+        if (!i.isDeleted && i.monthlySipAmount > 0)
+          'S${i.id}:${i.sipDay}:${i.monthlySipAmount}:${i.autoInvestEnabled}',
     ].join('|');
     if (sig == lastSig) return;
     lastSig = sig;
