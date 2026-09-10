@@ -47,6 +47,37 @@ const List<String> _financeCloudTables = <String>[
 /// used.
 const int _kRefreshPageSize = 500;
 
+/// What an [UpcomingObligation] came from.
+enum ObligationKind { recurring, sip }
+
+/// A single scheduled outflow (or expected credit) shown on the Financial
+/// Calendar — either a real [RecurringPaymentModel] or a synthetic SIP
+/// occurrence derived from an investment's `sipDay`.
+class UpcomingObligation {
+  /// `<recurring id>` or `'sip_<investmentId>'`.
+  final String id;
+
+  /// The underlying recurring-payment id, or the investment id.
+  final String sourceId;
+  final ObligationKind kind;
+  final String title;
+  final double amount;
+  final DateTime date;
+
+  /// Always false for SIP entries. SIP obligations never affect Safe-to-Spend.
+  final bool isIncome;
+
+  const UpcomingObligation({
+    required this.id,
+    required this.sourceId,
+    required this.kind,
+    required this.title,
+    required this.amount,
+    required this.date,
+    this.isIncome = false,
+  });
+}
+
 class FinanceState {
   final List<AccountModel> accounts;
   final List<CategoryModel> categories;
@@ -355,6 +386,40 @@ class FinanceState {
         spentAmount: spent,
       );
     }).toList();
+  }
+
+  /// Recurring payments + SIP occurrences for [monthAnchor]'s month, merged and
+  /// sorted by date. Consumed by the Financial Calendar. SIP entries are always
+  /// outflows (`isIncome: false`) and never affect Safe-to-Spend.
+  List<UpcomingObligation> upcomingObligations(DateTime monthAnchor) {
+    final out = <UpcomingObligation>[];
+    for (final r in recurringPayments) {
+      if (r.isDeleted) continue;
+      out.add(UpcomingObligation(
+        id: r.id,
+        sourceId: r.id,
+        kind: ObligationKind.recurring,
+        title: r.title,
+        amount: r.amount,
+        date: r.nextDueDate,
+        isIncome: r.isIncome,
+      ));
+    }
+    final lastDay = DateTime(monthAnchor.year, monthAnchor.month + 1, 0).day;
+    for (final inv in investments) {
+      if (inv.isDeleted) continue;
+      if (inv.monthlySipAmount <= 0) continue;
+      out.add(UpcomingObligation(
+        id: 'sip_${inv.id}',
+        sourceId: inv.id,
+        kind: ObligationKind.sip,
+        title: '${inv.name} SIP',
+        amount: inv.monthlySipAmount,
+        date: DateTime(monthAnchor.year, monthAnchor.month, inv.sipDay.clamp(1, lastDay)),
+      ));
+    }
+    out.sort((a, b) => a.date.compareTo(b.date));
+    return out;
   }
 
   /// Upcoming Payments total for the next 30 days
