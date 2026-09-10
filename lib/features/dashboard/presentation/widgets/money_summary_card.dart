@@ -9,6 +9,7 @@ class MoneySummaryCard extends StatelessWidget {
   final double bankBalance;
   final double creditCardDue;
   final double upcomingEmis;
+  final double upcomingSips;
   final double monthlyIncome;
   final double monthlyExpenses;
 
@@ -17,6 +18,7 @@ class MoneySummaryCard extends StatelessWidget {
     required this.bankBalance,
     required this.creditCardDue,
     required this.upcomingEmis,
+    required this.upcomingSips,
     required this.monthlyIncome,
     required this.monthlyExpenses,
   });
@@ -44,12 +46,23 @@ class MoneySummaryCard extends StatelessWidget {
                 LucideIcons.creditCard,
                 AppColors.creditCard,
               ),
-              const SizedBox(width: 8),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
               _buildMetricCard(
                 'Upcoming EMIs',
                 CurrencyFormatter.format(upcomingEmis),
                 LucideIcons.clock,
                 AppColors.loan,
+              ),
+              const SizedBox(width: 8),
+              _buildMetricCard(
+                'Upcoming SIPs',
+                CurrencyFormatter.format(upcomingSips),
+                LucideIcons.repeat,
+                AppColors.transfer,
               ),
             ],
           ),
