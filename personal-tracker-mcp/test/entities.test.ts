@@ -30,10 +30,11 @@ describe("enum parity with the Flutter app", () => {
 });
 
 describe("entity registry", () => {
-  test("exactly the 10 v1 entities, notes excluded", () => {
+  test("exactly the 13 v1 entities, notes excluded", () => {
     expect([...ENTITY_NAMES].sort()).toEqual([
       "accounts", "budgets", "categories", "companies", "credit_cards",
-      "goals", "investments", "loans", "recurring_payments", "transactions",
+      "goals", "investments", "loans", "people", "recurring_payments",
+      "split_expenses", "split_participants", "transactions",
     ]);
   });
 
@@ -66,6 +67,31 @@ describe("entity registry", () => {
     });
     expect(good.success).toBe(true);
     expect(ENTITIES.transactions.fixed).toMatchObject({ sync_status: "synced" });
+  });
+
+  test("transactions: is_cash_spend defaults to false", () => {
+    const r = ENTITIES.transactions.createSchema.parse({
+      account_id: "11111111-1111-1111-1111-111111111111", type: "expense", amount: 10,
+    });
+    expect(r.is_cash_spend).toBe(false);
+  });
+
+  test("people: name required", () => {
+    expect(ENTITIES.people.createSchema.safeParse({}).success).toBe(false);
+    expect(ENTITIES.people.createSchema.safeParse({ name: "Rahul" }).success).toBe(true);
+  });
+
+  test("split_expenses: mode enum, defaults to equal", () => {
+    const base = { title: "Panipuri", total_amount: 100, transaction_id: "tx1" };
+    expect(ENTITIES.split_expenses.createSchema.parse(base).mode).toBe("equal");
+    expect(ENTITIES.split_expenses.createSchema.safeParse({ ...base, mode: "bogus" }).success).toBe(false);
+    expect(ENTITIES.split_expenses.createSchema.safeParse({ ...base, total_amount: -5 }).success).toBe(false);
+  });
+
+  test("split_participants: share_amount must be positive", () => {
+    const base = { split_expense_id: "s1", person_id: "p1" };
+    expect(ENTITIES.split_participants.createSchema.safeParse({ ...base, share_amount: 50 }).success).toBe(true);
+    expect(ENTITIES.split_participants.createSchema.safeParse({ ...base, share_amount: 0 }).success).toBe(false);
   });
 
   test("credit_cards: applies defaults", () => {

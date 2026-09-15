@@ -9,6 +9,8 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../core/database/finance_repository.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/app_scaffold.dart';
+import '../../../core/widgets/summary_card.dart';
+import '../../../core/utils/currency_formatter.dart';
 import 'widgets/net_worth_card.dart';
 import 'widgets/safe_to_spend_card.dart';
 import 'widgets/money_summary_card.dart';
@@ -124,6 +126,23 @@ class DashboardScreen extends ConsumerWidget {
                       onTap: () => context.push('/net-worth'),
                     ),
                   ),
+                  // Money others owe you from split bills — a receivable,
+                  // already folded into Net Worth above, but called out on
+                  // its own since it's easy to mistake for cash in hand.
+                  if (financeState.totalReceivables > 0) ...[
+                    const SizedBox(height: 14),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => context.push('/splits'),
+                      child: SummaryCard(
+                        label: "You're Owed",
+                        value: CurrencyFormatter.format(financeState.totalReceivables),
+                        icon: LucideIcons.coins,
+                        accentColor: AppColors.income,
+                        valueColor: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 14),
                   // Safe to Spend & Money Summary - Side by side on tablet
                   if (isTwoColumn) ...[

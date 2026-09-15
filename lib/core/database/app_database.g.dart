@@ -1580,6 +1580,21 @@ class $TransactionsTable extends Transactions
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isCashSpendMeta = const VerificationMeta(
+    'isCashSpend',
+  );
+  @override
+  late final GeneratedColumn<bool> isCashSpend = GeneratedColumn<bool>(
+    'is_cash_spend',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_cash_spend" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _syncStatusMeta = const VerificationMeta(
     'syncStatus',
   );
@@ -1658,6 +1673,7 @@ class $TransactionsTable extends Transactions
     loanId,
     companyId,
     isExternalToAccount,
+    isCashSpend,
     syncStatus,
     createdAt,
     updatedAt,
@@ -1785,6 +1801,15 @@ class $TransactionsTable extends Transactions
         ),
       );
     }
+    if (data.containsKey('is_cash_spend')) {
+      context.handle(
+        _isCashSpendMeta,
+        isCashSpend.isAcceptableOrUnknown(
+          data['is_cash_spend']!,
+          _isCashSpendMeta,
+        ),
+      );
+    }
     if (data.containsKey('sync_status')) {
       context.handle(
         _syncStatusMeta,
@@ -1886,6 +1911,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.bool,
         data['${effectivePrefix}is_external_to_account'],
       )!,
+      isCashSpend: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_cash_spend'],
+      )!,
       syncStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sync_status'],
@@ -1932,6 +1961,7 @@ class TransactionEntry extends DataClass
   final String? loanId;
   final String? companyId;
   final bool isExternalToAccount;
+  final bool isCashSpend;
   final String syncStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -1953,6 +1983,7 @@ class TransactionEntry extends DataClass
     this.loanId,
     this.companyId,
     required this.isExternalToAccount,
+    required this.isCashSpend,
     required this.syncStatus,
     required this.createdAt,
     required this.updatedAt,
@@ -1993,6 +2024,7 @@ class TransactionEntry extends DataClass
       map['company_id'] = Variable<String>(companyId);
     }
     map['is_external_to_account'] = Variable<bool>(isExternalToAccount);
+    map['is_cash_spend'] = Variable<bool>(isCashSpend);
     map['sync_status'] = Variable<String>(syncStatus);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -2036,6 +2068,7 @@ class TransactionEntry extends DataClass
           ? const Value.absent()
           : Value(companyId),
       isExternalToAccount: Value(isExternalToAccount),
+      isCashSpend: Value(isCashSpend),
       syncStatus: Value(syncStatus),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -2069,6 +2102,7 @@ class TransactionEntry extends DataClass
       isExternalToAccount: serializer.fromJson<bool>(
         json['isExternalToAccount'],
       ),
+      isCashSpend: serializer.fromJson<bool>(json['isCashSpend']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -2095,6 +2129,7 @@ class TransactionEntry extends DataClass
       'loanId': serializer.toJson<String?>(loanId),
       'companyId': serializer.toJson<String?>(companyId),
       'isExternalToAccount': serializer.toJson<bool>(isExternalToAccount),
+      'isCashSpend': serializer.toJson<bool>(isCashSpend),
       'syncStatus': serializer.toJson<String>(syncStatus),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -2119,6 +2154,7 @@ class TransactionEntry extends DataClass
     Value<String?> loanId = const Value.absent(),
     Value<String?> companyId = const Value.absent(),
     bool? isExternalToAccount,
+    bool? isCashSpend,
     String? syncStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -2140,6 +2176,7 @@ class TransactionEntry extends DataClass
     loanId: loanId.present ? loanId.value : this.loanId,
     companyId: companyId.present ? companyId.value : this.companyId,
     isExternalToAccount: isExternalToAccount ?? this.isExternalToAccount,
+    isCashSpend: isCashSpend ?? this.isCashSpend,
     syncStatus: syncStatus ?? this.syncStatus,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -2173,6 +2210,9 @@ class TransactionEntry extends DataClass
       isExternalToAccount: data.isExternalToAccount.present
           ? data.isExternalToAccount.value
           : this.isExternalToAccount,
+      isCashSpend: data.isCashSpend.present
+          ? data.isCashSpend.value
+          : this.isCashSpend,
       syncStatus: data.syncStatus.present
           ? data.syncStatus.value
           : this.syncStatus,
@@ -2201,6 +2241,7 @@ class TransactionEntry extends DataClass
           ..write('loanId: $loanId, ')
           ..write('companyId: $companyId, ')
           ..write('isExternalToAccount: $isExternalToAccount, ')
+          ..write('isCashSpend: $isCashSpend, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2211,7 +2252,7 @@ class TransactionEntry extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     accountId,
     toAccountId,
@@ -2227,12 +2268,13 @@ class TransactionEntry extends DataClass
     loanId,
     companyId,
     isExternalToAccount,
+    isCashSpend,
     syncStatus,
     createdAt,
     updatedAt,
     isDeleted,
     deletedAt,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2252,6 +2294,7 @@ class TransactionEntry extends DataClass
           other.loanId == this.loanId &&
           other.companyId == this.companyId &&
           other.isExternalToAccount == this.isExternalToAccount &&
+          other.isCashSpend == this.isCashSpend &&
           other.syncStatus == this.syncStatus &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -2275,6 +2318,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
   final Value<String?> loanId;
   final Value<String?> companyId;
   final Value<bool> isExternalToAccount;
+  final Value<bool> isCashSpend;
   final Value<String> syncStatus;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -2297,6 +2341,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     this.loanId = const Value.absent(),
     this.companyId = const Value.absent(),
     this.isExternalToAccount = const Value.absent(),
+    this.isCashSpend = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -2320,6 +2365,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     this.loanId = const Value.absent(),
     this.companyId = const Value.absent(),
     this.isExternalToAccount = const Value.absent(),
+    this.isCashSpend = const Value.absent(),
     this.syncStatus = const Value.absent(),
     required DateTime createdAt,
     this.updatedAt = const Value.absent(),
@@ -2348,6 +2394,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     Expression<String>? loanId,
     Expression<String>? companyId,
     Expression<bool>? isExternalToAccount,
+    Expression<bool>? isCashSpend,
     Expression<String>? syncStatus,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -2372,6 +2419,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
       if (companyId != null) 'company_id': companyId,
       if (isExternalToAccount != null)
         'is_external_to_account': isExternalToAccount,
+      if (isCashSpend != null) 'is_cash_spend': isCashSpend,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -2397,6 +2445,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     Value<String?>? loanId,
     Value<String?>? companyId,
     Value<bool>? isExternalToAccount,
+    Value<bool>? isCashSpend,
     Value<String>? syncStatus,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -2420,6 +2469,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
       loanId: loanId ?? this.loanId,
       companyId: companyId ?? this.companyId,
       isExternalToAccount: isExternalToAccount ?? this.isExternalToAccount,
+      isCashSpend: isCashSpend ?? this.isCashSpend,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -2477,6 +2527,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     if (isExternalToAccount.present) {
       map['is_external_to_account'] = Variable<bool>(isExternalToAccount.value);
     }
+    if (isCashSpend.present) {
+      map['is_cash_spend'] = Variable<bool>(isCashSpend.value);
+    }
     if (syncStatus.present) {
       map['sync_status'] = Variable<String>(syncStatus.value);
     }
@@ -2516,6 +2569,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
           ..write('loanId: $loanId, ')
           ..write('companyId: $companyId, ')
           ..write('isExternalToAccount: $isExternalToAccount, ')
+          ..write('isCashSpend: $isCashSpend, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -9058,6 +9112,1563 @@ class CompaniesCompanion extends UpdateCompanion<CompanyEntry> {
   }
 }
 
+class $PeopleTable extends People with TableInfo<$PeopleTable, PersonEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PeopleTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'people';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PersonEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PersonEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PersonEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $PeopleTable createAlias(String alias) {
+    return $PeopleTable(attachedDatabase, alias);
+  }
+}
+
+class PersonEntry extends DataClass implements Insertable<PersonEntry> {
+  final String id;
+  final String name;
+  final DateTime updatedAt;
+  final bool isDeleted;
+  final DateTime? deletedAt;
+  const PersonEntry({
+    required this.id,
+    required this.name,
+    required this.updatedAt,
+    required this.isDeleted,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  PeopleCompanion toCompanion(bool nullToAbsent) {
+    return PeopleCompanion(
+      id: Value(id),
+      name: Value(name),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory PersonEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PersonEntry(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  PersonEntry copyWith({
+    String? id,
+    String? name,
+    DateTime? updatedAt,
+    bool? isDeleted,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => PersonEntry(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    updatedAt: updatedAt ?? this.updatedAt,
+    isDeleted: isDeleted ?? this.isDeleted,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  PersonEntry copyWithCompanion(PeopleCompanion data) {
+    return PersonEntry(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PersonEntry(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, updatedAt, isDeleted, deletedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PersonEntry &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.updatedAt == this.updatedAt &&
+          other.isDeleted == this.isDeleted &&
+          other.deletedAt == this.deletedAt);
+}
+
+class PeopleCompanion extends UpdateCompanion<PersonEntry> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<DateTime> updatedAt;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const PeopleCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PeopleCompanion.insert({
+    required String id,
+    required String name,
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name);
+  static Insertable<PersonEntry> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<DateTime>? updatedAt,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PeopleCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<DateTime>? updatedAt,
+    Value<bool>? isDeleted,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return PeopleCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PeopleCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SplitExpensesTable extends SplitExpenses
+    with TableInfo<$SplitExpensesTable, SplitExpenseEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SplitExpensesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _totalAmountMeta = const VerificationMeta(
+    'totalAmount',
+  );
+  @override
+  late final GeneratedColumn<double> totalAmount = GeneratedColumn<double>(
+    'total_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _transactionIdMeta = const VerificationMeta(
+    'transactionId',
+  );
+  @override
+  late final GeneratedColumn<String> transactionId = GeneratedColumn<String>(
+    'transaction_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modeMeta = const VerificationMeta('mode');
+  @override
+  late final GeneratedColumn<String> mode = GeneratedColumn<String>(
+    'mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('equal'),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    title,
+    totalAmount,
+    date,
+    transactionId,
+    mode,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'split_expenses';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SplitExpenseEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('total_amount')) {
+      context.handle(
+        _totalAmountMeta,
+        totalAmount.isAcceptableOrUnknown(
+          data['total_amount']!,
+          _totalAmountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_totalAmountMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('transaction_id')) {
+      context.handle(
+        _transactionIdMeta,
+        transactionId.isAcceptableOrUnknown(
+          data['transaction_id']!,
+          _transactionIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transactionIdMeta);
+    }
+    if (data.containsKey('mode')) {
+      context.handle(
+        _modeMeta,
+        mode.isAcceptableOrUnknown(data['mode']!, _modeMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SplitExpenseEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SplitExpenseEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      totalAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}total_amount'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      )!,
+      transactionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}transaction_id'],
+      )!,
+      mode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mode'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $SplitExpensesTable createAlias(String alias) {
+    return $SplitExpensesTable(attachedDatabase, alias);
+  }
+}
+
+class SplitExpenseEntry extends DataClass
+    implements Insertable<SplitExpenseEntry> {
+  final String id;
+  final String title;
+  final double totalAmount;
+  final DateTime date;
+  final String transactionId;
+  final String mode;
+  final DateTime updatedAt;
+  final bool isDeleted;
+  final DateTime? deletedAt;
+  const SplitExpenseEntry({
+    required this.id,
+    required this.title,
+    required this.totalAmount,
+    required this.date,
+    required this.transactionId,
+    required this.mode,
+    required this.updatedAt,
+    required this.isDeleted,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['title'] = Variable<String>(title);
+    map['total_amount'] = Variable<double>(totalAmount);
+    map['date'] = Variable<DateTime>(date);
+    map['transaction_id'] = Variable<String>(transactionId);
+    map['mode'] = Variable<String>(mode);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  SplitExpensesCompanion toCompanion(bool nullToAbsent) {
+    return SplitExpensesCompanion(
+      id: Value(id),
+      title: Value(title),
+      totalAmount: Value(totalAmount),
+      date: Value(date),
+      transactionId: Value(transactionId),
+      mode: Value(mode),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory SplitExpenseEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SplitExpenseEntry(
+      id: serializer.fromJson<String>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      totalAmount: serializer.fromJson<double>(json['totalAmount']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      transactionId: serializer.fromJson<String>(json['transactionId']),
+      mode: serializer.fromJson<String>(json['mode']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'title': serializer.toJson<String>(title),
+      'totalAmount': serializer.toJson<double>(totalAmount),
+      'date': serializer.toJson<DateTime>(date),
+      'transactionId': serializer.toJson<String>(transactionId),
+      'mode': serializer.toJson<String>(mode),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  SplitExpenseEntry copyWith({
+    String? id,
+    String? title,
+    double? totalAmount,
+    DateTime? date,
+    String? transactionId,
+    String? mode,
+    DateTime? updatedAt,
+    bool? isDeleted,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => SplitExpenseEntry(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    totalAmount: totalAmount ?? this.totalAmount,
+    date: date ?? this.date,
+    transactionId: transactionId ?? this.transactionId,
+    mode: mode ?? this.mode,
+    updatedAt: updatedAt ?? this.updatedAt,
+    isDeleted: isDeleted ?? this.isDeleted,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  SplitExpenseEntry copyWithCompanion(SplitExpensesCompanion data) {
+    return SplitExpenseEntry(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      totalAmount: data.totalAmount.present
+          ? data.totalAmount.value
+          : this.totalAmount,
+      date: data.date.present ? data.date.value : this.date,
+      transactionId: data.transactionId.present
+          ? data.transactionId.value
+          : this.transactionId,
+      mode: data.mode.present ? data.mode.value : this.mode,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SplitExpenseEntry(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('totalAmount: $totalAmount, ')
+          ..write('date: $date, ')
+          ..write('transactionId: $transactionId, ')
+          ..write('mode: $mode, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    title,
+    totalAmount,
+    date,
+    transactionId,
+    mode,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SplitExpenseEntry &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.totalAmount == this.totalAmount &&
+          other.date == this.date &&
+          other.transactionId == this.transactionId &&
+          other.mode == this.mode &&
+          other.updatedAt == this.updatedAt &&
+          other.isDeleted == this.isDeleted &&
+          other.deletedAt == this.deletedAt);
+}
+
+class SplitExpensesCompanion extends UpdateCompanion<SplitExpenseEntry> {
+  final Value<String> id;
+  final Value<String> title;
+  final Value<double> totalAmount;
+  final Value<DateTime> date;
+  final Value<String> transactionId;
+  final Value<String> mode;
+  final Value<DateTime> updatedAt;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const SplitExpensesCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.totalAmount = const Value.absent(),
+    this.date = const Value.absent(),
+    this.transactionId = const Value.absent(),
+    this.mode = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SplitExpensesCompanion.insert({
+    required String id,
+    required String title,
+    required double totalAmount,
+    required DateTime date,
+    required String transactionId,
+    this.mode = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       title = Value(title),
+       totalAmount = Value(totalAmount),
+       date = Value(date),
+       transactionId = Value(transactionId);
+  static Insertable<SplitExpenseEntry> custom({
+    Expression<String>? id,
+    Expression<String>? title,
+    Expression<double>? totalAmount,
+    Expression<DateTime>? date,
+    Expression<String>? transactionId,
+    Expression<String>? mode,
+    Expression<DateTime>? updatedAt,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (totalAmount != null) 'total_amount': totalAmount,
+      if (date != null) 'date': date,
+      if (transactionId != null) 'transaction_id': transactionId,
+      if (mode != null) 'mode': mode,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SplitExpensesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? title,
+    Value<double>? totalAmount,
+    Value<DateTime>? date,
+    Value<String>? transactionId,
+    Value<String>? mode,
+    Value<DateTime>? updatedAt,
+    Value<bool>? isDeleted,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return SplitExpensesCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      totalAmount: totalAmount ?? this.totalAmount,
+      date: date ?? this.date,
+      transactionId: transactionId ?? this.transactionId,
+      mode: mode ?? this.mode,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (totalAmount.present) {
+      map['total_amount'] = Variable<double>(totalAmount.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (transactionId.present) {
+      map['transaction_id'] = Variable<String>(transactionId.value);
+    }
+    if (mode.present) {
+      map['mode'] = Variable<String>(mode.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SplitExpensesCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('totalAmount: $totalAmount, ')
+          ..write('date: $date, ')
+          ..write('transactionId: $transactionId, ')
+          ..write('mode: $mode, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SplitParticipantsTable extends SplitParticipants
+    with TableInfo<$SplitParticipantsTable, SplitParticipantEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SplitParticipantsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _splitExpenseIdMeta = const VerificationMeta(
+    'splitExpenseId',
+  );
+  @override
+  late final GeneratedColumn<String> splitExpenseId = GeneratedColumn<String>(
+    'split_expense_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _personIdMeta = const VerificationMeta(
+    'personId',
+  );
+  @override
+  late final GeneratedColumn<String> personId = GeneratedColumn<String>(
+    'person_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _shareAmountMeta = const VerificationMeta(
+    'shareAmount',
+  );
+  @override
+  late final GeneratedColumn<double> shareAmount = GeneratedColumn<double>(
+    'share_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isSettledMeta = const VerificationMeta(
+    'isSettled',
+  );
+  @override
+  late final GeneratedColumn<bool> isSettled = GeneratedColumn<bool>(
+    'is_settled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_settled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _settledAtMeta = const VerificationMeta(
+    'settledAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> settledAt = GeneratedColumn<DateTime>(
+    'settled_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _settledTransactionIdMeta =
+      const VerificationMeta('settledTransactionId');
+  @override
+  late final GeneratedColumn<String> settledTransactionId =
+      GeneratedColumn<String>(
+        'settled_transaction_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    splitExpenseId,
+    personId,
+    shareAmount,
+    isSettled,
+    settledAt,
+    settledTransactionId,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'split_participants';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SplitParticipantEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('split_expense_id')) {
+      context.handle(
+        _splitExpenseIdMeta,
+        splitExpenseId.isAcceptableOrUnknown(
+          data['split_expense_id']!,
+          _splitExpenseIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_splitExpenseIdMeta);
+    }
+    if (data.containsKey('person_id')) {
+      context.handle(
+        _personIdMeta,
+        personId.isAcceptableOrUnknown(data['person_id']!, _personIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_personIdMeta);
+    }
+    if (data.containsKey('share_amount')) {
+      context.handle(
+        _shareAmountMeta,
+        shareAmount.isAcceptableOrUnknown(
+          data['share_amount']!,
+          _shareAmountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_shareAmountMeta);
+    }
+    if (data.containsKey('is_settled')) {
+      context.handle(
+        _isSettledMeta,
+        isSettled.isAcceptableOrUnknown(data['is_settled']!, _isSettledMeta),
+      );
+    }
+    if (data.containsKey('settled_at')) {
+      context.handle(
+        _settledAtMeta,
+        settledAt.isAcceptableOrUnknown(data['settled_at']!, _settledAtMeta),
+      );
+    }
+    if (data.containsKey('settled_transaction_id')) {
+      context.handle(
+        _settledTransactionIdMeta,
+        settledTransactionId.isAcceptableOrUnknown(
+          data['settled_transaction_id']!,
+          _settledTransactionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SplitParticipantEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SplitParticipantEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      splitExpenseId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}split_expense_id'],
+      )!,
+      personId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}person_id'],
+      )!,
+      shareAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}share_amount'],
+      )!,
+      isSettled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_settled'],
+      )!,
+      settledAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}settled_at'],
+      ),
+      settledTransactionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}settled_transaction_id'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $SplitParticipantsTable createAlias(String alias) {
+    return $SplitParticipantsTable(attachedDatabase, alias);
+  }
+}
+
+class SplitParticipantEntry extends DataClass
+    implements Insertable<SplitParticipantEntry> {
+  final String id;
+  final String splitExpenseId;
+  final String personId;
+  final double shareAmount;
+  final bool isSettled;
+  final DateTime? settledAt;
+  final String? settledTransactionId;
+  final DateTime updatedAt;
+  final bool isDeleted;
+  final DateTime? deletedAt;
+  const SplitParticipantEntry({
+    required this.id,
+    required this.splitExpenseId,
+    required this.personId,
+    required this.shareAmount,
+    required this.isSettled,
+    this.settledAt,
+    this.settledTransactionId,
+    required this.updatedAt,
+    required this.isDeleted,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['split_expense_id'] = Variable<String>(splitExpenseId);
+    map['person_id'] = Variable<String>(personId);
+    map['share_amount'] = Variable<double>(shareAmount);
+    map['is_settled'] = Variable<bool>(isSettled);
+    if (!nullToAbsent || settledAt != null) {
+      map['settled_at'] = Variable<DateTime>(settledAt);
+    }
+    if (!nullToAbsent || settledTransactionId != null) {
+      map['settled_transaction_id'] = Variable<String>(settledTransactionId);
+    }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  SplitParticipantsCompanion toCompanion(bool nullToAbsent) {
+    return SplitParticipantsCompanion(
+      id: Value(id),
+      splitExpenseId: Value(splitExpenseId),
+      personId: Value(personId),
+      shareAmount: Value(shareAmount),
+      isSettled: Value(isSettled),
+      settledAt: settledAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(settledAt),
+      settledTransactionId: settledTransactionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(settledTransactionId),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory SplitParticipantEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SplitParticipantEntry(
+      id: serializer.fromJson<String>(json['id']),
+      splitExpenseId: serializer.fromJson<String>(json['splitExpenseId']),
+      personId: serializer.fromJson<String>(json['personId']),
+      shareAmount: serializer.fromJson<double>(json['shareAmount']),
+      isSettled: serializer.fromJson<bool>(json['isSettled']),
+      settledAt: serializer.fromJson<DateTime?>(json['settledAt']),
+      settledTransactionId: serializer.fromJson<String?>(
+        json['settledTransactionId'],
+      ),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'splitExpenseId': serializer.toJson<String>(splitExpenseId),
+      'personId': serializer.toJson<String>(personId),
+      'shareAmount': serializer.toJson<double>(shareAmount),
+      'isSettled': serializer.toJson<bool>(isSettled),
+      'settledAt': serializer.toJson<DateTime?>(settledAt),
+      'settledTransactionId': serializer.toJson<String?>(settledTransactionId),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  SplitParticipantEntry copyWith({
+    String? id,
+    String? splitExpenseId,
+    String? personId,
+    double? shareAmount,
+    bool? isSettled,
+    Value<DateTime?> settledAt = const Value.absent(),
+    Value<String?> settledTransactionId = const Value.absent(),
+    DateTime? updatedAt,
+    bool? isDeleted,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => SplitParticipantEntry(
+    id: id ?? this.id,
+    splitExpenseId: splitExpenseId ?? this.splitExpenseId,
+    personId: personId ?? this.personId,
+    shareAmount: shareAmount ?? this.shareAmount,
+    isSettled: isSettled ?? this.isSettled,
+    settledAt: settledAt.present ? settledAt.value : this.settledAt,
+    settledTransactionId: settledTransactionId.present
+        ? settledTransactionId.value
+        : this.settledTransactionId,
+    updatedAt: updatedAt ?? this.updatedAt,
+    isDeleted: isDeleted ?? this.isDeleted,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  SplitParticipantEntry copyWithCompanion(SplitParticipantsCompanion data) {
+    return SplitParticipantEntry(
+      id: data.id.present ? data.id.value : this.id,
+      splitExpenseId: data.splitExpenseId.present
+          ? data.splitExpenseId.value
+          : this.splitExpenseId,
+      personId: data.personId.present ? data.personId.value : this.personId,
+      shareAmount: data.shareAmount.present
+          ? data.shareAmount.value
+          : this.shareAmount,
+      isSettled: data.isSettled.present ? data.isSettled.value : this.isSettled,
+      settledAt: data.settledAt.present ? data.settledAt.value : this.settledAt,
+      settledTransactionId: data.settledTransactionId.present
+          ? data.settledTransactionId.value
+          : this.settledTransactionId,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SplitParticipantEntry(')
+          ..write('id: $id, ')
+          ..write('splitExpenseId: $splitExpenseId, ')
+          ..write('personId: $personId, ')
+          ..write('shareAmount: $shareAmount, ')
+          ..write('isSettled: $isSettled, ')
+          ..write('settledAt: $settledAt, ')
+          ..write('settledTransactionId: $settledTransactionId, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    splitExpenseId,
+    personId,
+    shareAmount,
+    isSettled,
+    settledAt,
+    settledTransactionId,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SplitParticipantEntry &&
+          other.id == this.id &&
+          other.splitExpenseId == this.splitExpenseId &&
+          other.personId == this.personId &&
+          other.shareAmount == this.shareAmount &&
+          other.isSettled == this.isSettled &&
+          other.settledAt == this.settledAt &&
+          other.settledTransactionId == this.settledTransactionId &&
+          other.updatedAt == this.updatedAt &&
+          other.isDeleted == this.isDeleted &&
+          other.deletedAt == this.deletedAt);
+}
+
+class SplitParticipantsCompanion
+    extends UpdateCompanion<SplitParticipantEntry> {
+  final Value<String> id;
+  final Value<String> splitExpenseId;
+  final Value<String> personId;
+  final Value<double> shareAmount;
+  final Value<bool> isSettled;
+  final Value<DateTime?> settledAt;
+  final Value<String?> settledTransactionId;
+  final Value<DateTime> updatedAt;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const SplitParticipantsCompanion({
+    this.id = const Value.absent(),
+    this.splitExpenseId = const Value.absent(),
+    this.personId = const Value.absent(),
+    this.shareAmount = const Value.absent(),
+    this.isSettled = const Value.absent(),
+    this.settledAt = const Value.absent(),
+    this.settledTransactionId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SplitParticipantsCompanion.insert({
+    required String id,
+    required String splitExpenseId,
+    required String personId,
+    required double shareAmount,
+    this.isSettled = const Value.absent(),
+    this.settledAt = const Value.absent(),
+    this.settledTransactionId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       splitExpenseId = Value(splitExpenseId),
+       personId = Value(personId),
+       shareAmount = Value(shareAmount);
+  static Insertable<SplitParticipantEntry> custom({
+    Expression<String>? id,
+    Expression<String>? splitExpenseId,
+    Expression<String>? personId,
+    Expression<double>? shareAmount,
+    Expression<bool>? isSettled,
+    Expression<DateTime>? settledAt,
+    Expression<String>? settledTransactionId,
+    Expression<DateTime>? updatedAt,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (splitExpenseId != null) 'split_expense_id': splitExpenseId,
+      if (personId != null) 'person_id': personId,
+      if (shareAmount != null) 'share_amount': shareAmount,
+      if (isSettled != null) 'is_settled': isSettled,
+      if (settledAt != null) 'settled_at': settledAt,
+      if (settledTransactionId != null)
+        'settled_transaction_id': settledTransactionId,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SplitParticipantsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? splitExpenseId,
+    Value<String>? personId,
+    Value<double>? shareAmount,
+    Value<bool>? isSettled,
+    Value<DateTime?>? settledAt,
+    Value<String?>? settledTransactionId,
+    Value<DateTime>? updatedAt,
+    Value<bool>? isDeleted,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return SplitParticipantsCompanion(
+      id: id ?? this.id,
+      splitExpenseId: splitExpenseId ?? this.splitExpenseId,
+      personId: personId ?? this.personId,
+      shareAmount: shareAmount ?? this.shareAmount,
+      isSettled: isSettled ?? this.isSettled,
+      settledAt: settledAt ?? this.settledAt,
+      settledTransactionId: settledTransactionId ?? this.settledTransactionId,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (splitExpenseId.present) {
+      map['split_expense_id'] = Variable<String>(splitExpenseId.value);
+    }
+    if (personId.present) {
+      map['person_id'] = Variable<String>(personId.value);
+    }
+    if (shareAmount.present) {
+      map['share_amount'] = Variable<double>(shareAmount.value);
+    }
+    if (isSettled.present) {
+      map['is_settled'] = Variable<bool>(isSettled.value);
+    }
+    if (settledAt.present) {
+      map['settled_at'] = Variable<DateTime>(settledAt.value);
+    }
+    if (settledTransactionId.present) {
+      map['settled_transaction_id'] = Variable<String>(
+        settledTransactionId.value,
+      );
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SplitParticipantsCompanion(')
+          ..write('id: $id, ')
+          ..write('splitExpenseId: $splitExpenseId, ')
+          ..write('personId: $personId, ')
+          ..write('shareAmount: $shareAmount, ')
+          ..write('isSettled: $isSettled, ')
+          ..write('settledAt: $settledAt, ')
+          ..write('settledTransactionId: $settledTransactionId, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -9074,6 +10685,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $NotesTable notes = $NotesTable(this);
   late final $SyncMetaTable syncMeta = $SyncMetaTable(this);
   late final $CompaniesTable companies = $CompaniesTable(this);
+  late final $PeopleTable people = $PeopleTable(this);
+  late final $SplitExpensesTable splitExpenses = $SplitExpensesTable(this);
+  late final $SplitParticipantsTable splitParticipants =
+      $SplitParticipantsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9091,6 +10706,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     notes,
     syncMeta,
     companies,
+    people,
+    splitExpenses,
+    splitParticipants,
   ];
 }
 
@@ -9783,6 +11401,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> loanId,
       Value<String?> companyId,
       Value<bool> isExternalToAccount,
+      Value<bool> isCashSpend,
       Value<String> syncStatus,
       required DateTime createdAt,
       Value<DateTime> updatedAt,
@@ -9807,6 +11426,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> loanId,
       Value<String?> companyId,
       Value<bool> isExternalToAccount,
+      Value<bool> isCashSpend,
       Value<String> syncStatus,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -9896,6 +11516,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<bool> get isExternalToAccount => $composableBuilder(
     column: $table.isExternalToAccount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCashSpend => $composableBuilder(
+    column: $table.isCashSpend,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10009,6 +11634,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isCashSpend => $composableBuilder(
+    column: $table.isCashSpend,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
@@ -10099,6 +11729,11 @@ class $$TransactionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get isCashSpend => $composableBuilder(
+    column: $table.isCashSpend,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => column,
@@ -10163,6 +11798,7 @@ class $$TransactionsTableTableManager
                 Value<String?> loanId = const Value.absent(),
                 Value<String?> companyId = const Value.absent(),
                 Value<bool> isExternalToAccount = const Value.absent(),
+                Value<bool> isCashSpend = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -10185,6 +11821,7 @@ class $$TransactionsTableTableManager
                 loanId: loanId,
                 companyId: companyId,
                 isExternalToAccount: isExternalToAccount,
+                isCashSpend: isCashSpend,
                 syncStatus: syncStatus,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -10209,6 +11846,7 @@ class $$TransactionsTableTableManager
                 Value<String?> loanId = const Value.absent(),
                 Value<String?> companyId = const Value.absent(),
                 Value<bool> isExternalToAccount = const Value.absent(),
+                Value<bool> isCashSpend = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 required DateTime createdAt,
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -10231,6 +11869,7 @@ class $$TransactionsTableTableManager
                 loanId: loanId,
                 companyId: companyId,
                 isExternalToAccount: isExternalToAccount,
+                isCashSpend: isCashSpend,
                 syncStatus: syncStatus,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -13340,6 +14979,801 @@ typedef $$CompaniesTableProcessedTableManager =
       CompanyEntry,
       PrefetchHooks Function()
     >;
+typedef $$PeopleTableCreateCompanionBuilder =
+    PeopleCompanion Function({
+      required String id,
+      required String name,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$PeopleTableUpdateCompanionBuilder =
+    PeopleCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $$PeopleTableFilterComposer
+    extends Composer<_$AppDatabase, $PeopleTable> {
+  $$PeopleTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PeopleTableOrderingComposer
+    extends Composer<_$AppDatabase, $PeopleTable> {
+  $$PeopleTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PeopleTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PeopleTable> {
+  $$PeopleTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$PeopleTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PeopleTable,
+          PersonEntry,
+          $$PeopleTableFilterComposer,
+          $$PeopleTableOrderingComposer,
+          $$PeopleTableAnnotationComposer,
+          $$PeopleTableCreateCompanionBuilder,
+          $$PeopleTableUpdateCompanionBuilder,
+          (
+            PersonEntry,
+            BaseReferences<_$AppDatabase, $PeopleTable, PersonEntry>,
+          ),
+          PersonEntry,
+          PrefetchHooks Function()
+        > {
+  $$PeopleTableTableManager(_$AppDatabase db, $PeopleTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PeopleTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PeopleTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PeopleTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PeopleCompanion(
+                id: id,
+                name: name,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PeopleCompanion.insert(
+                id: id,
+                name: name,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PeopleTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PeopleTable,
+      PersonEntry,
+      $$PeopleTableFilterComposer,
+      $$PeopleTableOrderingComposer,
+      $$PeopleTableAnnotationComposer,
+      $$PeopleTableCreateCompanionBuilder,
+      $$PeopleTableUpdateCompanionBuilder,
+      (PersonEntry, BaseReferences<_$AppDatabase, $PeopleTable, PersonEntry>),
+      PersonEntry,
+      PrefetchHooks Function()
+    >;
+typedef $$SplitExpensesTableCreateCompanionBuilder =
+    SplitExpensesCompanion Function({
+      required String id,
+      required String title,
+      required double totalAmount,
+      required DateTime date,
+      required String transactionId,
+      Value<String> mode,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$SplitExpensesTableUpdateCompanionBuilder =
+    SplitExpensesCompanion Function({
+      Value<String> id,
+      Value<String> title,
+      Value<double> totalAmount,
+      Value<DateTime> date,
+      Value<String> transactionId,
+      Value<String> mode,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $$SplitExpensesTableFilterComposer
+    extends Composer<_$AppDatabase, $SplitExpensesTable> {
+  $$SplitExpensesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get totalAmount => $composableBuilder(
+    column: $table.totalAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get transactionId => $composableBuilder(
+    column: $table.transactionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mode => $composableBuilder(
+    column: $table.mode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SplitExpensesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SplitExpensesTable> {
+  $$SplitExpensesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get totalAmount => $composableBuilder(
+    column: $table.totalAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get transactionId => $composableBuilder(
+    column: $table.transactionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mode => $composableBuilder(
+    column: $table.mode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SplitExpensesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SplitExpensesTable> {
+  $$SplitExpensesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<double> get totalAmount => $composableBuilder(
+    column: $table.totalAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get transactionId => $composableBuilder(
+    column: $table.transactionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mode =>
+      $composableBuilder(column: $table.mode, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$SplitExpensesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SplitExpensesTable,
+          SplitExpenseEntry,
+          $$SplitExpensesTableFilterComposer,
+          $$SplitExpensesTableOrderingComposer,
+          $$SplitExpensesTableAnnotationComposer,
+          $$SplitExpensesTableCreateCompanionBuilder,
+          $$SplitExpensesTableUpdateCompanionBuilder,
+          (
+            SplitExpenseEntry,
+            BaseReferences<
+              _$AppDatabase,
+              $SplitExpensesTable,
+              SplitExpenseEntry
+            >,
+          ),
+          SplitExpenseEntry,
+          PrefetchHooks Function()
+        > {
+  $$SplitExpensesTableTableManager(_$AppDatabase db, $SplitExpensesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SplitExpensesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SplitExpensesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SplitExpensesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<double> totalAmount = const Value.absent(),
+                Value<DateTime> date = const Value.absent(),
+                Value<String> transactionId = const Value.absent(),
+                Value<String> mode = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SplitExpensesCompanion(
+                id: id,
+                title: title,
+                totalAmount: totalAmount,
+                date: date,
+                transactionId: transactionId,
+                mode: mode,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String title,
+                required double totalAmount,
+                required DateTime date,
+                required String transactionId,
+                Value<String> mode = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SplitExpensesCompanion.insert(
+                id: id,
+                title: title,
+                totalAmount: totalAmount,
+                date: date,
+                transactionId: transactionId,
+                mode: mode,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SplitExpensesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SplitExpensesTable,
+      SplitExpenseEntry,
+      $$SplitExpensesTableFilterComposer,
+      $$SplitExpensesTableOrderingComposer,
+      $$SplitExpensesTableAnnotationComposer,
+      $$SplitExpensesTableCreateCompanionBuilder,
+      $$SplitExpensesTableUpdateCompanionBuilder,
+      (
+        SplitExpenseEntry,
+        BaseReferences<_$AppDatabase, $SplitExpensesTable, SplitExpenseEntry>,
+      ),
+      SplitExpenseEntry,
+      PrefetchHooks Function()
+    >;
+typedef $$SplitParticipantsTableCreateCompanionBuilder =
+    SplitParticipantsCompanion Function({
+      required String id,
+      required String splitExpenseId,
+      required String personId,
+      required double shareAmount,
+      Value<bool> isSettled,
+      Value<DateTime?> settledAt,
+      Value<String?> settledTransactionId,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$SplitParticipantsTableUpdateCompanionBuilder =
+    SplitParticipantsCompanion Function({
+      Value<String> id,
+      Value<String> splitExpenseId,
+      Value<String> personId,
+      Value<double> shareAmount,
+      Value<bool> isSettled,
+      Value<DateTime?> settledAt,
+      Value<String?> settledTransactionId,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $$SplitParticipantsTableFilterComposer
+    extends Composer<_$AppDatabase, $SplitParticipantsTable> {
+  $$SplitParticipantsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get splitExpenseId => $composableBuilder(
+    column: $table.splitExpenseId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get personId => $composableBuilder(
+    column: $table.personId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get shareAmount => $composableBuilder(
+    column: $table.shareAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSettled => $composableBuilder(
+    column: $table.isSettled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get settledAt => $composableBuilder(
+    column: $table.settledAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get settledTransactionId => $composableBuilder(
+    column: $table.settledTransactionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SplitParticipantsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SplitParticipantsTable> {
+  $$SplitParticipantsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get splitExpenseId => $composableBuilder(
+    column: $table.splitExpenseId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get personId => $composableBuilder(
+    column: $table.personId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get shareAmount => $composableBuilder(
+    column: $table.shareAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSettled => $composableBuilder(
+    column: $table.isSettled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get settledAt => $composableBuilder(
+    column: $table.settledAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get settledTransactionId => $composableBuilder(
+    column: $table.settledTransactionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SplitParticipantsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SplitParticipantsTable> {
+  $$SplitParticipantsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get splitExpenseId => $composableBuilder(
+    column: $table.splitExpenseId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get personId =>
+      $composableBuilder(column: $table.personId, builder: (column) => column);
+
+  GeneratedColumn<double> get shareAmount => $composableBuilder(
+    column: $table.shareAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isSettled =>
+      $composableBuilder(column: $table.isSettled, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get settledAt =>
+      $composableBuilder(column: $table.settledAt, builder: (column) => column);
+
+  GeneratedColumn<String> get settledTransactionId => $composableBuilder(
+    column: $table.settledTransactionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$SplitParticipantsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SplitParticipantsTable,
+          SplitParticipantEntry,
+          $$SplitParticipantsTableFilterComposer,
+          $$SplitParticipantsTableOrderingComposer,
+          $$SplitParticipantsTableAnnotationComposer,
+          $$SplitParticipantsTableCreateCompanionBuilder,
+          $$SplitParticipantsTableUpdateCompanionBuilder,
+          (
+            SplitParticipantEntry,
+            BaseReferences<
+              _$AppDatabase,
+              $SplitParticipantsTable,
+              SplitParticipantEntry
+            >,
+          ),
+          SplitParticipantEntry,
+          PrefetchHooks Function()
+        > {
+  $$SplitParticipantsTableTableManager(
+    _$AppDatabase db,
+    $SplitParticipantsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SplitParticipantsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SplitParticipantsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SplitParticipantsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> splitExpenseId = const Value.absent(),
+                Value<String> personId = const Value.absent(),
+                Value<double> shareAmount = const Value.absent(),
+                Value<bool> isSettled = const Value.absent(),
+                Value<DateTime?> settledAt = const Value.absent(),
+                Value<String?> settledTransactionId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SplitParticipantsCompanion(
+                id: id,
+                splitExpenseId: splitExpenseId,
+                personId: personId,
+                shareAmount: shareAmount,
+                isSettled: isSettled,
+                settledAt: settledAt,
+                settledTransactionId: settledTransactionId,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String splitExpenseId,
+                required String personId,
+                required double shareAmount,
+                Value<bool> isSettled = const Value.absent(),
+                Value<DateTime?> settledAt = const Value.absent(),
+                Value<String?> settledTransactionId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SplitParticipantsCompanion.insert(
+                id: id,
+                splitExpenseId: splitExpenseId,
+                personId: personId,
+                shareAmount: shareAmount,
+                isSettled: isSettled,
+                settledAt: settledAt,
+                settledTransactionId: settledTransactionId,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SplitParticipantsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SplitParticipantsTable,
+      SplitParticipantEntry,
+      $$SplitParticipantsTableFilterComposer,
+      $$SplitParticipantsTableOrderingComposer,
+      $$SplitParticipantsTableAnnotationComposer,
+      $$SplitParticipantsTableCreateCompanionBuilder,
+      $$SplitParticipantsTableUpdateCompanionBuilder,
+      (
+        SplitParticipantEntry,
+        BaseReferences<
+          _$AppDatabase,
+          $SplitParticipantsTable,
+          SplitParticipantEntry
+        >,
+      ),
+      SplitParticipantEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -13368,4 +15802,10 @@ class $AppDatabaseManager {
       $$SyncMetaTableTableManager(_db, _db.syncMeta);
   $$CompaniesTableTableManager get companies =>
       $$CompaniesTableTableManager(_db, _db.companies);
+  $$PeopleTableTableManager get people =>
+      $$PeopleTableTableManager(_db, _db.people);
+  $$SplitExpensesTableTableManager get splitExpenses =>
+      $$SplitExpensesTableTableManager(_db, _db.splitExpenses);
+  $$SplitParticipantsTableTableManager get splitParticipants =>
+      $$SplitParticipantsTableTableManager(_db, _db.splitParticipants);
 }

@@ -22,6 +22,9 @@ part 'app_database.g.dart';
   Notes,
   SyncMeta,
   Companies,
+  People,
+  SplitExpenses,
+  SplitParticipants,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -35,7 +38,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -205,6 +208,31 @@ class AppDatabase extends _$AppDatabase {
               await m.addColumn(investments, investments.lastAutoPostedMonth);
             }
           }
+          if (from < 10) {
+            // v10: split expenses (IOU tracking) + cash as a "Pay With"
+            // option. Added defensively — a synthetic upgrade path may
+            // already be on the current schema.
+            final v10Cache = <String, Set<String>>{};
+            Future<Set<String>> v10Cols(String table) async {
+              return v10Cache[table] ??= (await customSelect('PRAGMA table_info($table)').get())
+                  .map((row) => row.read<String>('name'))
+                  .toSet();
+            }
+
+            if (!(await v10Cols('people')).isNotEmpty) {
+              await m.createTable(people);
+            }
+            if (!(await v10Cols('split_expenses')).isNotEmpty) {
+              await m.createTable(splitExpenses);
+            }
+            if (!(await v10Cols('split_participants')).isNotEmpty) {
+              await m.createTable(splitParticipants);
+            }
+            final txCols = await v10Cols('transactions');
+            if (!txCols.contains(transactions.isCashSpend.name)) {
+              await m.addColumn(transactions, transactions.isCashSpend);
+            }
+          }
         },
       );
 
@@ -218,6 +246,9 @@ class AppDatabase extends _$AppDatabase {
       await delete(investments).go();
       await delete(goals).go();
       await delete(companies).go();
+      await delete(splitParticipants).go();
+      await delete(splitExpenses).go();
+      await delete(people).go();
       await delete(accounts).go();
       await delete(categories).go();
       await delete(notes).go();
@@ -240,6 +271,9 @@ class AppDatabase extends _$AppDatabase {
       'investments': (await select(investments).get()).map((e) => e.toJson()).toList(),
       'goals': (await select(goals).get()).map((e) => e.toJson()).toList(),
       'companies': (await select(companies).get()).map((e) => e.toJson()).toList(),
+      'people': (await select(people).get()).map((e) => e.toJson()).toList(),
+      'splitExpenses': (await select(splitExpenses).get()).map((e) => e.toJson()).toList(),
+      'splitParticipants': (await select(splitParticipants).get()).map((e) => e.toJson()).toList(),
       'notes': (await select(notes).get()).map((e) => e.toJson()).toList(),
     };
   }
@@ -285,6 +319,15 @@ class AppDatabase extends _$AppDatabase {
       }
       for (final row in rows('companies')) {
         await into(companies).insertOnConflictUpdate(CompanyEntry.fromJson(row).toCompanion(true));
+      }
+      for (final row in rows('people')) {
+        await into(people).insertOnConflictUpdate(PersonEntry.fromJson(row).toCompanion(true));
+      }
+      for (final row in rows('splitExpenses')) {
+        await into(splitExpenses).insertOnConflictUpdate(SplitExpenseEntry.fromJson(row).toCompanion(true));
+      }
+      for (final row in rows('splitParticipants')) {
+        await into(splitParticipants).insertOnConflictUpdate(SplitParticipantEntry.fromJson(row).toCompanion(true));
       }
       for (final row in rows('notes')) {
         await into(notes).insertOnConflictUpdate(NoteEntry.fromJson(row).toCompanion(true));

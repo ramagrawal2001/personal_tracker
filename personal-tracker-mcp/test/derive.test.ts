@@ -6,7 +6,7 @@ import {
 const acc = { id: "A", opening_balance: 1000 };
 const tx = (p: Partial<BalanceTxn>): BalanceTxn => ({
   account_id: "A", to_account_id: null, type: "expense", amount: 0,
-  credit_card_id: null, is_external_to_account: false, ...p,
+  credit_card_id: null, is_external_to_account: false, is_cash_spend: false, ...p,
 });
 
 describe("computeAccountBalance — port of FinanceState.accountsWithCalculatedBalances", () => {
@@ -26,6 +26,9 @@ describe("computeAccountBalance — port of FinanceState.accountsWithCalculatedB
   });
   test("is_external_to_account rows are skipped on the account_id leg", () => {
     expect(computeAccountBalance(acc, [tx({ type: "expense", amount: 300, is_external_to_account: true })], new Set())).toBe(1000);
+  });
+  test("is_cash_spend rows are skipped on the account_id leg", () => {
+    expect(computeAccountBalance(acc, [tx({ type: "expense", amount: 300, is_cash_spend: true })], new Set())).toBe(1000);
   });
   test("credit-card charge rows are skipped (credit card id + expense/refund)", () => {
     const credit = new Set(["card1"]);

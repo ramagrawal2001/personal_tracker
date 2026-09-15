@@ -8,8 +8,9 @@ Design: [`../docs/superpowers/specs/2026-09-08-personal-tracker-mcp-design.md`](
 
 ## What it can do
 
-10 entities — `accounts`, `transactions`, `categories`, `credit_cards`, `loans`,
-`budgets`, `recurring_payments`, `investments`, `goals`, `companies`.
+13 entities — `accounts`, `transactions`, `categories`, `credit_cards`, `loans`,
+`budgets`, `recurring_payments`, `investments`, `goals`, `companies`, `people`,
+`split_expenses`, `split_participants`.
 
 Tools:
 

@@ -5,6 +5,7 @@ export interface BalanceTxn {
   amount: number;
   credit_card_id: string | null;
   is_external_to_account: boolean;
+  is_cash_spend?: boolean;
 }
 
 const DEBIT_TYPES = new Set([
@@ -19,8 +20,9 @@ const DEBIT_TYPES = new Set([
  *   + income/refund posted to this account
  *   - expense/transfer/creditCardPayment/loanPayment/investment/adjustment posted to this account
  *   + amount for every transaction whose to_account_id is this account
- * Skips rows where is_external_to_account is true, and "card charge" rows whose
- * credit_card_id belongs to a credit card and whose type is expense or refund.
+ * Skips rows where is_external_to_account or is_cash_spend is true, and "card
+ * charge" rows whose credit_card_id belongs to a credit card and whose type
+ * is expense or refund.
  */
 export function computeAccountBalance(
   account: { id: string; opening_balance: number },
@@ -34,7 +36,7 @@ export function computeAccountBalance(
         t.credit_card_id != null &&
         creditCardIds.has(t.credit_card_id) &&
         (t.type === "expense" || t.type === "refund");
-      if (!isCardCharge && !t.is_external_to_account) {
+      if (!isCardCharge && !t.is_external_to_account && !t.is_cash_spend) {
         if (t.type === "income" || t.type === "refund") calc += t.amount;
         else if (DEBIT_TYPES.has(t.type)) calc -= t.amount;
       }

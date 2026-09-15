@@ -168,6 +168,12 @@ class TransactionModel {
   // movement — that money was diverted before it ever reached the bank, so
   // accountsWithCalculatedBalances/liquidBalanceTrend must not debit it.
   final bool isExternalToAccount;
+  // True for a cash spend logged via "Pay With" — `accountId` is a required
+  // FK reference only (same reason as isExternalToAccount above), never
+  // actually debited, because cash isn't tracked against any bank balance.
+  // Kept as its own flag rather than reusing isExternalToAccount so the two
+  // reasons stay distinguishable wherever a transaction is displayed.
+  final bool isCashSpend;
   final SyncStatus syncStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -192,6 +198,7 @@ class TransactionModel {
     this.investmentId,
     this.companyId,
     this.isExternalToAccount = false,
+    this.isCashSpend = false,
     this.syncStatus = SyncStatus.synced,
     required this.createdAt,
     DateTime? updatedAt,
@@ -222,6 +229,7 @@ class TransactionModel {
     String? investmentId,
     String? companyId,
     bool? isExternalToAccount,
+    bool? isCashSpend,
     SyncStatus? syncStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -243,6 +251,7 @@ class TransactionModel {
       attachmentPath: attachmentPath ?? this.attachmentPath,
       creditCardId: clearCreditCardId ? null : (creditCardId ?? this.creditCardId),
       loanId: loanId ?? this.loanId,
+      isCashSpend: isCashSpend ?? this.isCashSpend,
       investmentId: investmentId ?? this.investmentId,
       companyId: companyId ?? this.companyId,
       isExternalToAccount: isExternalToAccount ?? this.isExternalToAccount,
@@ -789,5 +798,149 @@ class CompanyModel {
   }
 }
 
+// ── Split expenses (IOU tracking) ───────────────────────────────────────────
+
+/// A person you split expenses with — reusable across many splits, so "who
+/// owes me" can be totalled per person. Doesn't need the app themselves.
+class PersonModel {
+  final String id;
+  final String name;
+  final DateTime updatedAt;
+  final bool isDeleted;
+
+  PersonModel({
+    required this.id,
+    required this.name,
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
+
+  PersonModel copyWith({
+    String? name,
+    DateTime? updatedAt,
+    bool? isDeleted,
+  }) {
+    return PersonModel(
+      id: id,
+      name: name ?? this.name,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
+}
+
+/// How a split's participant shares were computed. Display metadata only —
+/// every [SplitParticipantModel.shareAmount] is always a resolved rupee
+/// figure regardless of mode, so nothing downstream needs to re-derive it.
+enum SplitMode {
+  equal,
+  custom,
+  ratio,
+  percentage;
+
+  String get displayName => switch (this) {
+        SplitMode.equal => 'Equal',
+        SplitMode.custom => 'Custom amount',
+        SplitMode.ratio => 'Ratio',
+        SplitMode.percentage => 'Percentage',
+      };
+}
+
+/// One split "event" — e.g. "Panipuri, ₹100, split 3 ways". [transactionId]
+/// points at the real expense (the *full* amount, debited from a real
+/// account/card — that money genuinely left the bank). This row and its
+/// [SplitParticipantModel] rows are pure tracking metadata layered on top;
+/// they never affect any account balance themselves.
+class SplitExpenseModel {
+  final String id;
+  final String title;
+  final double totalAmount;
+  final DateTime date;
+  final String transactionId;
+  final SplitMode mode;
+  final DateTime updatedAt;
+  final bool isDeleted;
+
+  SplitExpenseModel({
+    required this.id,
+    required this.title,
+    required this.totalAmount,
+    required this.date,
+    required this.transactionId,
+    this.mode = SplitMode.equal,
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
+
+  SplitExpenseModel copyWith({
+    String? title,
+    double? totalAmount,
+    DateTime? date,
+    String? transactionId,
+    SplitMode? mode,
+    DateTime? updatedAt,
+    bool? isDeleted,
+  }) {
+    return SplitExpenseModel(
+      id: id,
+      title: title ?? this.title,
+      totalAmount: totalAmount ?? this.totalAmount,
+      date: date ?? this.date,
+      transactionId: transactionId ?? this.transactionId,
+      mode: mode ?? this.mode,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
+}
+
+/// One other person's share of a [SplitExpenseModel] — the payer's own share
+/// is never stored as a row; it's always `totalAmount - sum(participants)`.
+class SplitParticipantModel {
+  final String id;
+  final String splitExpenseId;
+  final String personId;
+  final double shareAmount;
+  final bool isSettled;
+  final DateTime? settledAt;
+  // Set only when the repayment was recorded as a real transaction (e.g. a
+  // UPI transfer back to the paying account) rather than handed over in cash.
+  final String? settledTransactionId;
+  final DateTime updatedAt;
+  final bool isDeleted;
+
+  SplitParticipantModel({
+    required this.id,
+    required this.splitExpenseId,
+    required this.personId,
+    required this.shareAmount,
+    this.isSettled = false,
+    this.settledAt,
+    this.settledTransactionId,
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
+
+  SplitParticipantModel copyWith({
+    double? shareAmount,
+    bool? isSettled,
+    DateTime? settledAt,
+    String? settledTransactionId,
+    DateTime? updatedAt,
+    bool? isDeleted,
+  }) {
+    return SplitParticipantModel(
+      id: id,
+      splitExpenseId: splitExpenseId,
+      personId: personId,
+      shareAmount: shareAmount ?? this.shareAmount,
+      isSettled: isSettled ?? this.isSettled,
+      settledAt: settledAt ?? this.settledAt,
+      settledTransactionId: settledTransactionId ?? this.settledTransactionId,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
+}
 
 

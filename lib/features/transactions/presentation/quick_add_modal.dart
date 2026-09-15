@@ -10,6 +10,11 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../domain/models/models.dart';
 import 'log_salary_modal.dart';
+import '../../splits/presentation/split_expense_modal.dart';
+
+/// Sentinel `_selectedPayCardId` value for "Cash" in the "Pay With" dropdown
+/// — not a real card id, so it never matches anything in `payCards`.
+const String kCashPaySentinel = '__cash__';
 
 /// Parses the Amount field: a plain number ("120.5"), or a single binary
 /// arithmetic expression between exactly two numbers ("100/3", "45+10.5",
@@ -180,7 +185,8 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
         }
       }
     }
-    if (selectedPayCard == null) _selectedPayCardId = null;
+    final isCashPay = _selectedPayCardId == kCashPaySentinel;
+    if (selectedPayCard == null && !isCashPay) _selectedPayCardId = null;
     final isCreditCharge = selectedPayCard?.cardType == CardType.credit;
     AccountModel? debitLinkedAccount;
     if (selectedPayCard?.cardType == CardType.debit && selectedPayCard!.linkedAccountId != null) {
@@ -196,7 +202,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
     // always recomputed from transaction history (or, for a card charge,
     // reversed off the old card and applied to the new one in
     // updateTransaction), so moving a transaction is always safe.
-    final accountLocked = debitLinkedAccount != null || isCreditCharge;
+    final accountLocked = debitLinkedAccount != null || isCreditCharge || isCashPay;
 
     final horizontalPadding = context.responsiveHorizontalPadding(mobile: 16, tablet: 24, desktop: 32);
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -269,6 +275,23 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                   onPressed: () {
                     Navigator.pop(context);
                     LogSalaryModal.show(context);
+                  },
+                ),
+              ),
+            ],
+            if (_selectedType == TransactionType.expense && !_isEditing) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  icon: Icon(LucideIcons.users, size: 15, color: AppColors.primary),
+                  label: Text(
+                    'Splitting this with others? Track who owes you →',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    SplitExpenseModal.show(context);
                   },
                 ),
               ),
@@ -411,6 +434,21 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 ],
               ),
             ],
+            if (isCashPay) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(LucideIcons.banknote, size: 13, color: AppColors.textMuted),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Paid with cash — no account balance affected',
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 14),
 
             // Destination / Specific Selectors based on Type
@@ -489,7 +527,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
               const SizedBox(height: 14),
             ],
 
-            if (_selectedType == TransactionType.expense && payCards.isNotEmpty) ...[
+            if (_selectedType == TransactionType.expense) ...[
               Text('Pay With', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String?>(
@@ -515,6 +553,10 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       )),
+                  DropdownMenuItem<String?>(
+                    value: kCashPaySentinel,
+                    child: Text('Cash'),
+                  ),
                 ],
                 onChanged: (val) => setState(() => _selectedPayCardId = val),
               ),
@@ -648,6 +690,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       }
     }
     final isCreditCharge = payCard?.cardType == CardType.credit;
+    final isCashPay = _selectedType == TransactionType.expense && _selectedPayCardId == kCashPaySentinel;
 
     // Every transaction still needs a real `accountId` — the cloud schema's
     // foreign key requires one, even for a credit-card charge where the
@@ -723,6 +766,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
           // supplied = unchanged" default.
           creditCardId: _selectedType == TransactionType.expense ? payCardId : null,
           clearCreditCardId: _selectedType == TransactionType.expense && payCardId == null,
+          isCashSpend: _selectedType == TransactionType.expense ? isCashPay : null,
         );
       } else {
         await notifier.addTransaction(
@@ -736,6 +780,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
           description: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
           creditCardId: _selectedType == TransactionType.creditCardPayment ? _selectedCardId : payCardId,
           loanId: _selectedType == TransactionType.loanPayment ? _selectedLoanId : null,
+          isCashSpend: isCashPay,
         );
       }
     } catch (e) {

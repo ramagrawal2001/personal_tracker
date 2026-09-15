@@ -54,7 +54,7 @@ void main() {
     expect(notes, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 9);
+    expect(versionRow.data['user_version'], 10);
 
     // v3 additions: the tombstone column is present (the sync_outbox table it
     // shipped alongside is gone again as of v6 — checked below).
@@ -197,7 +197,7 @@ void main() {
     expect(companies, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 9);
+    expect(versionRow.data['user_version'], 10);
 
     final txCols = (await phase2.customSelect('PRAGMA table_info(transactions)').get())
         .map((r) => r.read<String>('name'))
@@ -260,7 +260,7 @@ void main() {
     expect(accounts.first.sortOrder, 0, reason: 'the new column must default to 0, not fail the migration');
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 9);
+    expect(versionRow.data['user_version'], 10);
 
     final acctCols = (await phase2.customSelect('PRAGMA table_info(accounts)').get())
         .map((r) => r.read<String>('name'))
@@ -309,12 +309,74 @@ void main() {
     expect(investments.first.lastAutoPostedMonth, null);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 9);
+    expect(versionRow.data['user_version'], 10);
 
     final invCols = (await phase2.customSelect('PRAGMA table_info(investments)').get())
         .map((r) => r.read<String>('name'))
         .toSet();
     expect(invCols.contains('auto_invest_enabled'), isTrue);
     expect(invCols.contains('last_auto_posted_month'), isTrue);
+  });
+
+  test('v9 -> v10 upgrade adds split expenses + cash spend without losing existing data', () async {
+    final file = File('${Directory.systemTemp.path}/migration_check_v10_${DateTime.now().microsecondsSinceEpoch}.sqlite');
+    addTearDown(() {
+      if (file.existsSync()) file.deleteSync();
+    });
+
+    // ── Phase 1: simulate a v9 install (no people/split_expenses/
+    // split_participants, no transactions.is_cash_spend) ──
+    final phase1 = AppDatabase.forTesting(NativeDatabase(file));
+    final m = Migrator(phase1);
+    await phase1.customStatement('PRAGMA journal_mode=WAL');
+    await m.createTable(phase1.accounts);
+    await m.createTable(phase1.categories);
+    await m.createTable(phase1.transactions);
+    await m.createTable(phase1.creditCards);
+    await m.createTable(phase1.loans);
+    await m.createTable(phase1.budgets);
+    await m.createTable(phase1.recurringPayments);
+    await m.createTable(phase1.investments);
+    await m.createTable(phase1.goals);
+    await m.createTable(phase1.notes);
+    await m.createTable(phase1.syncMeta);
+    await m.createTable(phase1.companies);
+    // deliberately NOT creating people/split_expenses/split_participants —
+    // that's the v10 addition
+    final acc = AccountModel(
+      id: 'acc1',
+      name: 'Test Savings',
+      type: AccountType.savingsAccount,
+      openingBalance: 1000,
+      calculatedBalance: 1000,
+      createdAt: DateTime.now(),
+    );
+    await phase1.into(phase1.accounts).insertOnConflictUpdate(acc.toCompanion());
+    await phase1.customStatement('PRAGMA user_version = 9');
+    await phase1.close();
+
+    // ── Phase 2: open with the real (v10) AppDatabase against the same file ──
+    final phase2 = AppDatabase.forTesting(NativeDatabase(file));
+    addTearDown(phase2.close);
+
+    final accounts = await phase2.select(phase2.accounts).get();
+    expect(accounts.length, 1, reason: 'pre-existing data must survive the upgrade');
+    expect(accounts.first.name, 'Test Savings');
+
+    // This throws "no such table" if the migration didn't run.
+    final people = await phase2.select(phase2.people).get();
+    expect(people, isEmpty);
+    final splitExpenses = await phase2.select(phase2.splitExpenses).get();
+    expect(splitExpenses, isEmpty);
+    final splitParticipants = await phase2.select(phase2.splitParticipants).get();
+    expect(splitParticipants, isEmpty);
+
+    final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
+    expect(versionRow.data['user_version'], 10);
+
+    final txCols = (await phase2.customSelect('PRAGMA table_info(transactions)').get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(txCols.contains('is_cash_spend'), isTrue);
   });
 }

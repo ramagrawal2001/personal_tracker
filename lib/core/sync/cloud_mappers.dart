@@ -32,6 +32,9 @@ const Map<Type, String> kTableForModel = {
   InvestmentModel: 'investments',
   GoalModel: 'goals',
   CompanyModel: 'companies',
+  PersonModel: 'people',
+  SplitExpenseModel: 'split_expenses',
+  SplitParticipantModel: 'split_participants',
   NoteModel: 'notes',
 };
 
@@ -47,6 +50,9 @@ const List<String> kSyncedTables = <String>[
   'investments',
   'goals',
   'companies',
+  'people',
+  'split_expenses',
+  'split_participants',
   'notes',
 ];
 
@@ -157,6 +163,7 @@ extension TransactionCloud on TransactionModel {
         'investment_id': investmentId,
         'company_id': companyId,
         'is_external_to_account': isExternalToAccount,
+        'is_cash_spend': isCashSpend,
         'sync_status': syncStatus.name,
         'tags': tags,
         'splits': splits.map((s) => s.toMap()).toList(),
@@ -186,6 +193,7 @@ extension TransactionCloud on TransactionModel {
         investmentId: m['investment_id'] as String?,
         companyId: m['company_id'] as String?,
         isExternalToAccount: _bool(m['is_external_to_account']),
+        isCashSpend: _bool(m['is_cash_spend']),
         syncStatus: SyncStatus.values.byName(m['sync_status'] as String? ?? 'synced'),
         createdAt: _dt(m['created_at']),
         updatedAt: _dt(m['updated_at']),
@@ -453,6 +461,81 @@ extension CompanyCloud on CompanyModel {
         isCurrentEmployer: _bool(m['is_current_employer']),
         defaultBankAccountId: m['default_bank_account_id'] as String?,
         defaultPfAmount: _dN(m['default_pf_amount']),
+        updatedAt: _dt(m['updated_at']),
+        isDeleted: _bool(m['is_deleted']),
+      );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Split expenses (IOU tracking): People, SplitExpenses, SplitParticipants
+// ═══════════════════════════════════════════════════════════════════════════
+extension PersonCloud on PersonModel {
+  Map<String, dynamic> toCloudJson() => {
+        'id': id,
+        'name': name,
+        'is_deleted': isDeleted,
+        'deleted_at': _isoN(isDeleted ? updatedAt : null),
+        'created_at': _iso(updatedAt),
+        'updated_at': _iso(updatedAt),
+      };
+
+  static PersonModel fromCloud(Map<String, dynamic> m) => PersonModel(
+        id: m['id'] as String,
+        name: m['name'] as String,
+        updatedAt: _dt(m['updated_at']),
+        isDeleted: _bool(m['is_deleted']),
+      );
+}
+
+extension SplitExpenseCloud on SplitExpenseModel {
+  Map<String, dynamic> toCloudJson() => {
+        'id': id,
+        'title': title,
+        'total_amount': totalAmount,
+        'date': _iso(date),
+        'transaction_id': transactionId,
+        'mode': mode.name,
+        'is_deleted': isDeleted,
+        'deleted_at': _isoN(isDeleted ? updatedAt : null),
+        'created_at': _iso(updatedAt),
+        'updated_at': _iso(updatedAt),
+      };
+
+  static SplitExpenseModel fromCloud(Map<String, dynamic> m) => SplitExpenseModel(
+        id: m['id'] as String,
+        title: m['title'] as String,
+        totalAmount: _d(m['total_amount']),
+        date: _dt(m['date']),
+        transactionId: m['transaction_id'] as String,
+        mode: SplitMode.values.byName(m['mode'] as String? ?? 'equal'),
+        updatedAt: _dt(m['updated_at']),
+        isDeleted: _bool(m['is_deleted']),
+      );
+}
+
+extension SplitParticipantCloud on SplitParticipantModel {
+  Map<String, dynamic> toCloudJson() => {
+        'id': id,
+        'split_expense_id': splitExpenseId,
+        'person_id': personId,
+        'share_amount': shareAmount,
+        'is_settled': isSettled,
+        'settled_at': _isoN(settledAt),
+        'settled_transaction_id': settledTransactionId,
+        'is_deleted': isDeleted,
+        'deleted_at': _isoN(isDeleted ? updatedAt : null),
+        'created_at': _iso(updatedAt),
+        'updated_at': _iso(updatedAt),
+      };
+
+  static SplitParticipantModel fromCloud(Map<String, dynamic> m) => SplitParticipantModel(
+        id: m['id'] as String,
+        splitExpenseId: m['split_expense_id'] as String,
+        personId: m['person_id'] as String,
+        shareAmount: _d(m['share_amount']),
+        isSettled: _bool(m['is_settled']),
+        settledAt: _dtN(m['settled_at']),
+        settledTransactionId: m['settled_transaction_id'] as String?,
         updatedAt: _dt(m['updated_at']),
         isDeleted: _bool(m['is_deleted']),
       );

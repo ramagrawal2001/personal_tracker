@@ -58,6 +58,9 @@ class Transactions extends Table {
   TextColumn get loanId => text().nullable()();
   TextColumn get companyId => text().nullable()();
   BoolColumn get isExternalToAccount => boolean().withDefault(const Constant(false))();
+  // v9: cash "Pay With" — same reference-account-only meaning as
+  // isExternalToAccount above, kept as its own flag for clarity elsewhere.
+  BoolColumn get isCashSpend => boolean().withDefault(const Constant(false))();
   TextColumn get syncStatus => text().withDefault(const Constant('synced'))(); // SyncStatus enum name
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -248,4 +251,51 @@ class SyncMeta extends Table {
 
   @override
   Set<Column> get primaryKey => {key};
+}
+
+// ── Split expenses (IOU tracking) ───────────────────────────────────────────
+
+@DataClassName('PersonEntry')
+class People extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('SplitExpenseEntry')
+class SplitExpenses extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text()();
+  RealColumn get totalAmount => real()();
+  DateTimeColumn get date => dateTime()();
+  TextColumn get transactionId => text()();
+  TextColumn get mode => text().withDefault(const Constant('equal'))(); // SplitMode enum name
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('SplitParticipantEntry')
+class SplitParticipants extends Table {
+  TextColumn get id => text()();
+  TextColumn get splitExpenseId => text()();
+  TextColumn get personId => text()();
+  RealColumn get shareAmount => real()();
+  BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get settledAt => dateTime().nullable()();
+  TextColumn get settledTransactionId => text().nullable()();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
 }

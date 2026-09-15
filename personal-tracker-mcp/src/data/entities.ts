@@ -71,6 +71,7 @@ const transactionCreate = z.object({
   investment_id: optStr,
   company_id: optStr,
   is_external_to_account: z.boolean().default(false),
+  is_cash_spend: z.boolean().default(false),
   tags: z.array(z.string()).default([]),
 }).strict();
 
@@ -166,6 +167,31 @@ const companyCreate = z.object({
   default_pf_amount: z.number().optional(),
 }).strict();
 
+export const SPLIT_MODES = ["equal", "custom", "ratio", "percentage"] as const;
+
+const personCreate = z.object({
+  name: z.string().trim().min(1),
+}).strict();
+
+const splitExpenseCreate = z.object({
+  title: z.string().trim().min(1),
+  total_amount: z.number().positive(),
+  date: isoDate.optional(),
+  // No FK — same "no cross-entity FKs" convention as everything else here;
+  // the real expense this points at may sync before or after this row.
+  transaction_id: z.string().trim().min(1),
+  mode: z.enum(SPLIT_MODES).default("equal"),
+}).strict();
+
+const splitParticipantCreate = z.object({
+  split_expense_id: z.string().trim().min(1),
+  person_id: z.string().trim().min(1),
+  share_amount: z.number().positive(),
+  is_settled: z.boolean().default(false),
+  settled_at: isoDate.optional(),
+  settled_transaction_id: optStr,
+}).strict();
+
 export const ENTITIES = {
   accounts: {
     table: "accounts", displayName: "account", uuidId: true,
@@ -209,6 +235,18 @@ export const ENTITIES = {
   companies: {
     table: "companies", displayName: "company", uuidId: false,
     createSchema: companyCreate, updateSchema: companyCreate.partial(), omitFields: [],
+  },
+  people: {
+    table: "people", displayName: "person", uuidId: false,
+    createSchema: personCreate, updateSchema: personCreate.partial(), omitFields: [],
+  },
+  split_expenses: {
+    table: "split_expenses", displayName: "split expense", uuidId: false,
+    createSchema: splitExpenseCreate, updateSchema: splitExpenseCreate.partial(), omitFields: [],
+  },
+  split_participants: {
+    table: "split_participants", displayName: "split participant", uuidId: false,
+    createSchema: splitParticipantCreate, updateSchema: splitParticipantCreate.partial(), omitFields: [],
   },
 } satisfies Record<string, EntityDef>;
 

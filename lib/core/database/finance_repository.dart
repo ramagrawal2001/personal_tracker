@@ -40,6 +40,9 @@ const List<String> _financeCloudTables = <String>[
   'investments',
   'goals',
   'companies',
+  'people',
+  'split_expenses',
+  'split_participants',
 ];
 
 /// Page size for [FinanceNotifier.refreshFromCloud]'s paginated fetch —
@@ -89,6 +92,9 @@ class FinanceState {
   final List<InvestmentModel> investments;
   final List<GoalModel> goals;
   final List<CompanyModel> companies;
+  final List<PersonModel> people;
+  final List<SplitExpenseModel> splitExpenses;
+  final List<SplitParticipantModel> splitParticipants;
   final double emergencyBuffer;
   final String currencySymbol;
   final bool isBiometricEnabled;
@@ -124,6 +130,9 @@ class FinanceState {
     required this.investments,
     required this.goals,
     this.companies = const [],
+    this.people = const [],
+    this.splitExpenses = const [],
+    this.splitParticipants = const [],
     this.emergencyBuffer = 20000.0,
     this.currencySymbol = '₹',
     this.isBiometricEnabled = false,
@@ -168,11 +177,30 @@ class FinanceState {
     return result.toList();
   }
 
-  /// Total Assets = Liquid Money + Investment Portfolio Value
+  /// Money owed back to you across every split expense — friends/family who
+  /// haven't settled their share yet. A receivable, not cash in hand, so it's
+  /// tracked separately from totalLiquidBalance (same treatment Investments
+  /// already get) but still counts toward net worth below.
+  double get totalReceivables {
+    return splitParticipants.where((p) => !p.isDeleted && !p.isSettled).fold(0.0, (sum, p) => sum + p.shareAmount);
+  }
+
+  /// Every unsettled split participant's owed amount, summed per person —
+  /// drives the Splits screen's "Rahul owes ₹230" rollup.
+  Map<String, double> receivablesByPerson() {
+    final out = <String, double>{};
+    for (final p in splitParticipants) {
+      if (p.isDeleted || p.isSettled) continue;
+      out[p.personId] = (out[p.personId] ?? 0) + p.shareAmount;
+    }
+    return out;
+  }
+
+  /// Total Assets = Liquid Money + Investment Portfolio Value + Receivables
   double get totalAssets {
     double liquid = totalLiquidBalance;
     double portfolio = totalInvestmentCurrentValue;
-    return liquid + portfolio;
+    return liquid + portfolio + totalReceivables;
   }
 
 
@@ -197,8 +225,10 @@ class FinanceState {
               (tx.type == TransactionType.expense || tx.type == TransactionType.refund);
           // A salary-linked PF contribution (isExternalToAccount): the money
           // was diverted by the employer before it ever reached this account,
-          // so it must not be debited here either — see logSalary.
-          if (!isCardCharge && !tx.isExternalToAccount) {
+          // so it must not be debited here either — see logSalary. A cash
+          // spend (isCashSpend) is the same shape: `accountId` is just the
+          // required FK reference, cash isn't tracked against any balance.
+          if (!isCardCharge && !tx.isExternalToAccount && !tx.isCashSpend) {
             if (tx.type == TransactionType.income || tx.type == TransactionType.refund) {
               calc += tx.amount;
             } else if (tx.type == TransactionType.expense ||
@@ -277,7 +307,7 @@ class FinanceState {
           final isCardCharge = tx.creditCardId != null &&
               creditCardIds.contains(tx.creditCardId) &&
               (tx.type == TransactionType.expense || tx.type == TransactionType.refund);
-          if (tx.accountId == acc.id && !isCardCharge && !tx.isExternalToAccount) {
+          if (tx.accountId == acc.id && !isCardCharge && !tx.isExternalToAccount && !tx.isCashSpend) {
             if (tx.type == TransactionType.income || tx.type == TransactionType.refund) {
               calc += tx.amount;
             } else if (tx.type == TransactionType.expense ||
@@ -478,6 +508,9 @@ class FinanceState {
     List<InvestmentModel>? investments,
     List<GoalModel>? goals,
     List<CompanyModel>? companies,
+    List<PersonModel>? people,
+    List<SplitExpenseModel>? splitExpenses,
+    List<SplitParticipantModel>? splitParticipants,
     double? emergencyBuffer,
     String? currencySymbol,
     bool? isBiometricEnabled,
@@ -499,6 +532,9 @@ class FinanceState {
       investments: investments ?? this.investments,
       goals: goals ?? this.goals,
       companies: companies ?? this.companies,
+      people: people ?? this.people,
+      splitExpenses: splitExpenses ?? this.splitExpenses,
+      splitParticipants: splitParticipants ?? this.splitParticipants,
       emergencyBuffer: emergencyBuffer ?? this.emergencyBuffer,
       currencySymbol: currencySymbol ?? this.currencySymbol,
       isBiometricEnabled: isBiometricEnabled ?? this.isBiometricEnabled,
@@ -606,6 +642,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       investments: [],
       goals: [],
       companies: [],
+      people: [],
+      splitExpenses: [],
+      splitParticipants: [],
     );
   }
 
@@ -658,6 +697,16 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       final companies = (await (_db.select(_db.companies)..where((t) => t.isDeleted.equals(false))).get())
           .map((e) => e.toModel())
           .toList();
+      final people = (await (_db.select(_db.people)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
+      final splitExpenses = (await (_db.select(_db.splitExpenses)..where((t) => t.isDeleted.equals(false))).get())
+          .map((e) => e.toModel())
+          .toList();
+      final splitParticipants =
+          (await (_db.select(_db.splitParticipants)..where((t) => t.isDeleted.equals(false))).get())
+              .map((e) => e.toModel())
+              .toList();
 
       if (categories.isEmpty) {
         await ensureDefaultCategoriesSeeded(_db);
@@ -677,6 +726,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         investments: investments,
         goals: goals,
         companies: companies,
+        people: people,
+        splitExpenses: splitExpenses,
+        splitParticipants: splitParticipants,
         emergencyBuffer: prefs.getDouble(_kEmergencyBuffer) ?? 20000.0,
         currencySymbol: prefs.getString(_kCurrencySymbol) ?? '₹',
         isBiometricEnabled: prefs.getBool(_kBiometricEnabled) ?? false,
@@ -771,6 +823,18 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         for (final r in fetched['companies']!) {
           await _db.into(_db.companies).insertOnConflictUpdate(CompanyCloud.fromCloud(r).toCompanion());
         }
+        await _db.delete(_db.people).go();
+        for (final r in fetched['people']!) {
+          await _db.into(_db.people).insertOnConflictUpdate(PersonCloud.fromCloud(r).toCompanion());
+        }
+        await _db.delete(_db.splitExpenses).go();
+        for (final r in fetched['split_expenses']!) {
+          await _db.into(_db.splitExpenses).insertOnConflictUpdate(SplitExpenseCloud.fromCloud(r).toCompanion());
+        }
+        await _db.delete(_db.splitParticipants).go();
+        for (final r in fetched['split_participants']!) {
+          await _db.into(_db.splitParticipants).insertOnConflictUpdate(SplitParticipantCloud.fromCloud(r).toCompanion());
+        }
       });
 
       var categories = fetched['categories']!.map(CategoryCloud.fromCloud).toList();
@@ -793,6 +857,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         investments: fetched['investments']!.map(InvestmentCloud.fromCloud).toList(),
         goals: fetched['goals']!.map(GoalCloud.fromCloud).toList(),
         companies: fetched['companies']!.map(CompanyCloud.fromCloud).toList(),
+        people: fetched['people']!.map(PersonCloud.fromCloud).toList(),
+        splitExpenses: fetched['split_expenses']!.map(SplitExpenseCloud.fromCloud).toList(),
+        splitParticipants: fetched['split_participants']!.map(SplitParticipantCloud.fromCloud).toList(),
         emergencyBuffer: settings?.emergencyBuffer,
         currencySymbol: settings?.currencySymbol,
         isRoundUpEnabled: settings?.isRoundUpEnabled,
@@ -892,6 +959,9 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     await pushAll('investments', state.investments, (i) => i.toCloudJson());
     await pushAll('goals', state.goals, (g) => g.toCloudJson());
     await pushAll('companies', state.companies, (c) => c.toCloudJson());
+    await pushAll('people', state.people, (p) => p.toCloudJson());
+    await pushAll('split_expenses', state.splitExpenses, (s) => s.toCloudJson());
+    await pushAll('split_participants', state.splitParticipants, (s) => s.toCloudJson());
   }
 
   void _fireAndForget(Future<void> Function() op, String label) {
@@ -1010,6 +1080,21 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
         await _db.into(_db.companies).insertOnConflictUpdate(m.toCompanion());
         state = state.copyWith(companies: _spliceById(state.companies, m, (c) => c.id, false));
         break;
+      case 'people':
+        final m = PersonCloud.fromCloud(row);
+        await _db.into(_db.people).insertOnConflictUpdate(m.toCompanion());
+        state = state.copyWith(people: _spliceById(state.people, m, (p) => p.id, false));
+        break;
+      case 'split_expenses':
+        final m = SplitExpenseCloud.fromCloud(row);
+        await _db.into(_db.splitExpenses).insertOnConflictUpdate(m.toCompanion());
+        state = state.copyWith(splitExpenses: _spliceById(state.splitExpenses, m, (s) => s.id, false));
+        break;
+      case 'split_participants':
+        final m = SplitParticipantCloud.fromCloud(row);
+        await _db.into(_db.splitParticipants).insertOnConflictUpdate(m.toCompanion());
+        state = state.copyWith(splitParticipants: _spliceById(state.splitParticipants, m, (s) => s.id, false));
+        break;
       default:
         debugPrint('FinanceNotifier._applyRowLocally: unknown table "$table"');
     }
@@ -1048,6 +1133,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     String? investmentId,
     String? companyId,
     bool isExternalToAccount = false,
+    bool isCashSpend = false,
     bool isOnline = true,
   }) async {
     final now = DateTime.now();
@@ -1068,6 +1154,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       investmentId: investmentId,
       companyId: companyId,
       isExternalToAccount: isExternalToAccount,
+      isCashSpend: isCashSpend,
       syncStatus: isOnline ? SyncStatus.synced : SyncStatus.pending,
       createdAt: now,
       updatedAt: now,
@@ -1238,6 +1325,11 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     String? accountId,
     String? creditCardId,
     bool clearCreditCardId = false,
+    // Same "no manual reversal needed" reasoning as accountId above — cash
+    // spends never touch any stored field (unlike creditCardId's
+    // currentOutstanding), so flipping this just changes what the next
+    // balance recomputation includes.
+    bool? isCashSpend,
   }) async {
     final match = state.transactions.where((t) => t.id == id).toList();
     if (match.isEmpty) return; // nothing to update — treat as a no-op
@@ -1260,6 +1352,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       accountId: accountId ?? original.accountId,
       creditCardId: creditCardId,
       clearCreditCardId: clearCreditCardId,
+      isCashSpend: isCashSpend,
       updatedAt: now,
     );
 
@@ -1834,6 +1927,240 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       investments:
           savedInvestment != null ? _spliceById(state.investments, savedInvestment, (i) => i.id, false) : state.investments,
     );
+  }
+
+  // ── People (split-expense contacts) ─────────────────────────────────────
+
+  Future<PersonModel> addPerson(String name) async {
+    final draft = PersonModel(id: _uuid.v4(), name: name);
+    final serverTs = await pushToCloud('people', draft.toCloudJson());
+    final saved = serverTs != null ? draft.copyWith(updatedAt: serverTs) : draft;
+
+    await _db.into(_db.people).insertOnConflictUpdate(saved.toCompanion());
+    state = state.copyWith(people: [...state.people, saved]);
+    return saved;
+  }
+
+  Future<void> updatePerson(String id, {String? name}) async {
+    final existing = state.people.where((p) => p.id == id).toList();
+    if (existing.isEmpty) return;
+    final draft = existing.first.copyWith(name: name);
+
+    final serverTs = await pushToCloud('people', draft.toCloudJson());
+    final saved = serverTs != null ? draft.copyWith(updatedAt: serverTs) : draft;
+
+    await _db.into(_db.people).insertOnConflictUpdate(saved.toCompanion());
+    state = state.copyWith(people: state.people.map((p) => p.id == id ? saved : p).toList());
+  }
+
+  Future<void> deletePerson(String id) async {
+    final gone = state.people.where((p) => p.id == id).toList();
+    if (gone.isEmpty) return;
+    final now = DateTime.now();
+    final tombstone = gone.first.copyWith(isDeleted: true, updatedAt: now);
+
+    await pushToCloud('people', tombstone.toCloudJson());
+    _stashDeleted('people', gone.first.toCloudJson());
+
+    await (_db.update(_db.people)..where((p) => p.id.equals(id))).write(
+      PeopleCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now)),
+    );
+    state = state.copyWith(people: state.people.where((p) => p.id != id).toList());
+  }
+
+  // ── Split expenses (IOU tracking) ───────────────────────────────────────
+
+  /// Logs a split expense: the *full* bill as a real expense against
+  /// [accountId]/[creditCardId] (this is the actual money that left the
+  /// account — never reduced to "my share"), plus a [SplitExpenseModel] and
+  /// one [SplitParticipantModel] per entry in [shares] recording who owes
+  /// what back. The payer's own share is never stored — it's implicitly
+  /// `totalAmount - sum(shares.values)`.
+  ///
+  /// Same atomic push-everything-before-writing-anything shape as
+  /// [logSalary]: a half-logged split (transaction saved but participants
+  /// missing, or vice versa) would be worse than the split not being added at
+  /// all, since the underlying expense already looks "just a normal expense".
+  Future<void> addSplitExpense({
+    required String title,
+    required double totalAmount,
+    required String accountId,
+    String? creditCardId,
+    String? categoryId,
+    required DateTime date,
+    required SplitMode mode,
+    required Map<String, double> shares, // personId -> owed amount
+  }) async {
+    final now = DateTime.now();
+
+    final txDraft = TransactionModel(
+      id: _uuid.v4(),
+      accountId: accountId,
+      type: TransactionType.expense,
+      amount: totalAmount,
+      categoryId: categoryId,
+      merchant: title,
+      date: date,
+      creditCardId: creditCardId,
+      createdAt: now,
+      updatedAt: now,
+    );
+
+    // A credit-card charge still needs its outstanding bumped, exactly like
+    // a normal addTransaction expense would — the full bill was charged to
+    // the card, splitting it doesn't change that.
+    CardModel? adjustedCard;
+    if (creditCardId != null) {
+      final cardIdx = state.creditCards.indexWhere((c) => c.id == creditCardId);
+      if (cardIdx != -1 && state.creditCards[cardIdx].cardType == CardType.credit) {
+        final card = state.creditCards[cardIdx];
+        adjustedCard = card.copyWith(currentOutstanding: card.currentOutstanding + totalAmount, updatedAt: now);
+      }
+    }
+
+    final splitDraft = SplitExpenseModel(
+      id: _uuid.v4(),
+      title: title,
+      totalAmount: totalAmount,
+      date: date,
+      transactionId: txDraft.id,
+      mode: mode,
+    );
+
+    final participantDrafts = [
+      for (final entry in shares.entries)
+        if (entry.value > 0)
+          SplitParticipantModel(
+            id: _uuid.v4(),
+            splitExpenseId: splitDraft.id,
+            personId: entry.key,
+            shareAmount: entry.value,
+          ),
+    ];
+
+    final txTs = await pushToCloud('transactions', txDraft.toCloudJson());
+    final cardTs = adjustedCard == null ? null : await pushToCloud('credit_cards', adjustedCard.toCloudJson());
+    final splitTs = await pushToCloud('split_expenses', splitDraft.toCloudJson());
+    final participantTsList = <DateTime?>[];
+    for (final p in participantDrafts) {
+      participantTsList.add(await pushToCloud('split_participants', p.toCloudJson()));
+    }
+
+    final savedTx = txTs != null ? txDraft.copyWith(updatedAt: txTs) : txDraft;
+    final savedCard = adjustedCard == null ? null : (cardTs != null ? adjustedCard.copyWith(updatedAt: cardTs) : adjustedCard);
+    final savedSplit = splitTs != null ? splitDraft.copyWith(updatedAt: splitTs) : splitDraft;
+    final savedParticipants = [
+      for (var i = 0; i < participantDrafts.length; i++)
+        participantTsList[i] != null ? participantDrafts[i].copyWith(updatedAt: participantTsList[i]) : participantDrafts[i],
+    ];
+
+    await _db.into(_db.transactions).insertOnConflictUpdate(savedTx.toCompanion());
+    if (savedCard != null) await _db.into(_db.creditCards).insertOnConflictUpdate(savedCard.toCompanion());
+    await _db.into(_db.splitExpenses).insertOnConflictUpdate(savedSplit.toCompanion());
+    for (final p in savedParticipants) {
+      await _db.into(_db.splitParticipants).insertOnConflictUpdate(p.toCompanion());
+    }
+
+    state = state.copyWith(
+      transactions: [savedTx, ...state.transactions],
+      creditCards: savedCard != null ? _spliceById(state.creditCards, savedCard, (c) => c.id, false) : state.creditCards,
+      splitExpenses: [savedSplit, ...state.splitExpenses],
+      splitParticipants: [...state.splitParticipants, ...savedParticipants],
+    );
+  }
+
+  /// Marks one participant's share settled. If [recordAsTransaction] is true
+  /// (they paid back via UPI/bank rather than handing over cash), also logs
+  /// a real `refund`-type transaction crediting [accountId] — refund already
+  /// credits the account like income does (see accountsWithCalculatedBalances)
+  /// but is excluded from income-reporting getters, since a friend paying you
+  /// back isn't earnings.
+  Future<void> settleSplitParticipant(
+    String participantId, {
+    bool recordAsTransaction = false,
+    String? accountId,
+  }) async {
+    final existing = state.splitParticipants.where((p) => p.id == participantId).toList();
+    if (existing.isEmpty) return;
+    final original = existing.first;
+    final now = DateTime.now();
+
+    TransactionModel? txDraft;
+    if (recordAsTransaction) {
+      if (accountId == null) {
+        throw ArgumentError('accountId is required when recordAsTransaction is true');
+      }
+      final split = state.splitExpenses.where((s) => s.id == original.splitExpenseId).toList();
+      txDraft = TransactionModel(
+        id: _uuid.v4(),
+        accountId: accountId,
+        type: TransactionType.refund,
+        amount: original.shareAmount,
+        merchant: split.isNotEmpty ? 'Settled: ${split.first.title}' : 'Split settlement',
+        date: now,
+        createdAt: now,
+        updatedAt: now,
+      );
+    }
+
+    final participantDraft = original.copyWith(
+      isSettled: true,
+      settledAt: now,
+      settledTransactionId: txDraft?.id,
+      updatedAt: now,
+    );
+
+    final txTs = txDraft == null ? null : await pushToCloud('transactions', txDraft.toCloudJson());
+    final participantTs = await pushToCloud('split_participants', participantDraft.toCloudJson());
+
+    final savedTx = txDraft == null ? null : (txTs != null ? txDraft.copyWith(updatedAt: txTs) : txDraft);
+    final savedParticipant =
+        participantTs != null ? participantDraft.copyWith(updatedAt: participantTs) : participantDraft;
+
+    if (savedTx != null) await _db.into(_db.transactions).insertOnConflictUpdate(savedTx.toCompanion());
+    await _db.into(_db.splitParticipants).insertOnConflictUpdate(savedParticipant.toCompanion());
+
+    state = state.copyWith(
+      transactions: savedTx != null ? [savedTx, ...state.transactions] : state.transactions,
+      splitParticipants: _spliceById(state.splitParticipants, savedParticipant, (p) => p.id, false),
+    );
+  }
+
+  /// Deletes a split expense along with its participant rows and the real
+  /// transaction it was attached to — reuses [deleteTransaction] so the
+  /// card/loan/investment reversal logic there stays the single source of
+  /// truth rather than being duplicated here.
+  Future<void> deleteSplitExpense(String id) async {
+    final gone = state.splitExpenses.where((s) => s.id == id).toList();
+    if (gone.isEmpty) return;
+    final split = gone.first;
+    final now = DateTime.now();
+
+    final participants = state.splitParticipants.where((p) => p.splitExpenseId == id).toList();
+    for (final p in participants) {
+      final tombstone = p.copyWith(isDeleted: true, updatedAt: now);
+      await pushToCloud('split_participants', tombstone.toCloudJson());
+      await (_db.update(_db.splitParticipants)..where((t) => t.id.equals(p.id))).write(
+        SplitParticipantsCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now)),
+      );
+    }
+
+    final tombstone = split.copyWith(isDeleted: true, updatedAt: now);
+    await pushToCloud('split_expenses', tombstone.toCloudJson());
+    await (_db.update(_db.splitExpenses)..where((t) => t.id.equals(id))).write(
+      SplitExpensesCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now)),
+    );
+
+    state = state.copyWith(
+      splitExpenses: state.splitExpenses.where((s) => s.id != id).toList(),
+      splitParticipants: state.splitParticipants.where((p) => p.splitExpenseId != id).toList(),
+    );
+
+    // The real expense behind this split — reuse deleteTransaction so its
+    // card/loan/investment reversal stays correct in one place.
+    if (state.transactions.any((t) => t.id == split.transactionId)) {
+      await deleteTransaction(split.transactionId);
+    }
   }
 
   // ── Settings / preferences ──────────────────────────────────────────────

@@ -115,6 +115,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
         location.startsWith('/settings') ||
         location.startsWith('/profile') ||
         location.startsWith('/companies') ||
+        location.startsWith('/splits') ||
         location.startsWith('/more')) {
       return 4;
     }
@@ -218,6 +219,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                             _buildMenuItem(ctx, 'Budgets', LucideIcons.pieChart, AppColors.warning, () { Navigator.pop(ctx); context.push('/budgets'); }),
                             _buildMenuItem(ctx, 'Goals', LucideIcons.target, AppColors.income, () { Navigator.pop(ctx); context.push('/goals'); }),
                             _buildMenuItem(ctx, 'Companies', LucideIcons.building2, AppColors.creditCard, () { Navigator.pop(ctx); context.push('/companies'); }),
+                            _buildMenuItem(ctx, 'Splits', LucideIcons.users, AppColors.income, () { Navigator.pop(ctx); context.push('/splits'); }),
                             _buildMenuItem(ctx, 'Categories', LucideIcons.tag, AppColors.primary, () { Navigator.pop(ctx); context.push('/categories'); }),
                             _buildMenuItem(ctx, 'Invest', LucideIcons.trendingUp, AppColors.transfer, () { Navigator.pop(ctx); context.push('/investments'); }),
                             _buildMenuItem(ctx, 'Calendar', LucideIcons.calendar, AppColors.accent, () { Navigator.pop(ctx); context.push('/recurring'); }),

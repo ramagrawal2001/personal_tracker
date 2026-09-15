@@ -101,6 +101,7 @@ extension TransactionEntryMapper on TransactionEntry {
       loanId: loanId,
       companyId: companyId,
       isExternalToAccount: isExternalToAccount,
+      isCashSpend: isCashSpend,
       syncStatus: SyncStatus.values.byName(syncStatus),
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -127,6 +128,7 @@ extension TransactionModelMapper on TransactionModel {
       loanId: Value(loanId),
       companyId: Value(companyId),
       isExternalToAccount: Value(isExternalToAccount),
+      isCashSpend: Value(isCashSpend),
       syncStatus: Value(syncStatus.name),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -408,6 +410,93 @@ extension CompanyModelMapper on CompanyModel {
       isCurrentEmployer: Value(isCurrentEmployer),
       defaultBankAccountId: Value(defaultBankAccountId),
       defaultPfAmount: Value(defaultPfAmount),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
+    );
+  }
+}
+
+extension PersonEntryMapper on PersonEntry {
+  PersonModel toModel() {
+    return PersonModel(
+      id: id,
+      name: name,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
+    );
+  }
+}
+
+extension PersonModelMapper on PersonModel {
+  PeopleCompanion toCompanion() {
+    return PeopleCompanion(
+      id: Value(id),
+      name: Value(name),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
+    );
+  }
+}
+
+extension SplitExpenseEntryMapper on SplitExpenseEntry {
+  SplitExpenseModel toModel() {
+    return SplitExpenseModel(
+      id: id,
+      title: title,
+      totalAmount: totalAmount,
+      date: date,
+      transactionId: transactionId,
+      mode: SplitMode.values.byName(mode),
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
+    );
+  }
+}
+
+extension SplitExpenseModelMapper on SplitExpenseModel {
+  SplitExpensesCompanion toCompanion() {
+    return SplitExpensesCompanion(
+      id: Value(id),
+      title: Value(title),
+      totalAmount: Value(totalAmount),
+      date: Value(date),
+      transactionId: Value(transactionId),
+      mode: Value(mode.name),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
+    );
+  }
+}
+
+extension SplitParticipantEntryMapper on SplitParticipantEntry {
+  SplitParticipantModel toModel() {
+    return SplitParticipantModel(
+      id: id,
+      splitExpenseId: splitExpenseId,
+      personId: personId,
+      shareAmount: shareAmount,
+      isSettled: isSettled,
+      settledAt: settledAt,
+      settledTransactionId: settledTransactionId,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
+    );
+  }
+}
+
+extension SplitParticipantModelMapper on SplitParticipantModel {
+  SplitParticipantsCompanion toCompanion() {
+    return SplitParticipantsCompanion(
+      id: Value(id),
+      splitExpenseId: Value(splitExpenseId),
+      personId: Value(personId),
+      shareAmount: Value(shareAmount),
+      isSettled: Value(isSettled),
+      settledAt: Value(settledAt),
+      settledTransactionId: Value(settledTransactionId),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: Value(isDeleted ? DateTime.now() : null),
