@@ -49,12 +49,24 @@ const accountCreate = z.object({
   opening_balance: z.number().default(0),
   currency: z.string().trim().min(1).default("INR"),
   is_active: z.boolean().default(true),
+  // Display position in the app's Accounts list — lower sorts first.
+  sort_order: z.number().int().optional(),
 }).strict();
 
 // Postgres `uuid` columns accept any RFC-4122-shaped value (no version/variant
 // check), and crypto.randomUUID() always satisfies it — so use the lenient
 // GUID format, not zod's strict versioned .uuid().
 const guid = z.guid();
+
+// Real jsonb column (0002_sync_all_entities.sql) — an older per-category
+// breakdown feature, unrelated to the newer split_expenses/split_participants
+// tables. Keys are camelCase because that's the literal shape
+// TransactionSplit.toMap() in the Flutter app serializes into this column.
+const transactionSplitItem = z.object({
+  categoryId: z.string().trim().min(1),
+  amount: z.number(),
+  note: z.string().nullable().optional(),
+});
 
 const transactionCreate = z.object({
   account_id: guid,
@@ -73,6 +85,7 @@ const transactionCreate = z.object({
   is_external_to_account: z.boolean().default(false),
   is_cash_spend: z.boolean().default(false),
   tags: z.array(z.string()).default([]),
+  splits: z.array(transactionSplitItem).default([]),
 }).strict();
 
 const categoryCreate = z.object({
@@ -103,6 +116,10 @@ const creditCardCreate = z.object({
   linked_account_id: optStr,
   balance: z.number().optional(),
   currency: optStr,
+  // App-managed reminder bookkeeping (0005_card_last_payment.sql) — readable
+  // on list/get, and writable here too (e.g. correcting a missed reminder).
+  last_payment_date: isoDate.optional(),
+  last_payment_amount: z.number().optional(),
 }).strict();
 
 const loanCreate = z.object({
@@ -201,7 +218,12 @@ export const ENTITIES = {
   transactions: {
     table: "transactions", displayName: "transaction", uuidId: true,
     createSchema: transactionCreate, updateSchema: transactionCreate.partial(),
-    omitFields: ["attachment_path"], fixed: { sync_status: "synced", splits: [] },
+    // `splits` used to be forced to `[]` here too, back when it wasn't a
+    // recognized key on the create schema at all — now that transactionCreate
+    // accepts it directly (with its own default), forcing it here would be a
+    // no-op at best (parsed.data always wins in the spread order below) and
+    // confusing at worst, so it's gone from `fixed`.
+    omitFields: ["attachment_path"], fixed: { sync_status: "synced" },
   },
   categories: {
     table: "categories", displayName: "category", uuidId: false,

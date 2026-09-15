@@ -99,6 +99,28 @@ describe("entity registry", () => {
     expect(r).toMatchObject({ card_type: "credit", network: "visa", due_day: 15, statement_day: 1 });
   });
 
+  test("credit_cards: last_payment_date/last_payment_amount are accepted (real columns, were missing)", () => {
+    const r = ENTITIES.credit_cards.createSchema.safeParse({
+      name: "Regalia", last_payment_date: "2026-09-01T00:00:00.000Z", last_payment_amount: 5000,
+    });
+    expect(r.success).toBe(true);
+  });
+
+  test("accounts: sort_order is accepted (real column, was missing)", () => {
+    const r = ENTITIES.accounts.createSchema.safeParse({ name: "HDFC", type: "savingsAccount", sort_order: 2 });
+    expect(r.success).toBe(true);
+  });
+
+  test("transactions: splits (the per-category breakdown column) is accepted (real column, was missing)", () => {
+    const base = { account_id: "11111111-1111-1111-1111-111111111111", type: "expense", amount: 100 };
+    const withSplits = ENTITIES.transactions.createSchema.safeParse({
+      ...base, splits: [{ categoryId: "cat_food", amount: 60 }, { categoryId: "cat_transport", amount: 40, note: "cab" }],
+    });
+    expect(withSplits.success).toBe(true);
+    // A caller who never mentions splits still gets the column's real default.
+    expect(ENTITIES.transactions.createSchema.parse(base).splits).toEqual([]);
+  });
+
   test("budgets: month_year must be YYYY-MM", () => {
     expect(ENTITIES.budgets.createSchema.safeParse({ category_id: "c1", month_year: "Sept" }).success).toBe(false);
     expect(ENTITIES.budgets.createSchema.safeParse({ category_id: "c1", month_year: "2026-09" }).success).toBe(true);
