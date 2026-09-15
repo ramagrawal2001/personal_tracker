@@ -23,6 +23,8 @@ Tools:
 | `update_record` | Patch fields on a record. |
 | `delete_record` | Soft-delete (recoverable in the app). |
 | `add_transaction` | Add income / expense / transfer, resolving account & category by name. |
+| `add_split_expense` | Log a bill paid in full and split with others — the full amount debits your account/card, each participant's share is tracked as money owed to you. Resolves account/card/category/people by name (new person names are created automatically). Modes: equal, custom, ratio, percentage. |
+| `settle_split` | Mark a split participant's share settled; optionally records a real credit (`refund` transaction) if they paid back via bank/UPI. |
 
 Not supported: `notes` (encrypted at rest), full card/account numbers, IFSC, CVV
 (client-side encrypted — the server has no key). Deletes are soft.

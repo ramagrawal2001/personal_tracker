@@ -46,6 +46,58 @@ export function computeAccountBalance(
   return calc;
 }
 
+export type SplitMode = "equal" | "custom" | "ratio" | "percentage";
+
+/**
+ * Port of resolveSplitShares
+ * (lib/features/splits/presentation/split_expense_modal.dart).
+ *
+ * Resolves each participant's owed share given `mode` and their raw input
+ * (interpretation depends on mode) plus the payer's own raw input (only
+ * meaningful for ratio/percentage). Returns null when the inputs don't
+ * resolve to something valid. The payer's own share is never part of the
+ * returned record — callers compute it as `totalAmount - sum(shares)`.
+ */
+export function resolveSplitShares(args: {
+  mode: SplitMode;
+  totalAmount: number;
+  participantIds: readonly string[];
+  participantInputs: Readonly<Record<string, number>>;
+  payerInput?: number;
+}): Record<string, number> | null {
+  const { mode, totalAmount, participantIds, participantInputs } = args;
+  const payerInput = args.payerInput ?? 1;
+  if (participantIds.length === 0 || totalAmount <= 0) return null;
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const sumInputs = () => participantIds.reduce((s, id) => s + (participantInputs[id] ?? 0), 0);
+
+  switch (mode) {
+    case "equal": {
+      const each = round2(totalAmount / (participantIds.length + 1));
+      return Object.fromEntries(participantIds.map((id) => [id, each]));
+    }
+    case "custom": {
+      const sum = sumInputs();
+      if (sum <= 0 || sum > totalAmount + 0.01) return null;
+      return Object.fromEntries(participantIds.map((id) => [id, participantInputs[id] ?? 0]));
+    }
+    case "ratio": {
+      const ratioSum = payerInput + sumInputs();
+      if (ratioSum <= 0) return null;
+      return Object.fromEntries(
+        participantIds.map((id) => [id, round2((totalAmount * (participantInputs[id] ?? 0)) / ratioSum)]),
+      );
+    }
+    case "percentage": {
+      const pctSum = payerInput + sumInputs();
+      if (Math.abs(pctSum - 100) > 0.5) return null;
+      return Object.fromEntries(
+        participantIds.map((id) => [id, round2((totalAmount * (participantInputs[id] ?? 0)) / 100)]),
+      );
+    }
+  }
+}
+
 export interface SpentTxn {
   category_id: string | null;
   type: string;

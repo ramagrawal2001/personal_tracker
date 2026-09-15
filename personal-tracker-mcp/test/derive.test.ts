@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
-  computeAccountBalance, computeBudgetSpent, type BalanceTxn, type SpentTxn,
+  computeAccountBalance, computeBudgetSpent, resolveSplitShares, type BalanceTxn, type SpentTxn,
 } from "../src/data/derive";
 
 const acc = { id: "A", opening_balance: 1000 };
@@ -63,5 +63,47 @@ describe("computeBudgetSpent", () => {
   });
   test("null category never matches", () => {
     expect(computeBudgetSpent(b, [st({ amount: 100, category_id: null })])).toBe(0);
+  });
+});
+
+describe("resolveSplitShares — port of the app's split math", () => {
+  test("equal: splits evenly among participants + payer", () => {
+    const shares = resolveSplitShares({
+      mode: "equal", totalAmount: 100, participantIds: ["rahul", "priya"], participantInputs: {},
+    });
+    expect(shares!.rahul).toBeCloseTo(33.33, 2);
+    expect(shares!.priya).toBeCloseTo(33.33, 2);
+  });
+
+  test("custom: exact amounts, rejected when they exceed the total", () => {
+    expect(resolveSplitShares({
+      mode: "custom", totalAmount: 100, participantIds: ["rahul"], participantInputs: { rahul: 30 },
+    })).toEqual({ rahul: 30 });
+    expect(resolveSplitShares({
+      mode: "custom", totalAmount: 100, participantIds: ["rahul"], participantInputs: { rahul: 150 },
+    })).toBeNull();
+  });
+
+  test("ratio: proportional, payer included via payerInput", () => {
+    const shares = resolveSplitShares({
+      mode: "ratio", totalAmount: 400, participantIds: ["rahul", "priya"],
+      participantInputs: { rahul: 1, priya: 1 }, payerInput: 2,
+    });
+    expect(shares).toEqual({ rahul: 100, priya: 100 });
+  });
+
+  test("percentage: must sum to ~100 including payerInput", () => {
+    expect(resolveSplitShares({
+      mode: "percentage", totalAmount: 200, participantIds: ["rahul"],
+      participantInputs: { rahul: 25 }, payerInput: 75,
+    })).toEqual({ rahul: 50 });
+    expect(resolveSplitShares({
+      mode: "percentage", totalAmount: 200, participantIds: ["rahul"],
+      participantInputs: { rahul: 25 }, payerInput: 50, // 75, not 100
+    })).toBeNull();
+  });
+
+  test("no participants is always rejected", () => {
+    expect(resolveSplitShares({ mode: "equal", totalAmount: 100, participantIds: [], participantInputs: {} })).toBeNull();
   });
 });

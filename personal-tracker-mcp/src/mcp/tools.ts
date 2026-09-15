@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { AuthError } from "../auth/supabase-auth";
 import {
-  computeAccountBalance, computeBudgetSpent, type BalanceTxn, type SpentTxn,
+  computeAccountBalance, computeBudgetSpent, resolveSplitShares,
+  type BalanceTxn, type SpentTxn, type SplitMode,
 } from "../data/derive";
-import { ENTITIES, ENTITY_NAMES, type EntityDef, type EntityName } from "../data/entities";
+import { ENTITIES, ENTITY_NAMES, SPLIT_MODES, type EntityDef, type EntityName } from "../data/entities";
 import type { SupabaseRest } from "../data/supabase-rest";
 
 export interface ToolResult {
@@ -92,7 +93,7 @@ async function attachBudgetSpent(
 type Ref = { ok: string } | { error: string };
 
 function resolveRef(
-  kind: "account" | "category",
+  kind: "account" | "category" | "credit card" | "person",
   needle: string,
   rows: { id: string; name: string }[],
 ): Ref {
@@ -313,6 +314,217 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
         };
         const created = await rest.insert("transactions", row);
         return ok(created);
+      } catch (e) {
+        return toToolError(e);
+      }
+    },
+  );
+
+  server.tool(
+    "add_split_expense",
+    "Log a bill you paid in full and split with others (e.g. a group dinner). " +
+      "The FULL amount debits your account/card — matching your real bank statement " +
+      "— while each participant's share is tracked separately as money they owe you, " +
+      "never counted against your balance a second time. Modes: equal (even split " +
+      "among everyone including you), custom (exact amount per participant), ratio " +
+      "(shares like 2:1:1), percentage (must sum to 100 with your own `payer_value`). " +
+      "`payer_value` is required for ratio/percentage — your own ratio or percent.",
+    {
+      title: z.string().trim().min(1),
+      total_amount: z.number().positive(),
+      account: z.string().describe("Paying account name or id."),
+      credit_card: z.string().optional().describe("Charge to this credit card instead of the account."),
+      category: z.string().optional(),
+      date: z.string().datetime({ offset: true }).optional(),
+      mode: z.enum(SPLIT_MODES).default("equal"),
+      participants: z
+        .array(
+          z.object({
+            person: z.string().describe("Name or id — a new name is created automatically."),
+            value: z
+              .number()
+              .optional()
+              .describe("Exact amount (custom), ratio (ratio), or percent (percentage). Ignored for equal."),
+          }),
+        )
+        .min(1),
+      payer_value: z.number().optional().describe("Your own ratio/percent — required for ratio and percentage modes."),
+    },
+    async (a) => {
+      try {
+        if ((a.mode === "ratio" || a.mode === "percentage") && a.payer_value == null) {
+          return fail(`\`payer_value\` is required for mode "${a.mode}".`);
+        }
+
+        const accounts = (await rest.list("accounts", { limit: 500 })) as { id: string; name: string }[];
+        const acctRef = resolveRef("account", a.account, accounts);
+        if ("error" in acctRef) return fail(acctRef.error);
+
+        let creditCardId: string | null = null;
+        if (a.credit_card) {
+          const cards = (await rest.list("credit_cards", { limit: 500 })) as { id: string; name: string }[];
+          const cardRef = resolveRef("credit card", a.credit_card, cards);
+          if ("error" in cardRef) return fail(cardRef.error);
+          creditCardId = cardRef.ok;
+        }
+
+        let categoryId: string | null = null;
+        if (a.category) {
+          const cats = (await rest.list("categories", { limit: 500 })) as { id: string; name: string }[];
+          const catRef = resolveRef("category", a.category, cats);
+          if ("error" in catRef) return fail(catRef.error);
+          categoryId = catRef.ok;
+        }
+
+        // Resolve each participant by name/id, auto-creating a new person —
+        // People are lightweight (just a name), so this is low-risk and
+        // matches the app's own inline "+ Add person" convenience.
+        const people = (await rest.list("people", { limit: 500 })) as { id: string; name: string }[];
+        const now = new Date().toISOString();
+        const participantIds: string[] = [];
+        const participantInputs: Record<string, number> = {};
+        for (const p of a.participants) {
+          const ref = resolveRef("person", p.person, people);
+          let id: string;
+          if ("error" in ref) {
+            if (people.some((x) => x.name.toLowerCase() === p.person.toLowerCase())) {
+              return fail(ref.error); // genuinely ambiguous — surface it rather than guess
+            }
+            const created = (await rest.insert("people", {
+              id: crypto.randomUUID(),
+              name: p.person,
+              created_at: now,
+              updated_at: now,
+            })) as { id: string };
+            id = created.id;
+            people.push({ id, name: p.person });
+          } else {
+            id = ref.ok;
+          }
+          participantIds.push(id);
+          participantInputs[id] = p.value ?? 0;
+        }
+
+        const shares = resolveSplitShares({
+          mode: a.mode as SplitMode,
+          totalAmount: a.total_amount,
+          participantIds,
+          participantInputs,
+          payerInput: a.payer_value ?? 1,
+        });
+        if (!shares) {
+          return fail(
+            "The shares given don't resolve to a valid split for this mode — " +
+              "custom shares must not exceed the total, and ratio/percentage " +
+              "(including payer_value) must be positive and, for percentage, sum to 100.",
+          );
+        }
+
+        // 1. The real, full-amount expense — this is what actually left the
+        // account/card, exactly like any other expense.
+        const txRow = {
+          id: crypto.randomUUID(),
+          account_id: acctRef.ok,
+          type: "expense",
+          amount: a.total_amount,
+          category_id: categoryId,
+          merchant: a.title,
+          date: a.date ?? now,
+          credit_card_id: creditCardId,
+          is_external_to_account: false,
+          is_cash_spend: false,
+          tags: [],
+          splits: [],
+          sync_status: "synced",
+          created_at: now,
+          updated_at: now,
+        };
+        const createdTx = (await rest.insert("transactions", txRow)) as { id: string };
+
+        // 2. The split expense, linked to that transaction.
+        const createdSplit = (await rest.insert("split_expenses", {
+          id: crypto.randomUUID(),
+          title: a.title,
+          total_amount: a.total_amount,
+          date: a.date ?? now,
+          transaction_id: createdTx.id,
+          mode: a.mode,
+          created_at: now,
+          updated_at: now,
+        })) as { id: string };
+
+        // 3. One participant row per person with their resolved share.
+        const participants = [];
+        for (const id of participantIds) {
+          participants.push(
+            await rest.insert("split_participants", {
+              id: crypto.randomUUID(),
+              split_expense_id: createdSplit.id,
+              person_id: id,
+              share_amount: shares[id],
+              is_settled: false,
+              created_at: now,
+              updated_at: now,
+            }),
+          );
+        }
+
+        return ok({ transaction: createdTx, split_expense: createdSplit, participants });
+      } catch (e) {
+        return toToolError(e);
+      }
+    },
+  );
+
+  server.tool(
+    "settle_split",
+    "Mark a split participant's share as settled. Pass `account` if they paid you " +
+      "back via bank/UPI — this also records a real credit (a `refund` transaction) " +
+      "to that account. Omit it if they handed you cash: only the settled flag flips, " +
+      "your balance is untouched.",
+    {
+      participant_id: z.string(),
+      account: z.string().optional().describe("If given, records a refund transaction crediting this account."),
+    },
+    async ({ participant_id, account }) => {
+      try {
+        const participant = (await rest.get("split_participants", participant_id)) as Record<string, any> | null;
+        if (!participant) return fail("No split participant with that id.");
+        if (participant.is_settled) return fail("This participant's share is already settled.");
+
+        const now = new Date().toISOString();
+        let settledTransactionId: string | null = null;
+        if (account) {
+          const accounts = (await rest.list("accounts", { limit: 500 })) as { id: string; name: string }[];
+          const acctRef = resolveRef("account", account, accounts);
+          if ("error" in acctRef) return fail(acctRef.error);
+
+          const split = (await rest.get("split_expenses", participant.split_expense_id)) as Record<string, any> | null;
+          const createdTx = (await rest.insert("transactions", {
+            id: crypto.randomUUID(),
+            account_id: acctRef.ok,
+            type: "refund",
+            amount: participant.share_amount,
+            merchant: split ? `Settled: ${split.title}` : "Split settlement",
+            date: now,
+            is_external_to_account: false,
+            is_cash_spend: false,
+            tags: [],
+            splits: [],
+            sync_status: "synced",
+            created_at: now,
+            updated_at: now,
+          })) as { id: string };
+          settledTransactionId = createdTx.id;
+        }
+
+        const updated = await rest.patch("split_participants", participant_id, {
+          is_settled: true,
+          settled_at: now,
+          settled_transaction_id: settledTransactionId,
+          updated_at: now,
+        });
+        return ok(updated);
       } catch (e) {
         return toToolError(e);
       }

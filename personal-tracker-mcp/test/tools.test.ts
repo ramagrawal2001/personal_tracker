@@ -222,3 +222,132 @@ describe("add_transaction", () => {
     expect(rest.insert.mock.calls[0][1]).toMatchObject({ account_id: "a-hdfc", to_account_id: "a-cash" });
   });
 });
+
+describe("add_split_expense", () => {
+  const accounts = [{ id: "a-hdfc", name: "HDFC Savings" }];
+  const cards = [{ id: "card-1", name: "Regalia" }];
+  const categories = [{ id: "c-food", name: "Food & Dining" }];
+  const people = [{ id: "p-rahul", name: "Rahul" }];
+
+  function restFor() {
+    return {
+      list: vi.fn(async (t: string) =>
+        t === "accounts" ? accounts : t === "credit_cards" ? cards : t === "categories" ? categories : t === "people" ? people : [],
+      ),
+      insert: vi.fn(async (_t: string, row: any) => row),
+      get: vi.fn(),
+    };
+  }
+
+  test("logs the full amount as the real expense and creates the split + participant rows", async () => {
+    const rest = restFor();
+    const { handlers } = harness(rest);
+    const r = await handlers.get("add_split_expense")!({
+      title: "Panipuri", total_amount: 100, account: "HDFC Savings",
+      mode: "equal", participants: [{ person: "Rahul" }],
+    });
+    expect(r.isError).toBeFalsy();
+
+    const [txCall, splitCall, participantCall] = rest.insert.mock.calls;
+    expect(txCall[0]).toBe("transactions");
+    expect(txCall[1]).toMatchObject({ account_id: "a-hdfc", type: "expense", amount: 100, merchant: "Panipuri" });
+
+    expect(splitCall[0]).toBe("split_expenses");
+    expect(splitCall[1]).toMatchObject({ title: "Panipuri", total_amount: 100, transaction_id: txCall[1].id, mode: "equal" });
+
+    expect(participantCall[0]).toBe("split_participants");
+    expect(participantCall[1]).toMatchObject({ person_id: "p-rahul", split_expense_id: splitCall[1].id, share_amount: 50 });
+  });
+
+  test("auto-creates a person that doesn't exist yet", async () => {
+    const rest = restFor();
+    const { handlers } = harness(rest);
+    await handlers.get("add_split_expense")!({
+      title: "Dinner", total_amount: 200, account: "HDFC Savings",
+      mode: "equal", participants: [{ person: "Priya" }],
+    });
+    const personInsert = rest.insert.mock.calls.find((c: any) => c[0] === "people")!;
+    expect(personInsert[1]).toMatchObject({ name: "Priya" });
+  });
+
+  test("charges a credit card instead of debiting the account", async () => {
+    const rest = restFor();
+    const { handlers } = harness(rest);
+    await handlers.get("add_split_expense")!({
+      title: "Dinner", total_amount: 1000, account: "HDFC Savings", credit_card: "Regalia",
+      mode: "equal", participants: [{ person: "Rahul" }],
+    });
+    const txInsert = rest.insert.mock.calls.find((c: any) => c[0] === "transactions")!;
+    expect(txInsert[1]).toMatchObject({ credit_card_id: "card-1" });
+  });
+
+  test("ratio mode requires payer_value", async () => {
+    const rest = restFor();
+    const { handlers } = harness(rest);
+    const r = await handlers.get("add_split_expense")!({
+      title: "Trip", total_amount: 300, account: "HDFC Savings",
+      mode: "ratio", participants: [{ person: "Rahul", value: 1 }],
+    });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/payer_value.*required/);
+  });
+
+  test("custom shares exceeding the total are rejected", async () => {
+    const rest = restFor();
+    const { handlers } = harness(rest);
+    const r = await handlers.get("add_split_expense")!({
+      title: "Trip", total_amount: 100, account: "HDFC Savings",
+      mode: "custom", participants: [{ person: "Rahul", value: 150 }],
+    });
+    expect(r.isError).toBe(true);
+  });
+});
+
+describe("settle_split", () => {
+  test("without account: only flips is_settled, no transaction recorded", async () => {
+    const get = vi.fn(async () => ({ id: "sp1", share_amount: 50, split_expense_id: "s1", is_settled: false }));
+    const patch = vi.fn(async (_t: string, _id: string, changes: any) => ({ id: "sp1", ...changes }));
+    const insert = vi.fn();
+    const { handlers } = harness({ get, patch, insert });
+
+    const r = await handlers.get("settle_split")!({ participant_id: "sp1" });
+    expect(r.isError).toBeFalsy();
+    expect(insert).not.toHaveBeenCalled();
+    expect(patch).toHaveBeenCalledWith("split_participants", "sp1", expect.objectContaining({ is_settled: true, settled_transaction_id: null }));
+  });
+
+  test("with account: records a refund transaction and links it", async () => {
+    const get = vi.fn(async (t: string) =>
+      t === "split_participants"
+        ? { id: "sp1", share_amount: 50, split_expense_id: "s1", is_settled: false }
+        : { id: "s1", title: "Panipuri" },
+    );
+    const accounts = [{ id: "a-hdfc", name: "HDFC Savings" }];
+    const list = vi.fn(async () => accounts);
+    const insert = vi.fn(async (_t: string, row: any) => row);
+    const patch = vi.fn(async (_t: string, _id: string, changes: any) => ({ id: "sp1", ...changes }));
+    const { handlers } = harness({ get, list, insert, patch });
+
+    await handlers.get("settle_split")!({ participant_id: "sp1", account: "HDFC Savings" });
+    const [txCall] = insert.mock.calls;
+    expect(txCall).toEqual(["transactions", expect.objectContaining({ type: "refund", amount: 50, account_id: "a-hdfc" })]);
+    expect(patch).toHaveBeenCalledWith(
+      "split_participants", "sp1",
+      expect.objectContaining({ is_settled: true, settled_transaction_id: txCall[1].id }),
+    );
+  });
+
+  test("already-settled participant is rejected", async () => {
+    const get = vi.fn(async () => ({ id: "sp1", share_amount: 50, is_settled: true }));
+    const { handlers } = harness({ get });
+    const r = await handlers.get("settle_split")!({ participant_id: "sp1" });
+    expect(r.isError).toBe(true);
+  });
+
+  test("unknown participant id is rejected", async () => {
+    const get = vi.fn(async () => null);
+    const { handlers } = harness({ get });
+    const r = await handlers.get("settle_split")!({ participant_id: "nope" });
+    expect(r.isError).toBe(true);
+  });
+});
