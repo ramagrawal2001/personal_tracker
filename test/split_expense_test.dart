@@ -135,6 +135,29 @@ void main() {
         reason: 'fully reversed');
   });
 
+  test('deleting the underlying transaction directly (not via deleteSplitExpense) cleans up the split too', () async {
+    // Regression: swipe-to-delete on the Transactions screen calls
+    // deleteTransaction directly, bypassing deleteSplitExpense entirely — the
+    // split/participant rows must not survive as orphans pointing at a
+    // transaction that no longer exists.
+    await finance.addAccount(name: 'Wallet', type: AccountType.savingsAccount, openingBalance: 1000);
+    final accountId = finance.state.accounts.single.id;
+    final rahul = await finance.addPerson('Rahul');
+    await finance.addSplitExpense(
+      title: 'Panipuri', totalAmount: 100, accountId: accountId,
+      date: DateTime.now(), mode: SplitMode.equal, shares: {rahul.id: 50},
+    );
+    final txId = finance.state.transactions.single.id;
+
+    await finance.deleteTransaction(txId);
+
+    expect(finance.state.transactions, isEmpty);
+    expect(finance.state.splitExpenses, isEmpty, reason: 'must not survive as an orphan');
+    expect(finance.state.splitParticipants, isEmpty, reason: 'must not survive as an orphan');
+    expect(finance.state.totalReceivables, 0);
+    expect(finance.state.accountsWithCalculatedBalances.single.calculatedBalance, 1000);
+  });
+
   test('totalAssets includes receivables alongside liquid balance and investments', () async {
     await finance.addAccount(name: 'Wallet', type: AccountType.savingsAccount, openingBalance: 1000);
     final accountId = finance.state.accounts.single.id;

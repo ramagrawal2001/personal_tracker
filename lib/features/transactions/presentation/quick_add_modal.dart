@@ -246,6 +246,28 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 ),
               ],
             ),
+            if (_isEditing && financeState.splitExpenses.any((s) => s.transactionId == widget.existing!.id)) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.users, size: 15, color: AppColors.warning),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "This bill is split with others. Changing the amount here won't update their shares — manage the split from Splits.",
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 14),
 
             // Type Selector Chips (locked while editing — changing type would

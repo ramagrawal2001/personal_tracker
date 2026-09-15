@@ -2126,17 +2126,17 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     );
   }
 
-  /// Deletes a split expense along with its participant rows and the real
-  /// transaction it was attached to — reuses [deleteTransaction] so the
-  /// card/loan/investment reversal logic there stays the single source of
-  /// truth rather than being duplicated here.
-  Future<void> deleteSplitExpense(String id) async {
-    final gone = state.splitExpenses.where((s) => s.id == id).toList();
-    if (gone.isEmpty) return;
-    final split = gone.first;
+  /// Tombstones a split expense and its participant rows (cloud + local),
+  /// without touching the underlying transaction. Shared by
+  /// [deleteSplitExpense] (which then deletes the transaction itself) and
+  /// [deleteTransaction] (which calls this when the transaction being deleted
+  /// directly — e.g. via swipe-to-delete on the Transactions screen — turns
+  /// out to be the "full bill" behind a split), so a split's tracking rows
+  /// never survive as an orphan pointing at a transaction that no longer
+  /// exists, still claiming someone owes money for a bill that's gone.
+  Future<void> _tombstoneSplitExpense(SplitExpenseModel split) async {
     final now = DateTime.now();
-
-    final participants = state.splitParticipants.where((p) => p.splitExpenseId == id).toList();
+    final participants = state.splitParticipants.where((p) => p.splitExpenseId == split.id).toList();
     for (final p in participants) {
       final tombstone = p.copyWith(isDeleted: true, updatedAt: now);
       await pushToCloud('split_participants', tombstone.toCloudJson());
@@ -2147,17 +2147,32 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
 
     final tombstone = split.copyWith(isDeleted: true, updatedAt: now);
     await pushToCloud('split_expenses', tombstone.toCloudJson());
-    await (_db.update(_db.splitExpenses)..where((t) => t.id.equals(id))).write(
+    await (_db.update(_db.splitExpenses)..where((t) => t.id.equals(split.id))).write(
       SplitExpensesCompanion(isDeleted: const Value(true), deletedAt: Value(now), updatedAt: Value(now)),
     );
 
     state = state.copyWith(
-      splitExpenses: state.splitExpenses.where((s) => s.id != id).toList(),
-      splitParticipants: state.splitParticipants.where((p) => p.splitExpenseId != id).toList(),
+      splitExpenses: state.splitExpenses.where((s) => s.id != split.id).toList(),
+      splitParticipants: state.splitParticipants.where((p) => p.splitExpenseId != split.id).toList(),
     );
+  }
+
+  /// Deletes a split expense along with its participant rows and the real
+  /// transaction it was attached to — reuses [deleteTransaction] so the
+  /// card/loan/investment reversal logic there stays the single source of
+  /// truth rather than being duplicated here.
+  Future<void> deleteSplitExpense(String id) async {
+    final gone = state.splitExpenses.where((s) => s.id == id).toList();
+    if (gone.isEmpty) return;
+    final split = gone.first;
+
+    await _tombstoneSplitExpense(split);
 
     // The real expense behind this split — reuse deleteTransaction so its
-    // card/loan/investment reversal stays correct in one place.
+    // card/loan/investment reversal stays correct in one place. By the time
+    // this runs, `split` is already gone from state, so deleteTransaction's
+    // own linked-split lookup finds nothing and just deletes the transaction
+    // normally — no double-tombstoning, no recursion.
     if (state.transactions.any((t) => t.id == split.transactionId)) {
       await deleteTransaction(split.transactionId);
     }
@@ -2317,6 +2332,16 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     if (tx.isEmpty) return;
     final original = tx.first;
     final now = DateTime.now();
+
+    // If this is the "full bill" transaction behind a split expense (e.g.
+    // deleted directly via swipe-to-delete on the Transactions screen rather
+    // than through deleteSplitExpense), its split/participant rows must go
+    // with it — otherwise they'd survive as orphans still showing "so-and-so
+    // owes you" for a bill that no longer exists.
+    final linkedSplit = state.splitExpenses.where((s) => s.transactionId == id).toList();
+    if (linkedSplit.isNotEmpty) {
+      await _tombstoneSplitExpense(linkedSplit.first);
+    }
 
     CreditCardModel? adjustedCard;
     if (original.creditCardId != null) {
