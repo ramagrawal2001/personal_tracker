@@ -102,6 +102,7 @@ extension TransactionEntryMapper on TransactionEntry {
       companyId: companyId,
       isExternalToAccount: isExternalToAccount,
       isCashSpend: isCashSpend,
+      isSettlement: isSettlement,
       syncStatus: SyncStatus.values.byName(syncStatus),
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -129,6 +130,7 @@ extension TransactionModelMapper on TransactionModel {
       companyId: Value(companyId),
       isExternalToAccount: Value(isExternalToAccount),
       isCashSpend: Value(isCashSpend),
+      isSettlement: Value(isSettlement),
       syncStatus: Value(syncStatus.name),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -422,6 +424,9 @@ extension PersonEntryMapper on PersonEntry {
     return PersonModel(
       id: id,
       name: name,
+      phone: phone,
+      upiId: upiId,
+      notes: notes,
       updatedAt: updatedAt,
       isDeleted: isDeleted,
     );
@@ -433,6 +438,9 @@ extension PersonModelMapper on PersonModel {
     return PeopleCompanion(
       id: Value(id),
       name: Value(name),
+      phone: Value(phone),
+      upiId: Value(upiId),
+      notes: Value(notes),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: Value(isDeleted ? DateTime.now() : null),
@@ -478,7 +486,9 @@ extension SplitParticipantEntryMapper on SplitParticipantEntry {
       splitExpenseId: splitExpenseId,
       personId: personId,
       shareAmount: shareAmount,
-      isSettled: isSettled,
+      categoryId: categoryId,
+      note: note,
+      settledAmount: settledAmount,
       settledAt: settledAt,
       settledTransactionId: settledTransactionId,
       updatedAt: updatedAt,
@@ -494,7 +504,44 @@ extension SplitParticipantModelMapper on SplitParticipantModel {
       splitExpenseId: Value(splitExpenseId),
       personId: Value(personId),
       shareAmount: Value(shareAmount),
-      isSettled: Value(isSettled),
+      categoryId: Value(categoryId),
+      note: Value(note),
+      settledAmount: Value(settledAmount),
+      settledAt: Value(settledAt),
+      settledTransactionId: Value(settledTransactionId),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: Value(isDeleted ? DateTime.now() : null),
+    );
+  }
+}
+
+extension PayableEntryMapper on PayableEntry {
+  PayableModel toModel() {
+    return PayableModel(
+      id: id,
+      personId: personId,
+      amount: amount,
+      description: description,
+      date: date,
+      settledAmount: settledAmount,
+      settledAt: settledAt,
+      settledTransactionId: settledTransactionId,
+      updatedAt: updatedAt,
+      isDeleted: isDeleted,
+    );
+  }
+}
+
+extension PayableModelMapper on PayableModel {
+  PayablesCompanion toCompanion() {
+    return PayablesCompanion(
+      id: Value(id),
+      personId: Value(personId),
+      amount: Value(amount),
+      description: Value(description),
+      date: Value(date),
+      settledAmount: Value(settledAmount),
       settledAt: Value(settledAt),
       settledTransactionId: Value(settledTransactionId),
       updatedAt: Value(updatedAt),

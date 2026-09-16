@@ -25,6 +25,7 @@ part 'app_database.g.dart';
   People,
   SplitExpenses,
   SplitParticipants,
+  Payables,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -38,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -233,6 +234,53 @@ class AppDatabase extends _$AppDatabase {
               await m.addColumn(transactions, transactions.isCashSpend);
             }
           }
+          if (from < 11) {
+            // v11: people-splitting v2 — phone/UPI/notes on People, per-
+            // participant category/note + partial-settlement on
+            // SplitParticipants, the "I owe them" Payables table, and
+            // isSettlement on Transactions. Added defensively — a synthetic
+            // upgrade path may already be on the current schema.
+            final v11Cache = <String, Set<String>>{};
+            Future<Set<String>> v11Cols(String table) async {
+              return v11Cache[table] ??= (await customSelect('PRAGMA table_info($table)').get())
+                  .map((row) => row.read<String>('name'))
+                  .toSet();
+            }
+
+            final peopleCols = await v11Cols('people');
+            if (!peopleCols.contains(people.phone.name)) await m.addColumn(people, people.phone);
+            if (!peopleCols.contains(people.upiId.name)) await m.addColumn(people, people.upiId);
+            if (!peopleCols.contains(people.notes.name)) await m.addColumn(people, people.notes);
+
+            final spCols = await v11Cols('split_participants');
+            final hadOldIsSettled = spCols.contains('is_settled');
+            if (!spCols.contains(splitParticipants.categoryId.name)) {
+              await m.addColumn(splitParticipants, splitParticipants.categoryId);
+            }
+            if (!spCols.contains(splitParticipants.note.name)) {
+              await m.addColumn(splitParticipants, splitParticipants.note);
+            }
+            if (!spCols.contains(splitParticipants.settledAmount.name)) {
+              await m.addColumn(splitParticipants, splitParticipants.settledAmount);
+              if (hadOldIsSettled) {
+                // Carry the old boolean's meaning forward: a fully-settled
+                // row's settledAmount becomes its full shareAmount, an
+                // unsettled row's stays 0 (the column default).
+                await customStatement(
+                  'UPDATE split_participants SET settled_amount = share_amount WHERE is_settled = 1',
+                );
+              }
+            }
+
+            if (!(await v11Cols('payables')).isNotEmpty) {
+              await m.createTable(payables);
+            }
+
+            final txCols11 = await v11Cols('transactions');
+            if (!txCols11.contains(transactions.isSettlement.name)) {
+              await m.addColumn(transactions, transactions.isSettlement);
+            }
+          }
         },
       );
 
@@ -248,6 +296,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(companies).go();
       await delete(splitParticipants).go();
       await delete(splitExpenses).go();
+      await delete(payables).go();
       await delete(people).go();
       await delete(accounts).go();
       await delete(categories).go();
@@ -274,6 +323,7 @@ class AppDatabase extends _$AppDatabase {
       'people': (await select(people).get()).map((e) => e.toJson()).toList(),
       'splitExpenses': (await select(splitExpenses).get()).map((e) => e.toJson()).toList(),
       'splitParticipants': (await select(splitParticipants).get()).map((e) => e.toJson()).toList(),
+      'payables': (await select(payables).get()).map((e) => e.toJson()).toList(),
       'notes': (await select(notes).get()).map((e) => e.toJson()).toList(),
     };
   }
@@ -328,6 +378,9 @@ class AppDatabase extends _$AppDatabase {
       }
       for (final row in rows('splitParticipants')) {
         await into(splitParticipants).insertOnConflictUpdate(SplitParticipantEntry.fromJson(row).toCompanion(true));
+      }
+      for (final row in rows('payables')) {
+        await into(payables).insertOnConflictUpdate(PayableEntry.fromJson(row).toCompanion(true));
       }
       for (final row in rows('notes')) {
         await into(notes).insertOnConflictUpdate(NoteEntry.fromJson(row).toCompanion(true));

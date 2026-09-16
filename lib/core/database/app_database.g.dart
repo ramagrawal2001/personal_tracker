@@ -1595,6 +1595,21 @@ class $TransactionsTable extends Transactions
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isSettlementMeta = const VerificationMeta(
+    'isSettlement',
+  );
+  @override
+  late final GeneratedColumn<bool> isSettlement = GeneratedColumn<bool>(
+    'is_settlement',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_settlement" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _syncStatusMeta = const VerificationMeta(
     'syncStatus',
   );
@@ -1674,6 +1689,7 @@ class $TransactionsTable extends Transactions
     companyId,
     isExternalToAccount,
     isCashSpend,
+    isSettlement,
     syncStatus,
     createdAt,
     updatedAt,
@@ -1810,6 +1826,15 @@ class $TransactionsTable extends Transactions
         ),
       );
     }
+    if (data.containsKey('is_settlement')) {
+      context.handle(
+        _isSettlementMeta,
+        isSettlement.isAcceptableOrUnknown(
+          data['is_settlement']!,
+          _isSettlementMeta,
+        ),
+      );
+    }
     if (data.containsKey('sync_status')) {
       context.handle(
         _syncStatusMeta,
@@ -1915,6 +1940,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.bool,
         data['${effectivePrefix}is_cash_spend'],
       )!,
+      isSettlement: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_settlement'],
+      )!,
       syncStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sync_status'],
@@ -1962,6 +1991,7 @@ class TransactionEntry extends DataClass
   final String? companyId;
   final bool isExternalToAccount;
   final bool isCashSpend;
+  final bool isSettlement;
   final String syncStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -1984,6 +2014,7 @@ class TransactionEntry extends DataClass
     this.companyId,
     required this.isExternalToAccount,
     required this.isCashSpend,
+    required this.isSettlement,
     required this.syncStatus,
     required this.createdAt,
     required this.updatedAt,
@@ -2025,6 +2056,7 @@ class TransactionEntry extends DataClass
     }
     map['is_external_to_account'] = Variable<bool>(isExternalToAccount);
     map['is_cash_spend'] = Variable<bool>(isCashSpend);
+    map['is_settlement'] = Variable<bool>(isSettlement);
     map['sync_status'] = Variable<String>(syncStatus);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -2069,6 +2101,7 @@ class TransactionEntry extends DataClass
           : Value(companyId),
       isExternalToAccount: Value(isExternalToAccount),
       isCashSpend: Value(isCashSpend),
+      isSettlement: Value(isSettlement),
       syncStatus: Value(syncStatus),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -2103,6 +2136,7 @@ class TransactionEntry extends DataClass
         json['isExternalToAccount'],
       ),
       isCashSpend: serializer.fromJson<bool>(json['isCashSpend']),
+      isSettlement: serializer.fromJson<bool>(json['isSettlement']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -2130,6 +2164,7 @@ class TransactionEntry extends DataClass
       'companyId': serializer.toJson<String?>(companyId),
       'isExternalToAccount': serializer.toJson<bool>(isExternalToAccount),
       'isCashSpend': serializer.toJson<bool>(isCashSpend),
+      'isSettlement': serializer.toJson<bool>(isSettlement),
       'syncStatus': serializer.toJson<String>(syncStatus),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -2155,6 +2190,7 @@ class TransactionEntry extends DataClass
     Value<String?> companyId = const Value.absent(),
     bool? isExternalToAccount,
     bool? isCashSpend,
+    bool? isSettlement,
     String? syncStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -2177,6 +2213,7 @@ class TransactionEntry extends DataClass
     companyId: companyId.present ? companyId.value : this.companyId,
     isExternalToAccount: isExternalToAccount ?? this.isExternalToAccount,
     isCashSpend: isCashSpend ?? this.isCashSpend,
+    isSettlement: isSettlement ?? this.isSettlement,
     syncStatus: syncStatus ?? this.syncStatus,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -2213,6 +2250,9 @@ class TransactionEntry extends DataClass
       isCashSpend: data.isCashSpend.present
           ? data.isCashSpend.value
           : this.isCashSpend,
+      isSettlement: data.isSettlement.present
+          ? data.isSettlement.value
+          : this.isSettlement,
       syncStatus: data.syncStatus.present
           ? data.syncStatus.value
           : this.syncStatus,
@@ -2242,6 +2282,7 @@ class TransactionEntry extends DataClass
           ..write('companyId: $companyId, ')
           ..write('isExternalToAccount: $isExternalToAccount, ')
           ..write('isCashSpend: $isCashSpend, ')
+          ..write('isSettlement: $isSettlement, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2269,6 +2310,7 @@ class TransactionEntry extends DataClass
     companyId,
     isExternalToAccount,
     isCashSpend,
+    isSettlement,
     syncStatus,
     createdAt,
     updatedAt,
@@ -2295,6 +2337,7 @@ class TransactionEntry extends DataClass
           other.companyId == this.companyId &&
           other.isExternalToAccount == this.isExternalToAccount &&
           other.isCashSpend == this.isCashSpend &&
+          other.isSettlement == this.isSettlement &&
           other.syncStatus == this.syncStatus &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -2319,6 +2362,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
   final Value<String?> companyId;
   final Value<bool> isExternalToAccount;
   final Value<bool> isCashSpend;
+  final Value<bool> isSettlement;
   final Value<String> syncStatus;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -2342,6 +2386,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     this.companyId = const Value.absent(),
     this.isExternalToAccount = const Value.absent(),
     this.isCashSpend = const Value.absent(),
+    this.isSettlement = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -2366,6 +2411,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     this.companyId = const Value.absent(),
     this.isExternalToAccount = const Value.absent(),
     this.isCashSpend = const Value.absent(),
+    this.isSettlement = const Value.absent(),
     this.syncStatus = const Value.absent(),
     required DateTime createdAt,
     this.updatedAt = const Value.absent(),
@@ -2395,6 +2441,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     Expression<String>? companyId,
     Expression<bool>? isExternalToAccount,
     Expression<bool>? isCashSpend,
+    Expression<bool>? isSettlement,
     Expression<String>? syncStatus,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -2420,6 +2467,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
       if (isExternalToAccount != null)
         'is_external_to_account': isExternalToAccount,
       if (isCashSpend != null) 'is_cash_spend': isCashSpend,
+      if (isSettlement != null) 'is_settlement': isSettlement,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -2446,6 +2494,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     Value<String?>? companyId,
     Value<bool>? isExternalToAccount,
     Value<bool>? isCashSpend,
+    Value<bool>? isSettlement,
     Value<String>? syncStatus,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -2470,6 +2519,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
       companyId: companyId ?? this.companyId,
       isExternalToAccount: isExternalToAccount ?? this.isExternalToAccount,
       isCashSpend: isCashSpend ?? this.isCashSpend,
+      isSettlement: isSettlement ?? this.isSettlement,
       syncStatus: syncStatus ?? this.syncStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -2530,6 +2580,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
     if (isCashSpend.present) {
       map['is_cash_spend'] = Variable<bool>(isCashSpend.value);
     }
+    if (isSettlement.present) {
+      map['is_settlement'] = Variable<bool>(isSettlement.value);
+    }
     if (syncStatus.present) {
       map['sync_status'] = Variable<String>(syncStatus.value);
     }
@@ -2570,6 +2623,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionEntry> {
           ..write('companyId: $companyId, ')
           ..write('isExternalToAccount: $isExternalToAccount, ')
           ..write('isCashSpend: $isCashSpend, ')
+          ..write('isSettlement: $isSettlement, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -9135,6 +9189,33 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PersonEntry> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
+  @override
+  late final GeneratedColumn<String> phone = GeneratedColumn<String>(
+    'phone',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _upiIdMeta = const VerificationMeta('upiId');
+  @override
+  late final GeneratedColumn<String> upiId = GeneratedColumn<String>(
+    'upi_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -9177,6 +9258,9 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PersonEntry> {
   List<GeneratedColumn> get $columns => [
     id,
     name,
+    phone,
+    upiId,
+    notes,
     updatedAt,
     isDeleted,
     deletedAt,
@@ -9205,6 +9289,24 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PersonEntry> {
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('phone')) {
+      context.handle(
+        _phoneMeta,
+        phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta),
+      );
+    }
+    if (data.containsKey('upi_id')) {
+      context.handle(
+        _upiIdMeta,
+        upiId.isAcceptableOrUnknown(data['upi_id']!, _upiIdMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
     }
     if (data.containsKey('updated_at')) {
       context.handle(
@@ -9241,6 +9343,18 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PersonEntry> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      phone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}phone'],
+      ),
+      upiId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}upi_id'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
@@ -9265,12 +9379,18 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PersonEntry> {
 class PersonEntry extends DataClass implements Insertable<PersonEntry> {
   final String id;
   final String name;
+  final String? phone;
+  final String? upiId;
+  final String? notes;
   final DateTime updatedAt;
   final bool isDeleted;
   final DateTime? deletedAt;
   const PersonEntry({
     required this.id,
     required this.name,
+    this.phone,
+    this.upiId,
+    this.notes,
     required this.updatedAt,
     required this.isDeleted,
     this.deletedAt,
@@ -9280,6 +9400,15 @@ class PersonEntry extends DataClass implements Insertable<PersonEntry> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || phone != null) {
+      map['phone'] = Variable<String>(phone);
+    }
+    if (!nullToAbsent || upiId != null) {
+      map['upi_id'] = Variable<String>(upiId);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['is_deleted'] = Variable<bool>(isDeleted);
     if (!nullToAbsent || deletedAt != null) {
@@ -9292,6 +9421,15 @@ class PersonEntry extends DataClass implements Insertable<PersonEntry> {
     return PeopleCompanion(
       id: Value(id),
       name: Value(name),
+      phone: phone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(phone),
+      upiId: upiId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(upiId),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
       deletedAt: deletedAt == null && nullToAbsent
@@ -9308,6 +9446,9 @@ class PersonEntry extends DataClass implements Insertable<PersonEntry> {
     return PersonEntry(
       id: serializer.fromJson<String>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      phone: serializer.fromJson<String?>(json['phone']),
+      upiId: serializer.fromJson<String?>(json['upiId']),
+      notes: serializer.fromJson<String?>(json['notes']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -9319,6 +9460,9 @@ class PersonEntry extends DataClass implements Insertable<PersonEntry> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'name': serializer.toJson<String>(name),
+      'phone': serializer.toJson<String?>(phone),
+      'upiId': serializer.toJson<String?>(upiId),
+      'notes': serializer.toJson<String?>(notes),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isDeleted': serializer.toJson<bool>(isDeleted),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -9328,12 +9472,18 @@ class PersonEntry extends DataClass implements Insertable<PersonEntry> {
   PersonEntry copyWith({
     String? id,
     String? name,
+    Value<String?> phone = const Value.absent(),
+    Value<String?> upiId = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
     DateTime? updatedAt,
     bool? isDeleted,
     Value<DateTime?> deletedAt = const Value.absent(),
   }) => PersonEntry(
     id: id ?? this.id,
     name: name ?? this.name,
+    phone: phone.present ? phone.value : this.phone,
+    upiId: upiId.present ? upiId.value : this.upiId,
+    notes: notes.present ? notes.value : this.notes,
     updatedAt: updatedAt ?? this.updatedAt,
     isDeleted: isDeleted ?? this.isDeleted,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -9342,6 +9492,9 @@ class PersonEntry extends DataClass implements Insertable<PersonEntry> {
     return PersonEntry(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      phone: data.phone.present ? data.phone.value : this.phone,
+      upiId: data.upiId.present ? data.upiId.value : this.upiId,
+      notes: data.notes.present ? data.notes.value : this.notes,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -9353,6 +9506,9 @@ class PersonEntry extends DataClass implements Insertable<PersonEntry> {
     return (StringBuffer('PersonEntry(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('phone: $phone, ')
+          ..write('upiId: $upiId, ')
+          ..write('notes: $notes, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt')
@@ -9361,13 +9517,25 @@ class PersonEntry extends DataClass implements Insertable<PersonEntry> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, updatedAt, isDeleted, deletedAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    phone,
+    upiId,
+    notes,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PersonEntry &&
           other.id == this.id &&
           other.name == this.name &&
+          other.phone == this.phone &&
+          other.upiId == this.upiId &&
+          other.notes == this.notes &&
           other.updatedAt == this.updatedAt &&
           other.isDeleted == this.isDeleted &&
           other.deletedAt == this.deletedAt);
@@ -9376,6 +9544,9 @@ class PersonEntry extends DataClass implements Insertable<PersonEntry> {
 class PeopleCompanion extends UpdateCompanion<PersonEntry> {
   final Value<String> id;
   final Value<String> name;
+  final Value<String?> phone;
+  final Value<String?> upiId;
+  final Value<String?> notes;
   final Value<DateTime> updatedAt;
   final Value<bool> isDeleted;
   final Value<DateTime?> deletedAt;
@@ -9383,6 +9554,9 @@ class PeopleCompanion extends UpdateCompanion<PersonEntry> {
   const PeopleCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.phone = const Value.absent(),
+    this.upiId = const Value.absent(),
+    this.notes = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -9391,6 +9565,9 @@ class PeopleCompanion extends UpdateCompanion<PersonEntry> {
   PeopleCompanion.insert({
     required String id,
     required String name,
+    this.phone = const Value.absent(),
+    this.upiId = const Value.absent(),
+    this.notes = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -9400,6 +9577,9 @@ class PeopleCompanion extends UpdateCompanion<PersonEntry> {
   static Insertable<PersonEntry> custom({
     Expression<String>? id,
     Expression<String>? name,
+    Expression<String>? phone,
+    Expression<String>? upiId,
+    Expression<String>? notes,
     Expression<DateTime>? updatedAt,
     Expression<bool>? isDeleted,
     Expression<DateTime>? deletedAt,
@@ -9408,6 +9588,9 @@ class PeopleCompanion extends UpdateCompanion<PersonEntry> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (phone != null) 'phone': phone,
+      if (upiId != null) 'upi_id': upiId,
+      if (notes != null) 'notes': notes,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isDeleted != null) 'is_deleted': isDeleted,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -9418,6 +9601,9 @@ class PeopleCompanion extends UpdateCompanion<PersonEntry> {
   PeopleCompanion copyWith({
     Value<String>? id,
     Value<String>? name,
+    Value<String?>? phone,
+    Value<String?>? upiId,
+    Value<String?>? notes,
     Value<DateTime>? updatedAt,
     Value<bool>? isDeleted,
     Value<DateTime?>? deletedAt,
@@ -9426,6 +9612,9 @@ class PeopleCompanion extends UpdateCompanion<PersonEntry> {
     return PeopleCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
+      phone: phone ?? this.phone,
+      upiId: upiId ?? this.upiId,
+      notes: notes ?? this.notes,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -9441,6 +9630,15 @@ class PeopleCompanion extends UpdateCompanion<PersonEntry> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (phone.present) {
+      map['phone'] = Variable<String>(phone.value);
+    }
+    if (upiId.present) {
+      map['upi_id'] = Variable<String>(upiId.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
     }
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
@@ -9462,6 +9660,9 @@ class PeopleCompanion extends UpdateCompanion<PersonEntry> {
     return (StringBuffer('PeopleCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
+          ..write('phone: $phone, ')
+          ..write('upiId: $upiId, ')
+          ..write('notes: $notes, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted, ')
           ..write('deletedAt: $deletedAt, ')
@@ -10082,20 +10283,37 @@ class $SplitParticipantsTable extends SplitParticipants
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _isSettledMeta = const VerificationMeta(
-    'isSettled',
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
   );
   @override
-  late final GeneratedColumn<bool> isSettled = GeneratedColumn<bool>(
-    'is_settled',
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _settledAmountMeta = const VerificationMeta(
+    'settledAmount',
+  );
+  @override
+  late final GeneratedColumn<double> settledAmount = GeneratedColumn<double>(
+    'settled_amount',
     aliasedName,
     false,
-    type: DriftSqlType.bool,
+    type: DriftSqlType.double,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_settled" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _settledAtMeta = const VerificationMeta(
     'settledAt',
@@ -10163,7 +10381,9 @@ class $SplitParticipantsTable extends SplitParticipants
     splitExpenseId,
     personId,
     shareAmount,
-    isSettled,
+    categoryId,
+    note,
+    settledAmount,
     settledAt,
     settledTransactionId,
     updatedAt,
@@ -10217,10 +10437,25 @@ class $SplitParticipantsTable extends SplitParticipants
     } else if (isInserting) {
       context.missing(_shareAmountMeta);
     }
-    if (data.containsKey('is_settled')) {
+    if (data.containsKey('category_id')) {
       context.handle(
-        _isSettledMeta,
-        isSettled.isAcceptableOrUnknown(data['is_settled']!, _isSettledMeta),
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('settled_amount')) {
+      context.handle(
+        _settledAmountMeta,
+        settledAmount.isAcceptableOrUnknown(
+          data['settled_amount']!,
+          _settledAmountMeta,
+        ),
       );
     }
     if (data.containsKey('settled_at')) {
@@ -10281,9 +10516,17 @@ class $SplitParticipantsTable extends SplitParticipants
         DriftSqlType.double,
         data['${effectivePrefix}share_amount'],
       )!,
-      isSettled: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_settled'],
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      ),
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      settledAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}settled_amount'],
       )!,
       settledAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -10320,7 +10563,9 @@ class SplitParticipantEntry extends DataClass
   final String splitExpenseId;
   final String personId;
   final double shareAmount;
-  final bool isSettled;
+  final String? categoryId;
+  final String? note;
+  final double settledAmount;
   final DateTime? settledAt;
   final String? settledTransactionId;
   final DateTime updatedAt;
@@ -10331,7 +10576,9 @@ class SplitParticipantEntry extends DataClass
     required this.splitExpenseId,
     required this.personId,
     required this.shareAmount,
-    required this.isSettled,
+    this.categoryId,
+    this.note,
+    required this.settledAmount,
     this.settledAt,
     this.settledTransactionId,
     required this.updatedAt,
@@ -10345,7 +10592,13 @@ class SplitParticipantEntry extends DataClass
     map['split_expense_id'] = Variable<String>(splitExpenseId);
     map['person_id'] = Variable<String>(personId);
     map['share_amount'] = Variable<double>(shareAmount);
-    map['is_settled'] = Variable<bool>(isSettled);
+    if (!nullToAbsent || categoryId != null) {
+      map['category_id'] = Variable<String>(categoryId);
+    }
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['settled_amount'] = Variable<double>(settledAmount);
     if (!nullToAbsent || settledAt != null) {
       map['settled_at'] = Variable<DateTime>(settledAt);
     }
@@ -10366,7 +10619,11 @@ class SplitParticipantEntry extends DataClass
       splitExpenseId: Value(splitExpenseId),
       personId: Value(personId),
       shareAmount: Value(shareAmount),
-      isSettled: Value(isSettled),
+      categoryId: categoryId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(categoryId),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      settledAmount: Value(settledAmount),
       settledAt: settledAt == null && nullToAbsent
           ? const Value.absent()
           : Value(settledAt),
@@ -10391,7 +10648,9 @@ class SplitParticipantEntry extends DataClass
       splitExpenseId: serializer.fromJson<String>(json['splitExpenseId']),
       personId: serializer.fromJson<String>(json['personId']),
       shareAmount: serializer.fromJson<double>(json['shareAmount']),
-      isSettled: serializer.fromJson<bool>(json['isSettled']),
+      categoryId: serializer.fromJson<String?>(json['categoryId']),
+      note: serializer.fromJson<String?>(json['note']),
+      settledAmount: serializer.fromJson<double>(json['settledAmount']),
       settledAt: serializer.fromJson<DateTime?>(json['settledAt']),
       settledTransactionId: serializer.fromJson<String?>(
         json['settledTransactionId'],
@@ -10409,7 +10668,9 @@ class SplitParticipantEntry extends DataClass
       'splitExpenseId': serializer.toJson<String>(splitExpenseId),
       'personId': serializer.toJson<String>(personId),
       'shareAmount': serializer.toJson<double>(shareAmount),
-      'isSettled': serializer.toJson<bool>(isSettled),
+      'categoryId': serializer.toJson<String?>(categoryId),
+      'note': serializer.toJson<String?>(note),
+      'settledAmount': serializer.toJson<double>(settledAmount),
       'settledAt': serializer.toJson<DateTime?>(settledAt),
       'settledTransactionId': serializer.toJson<String?>(settledTransactionId),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -10423,7 +10684,9 @@ class SplitParticipantEntry extends DataClass
     String? splitExpenseId,
     String? personId,
     double? shareAmount,
-    bool? isSettled,
+    Value<String?> categoryId = const Value.absent(),
+    Value<String?> note = const Value.absent(),
+    double? settledAmount,
     Value<DateTime?> settledAt = const Value.absent(),
     Value<String?> settledTransactionId = const Value.absent(),
     DateTime? updatedAt,
@@ -10434,7 +10697,9 @@ class SplitParticipantEntry extends DataClass
     splitExpenseId: splitExpenseId ?? this.splitExpenseId,
     personId: personId ?? this.personId,
     shareAmount: shareAmount ?? this.shareAmount,
-    isSettled: isSettled ?? this.isSettled,
+    categoryId: categoryId.present ? categoryId.value : this.categoryId,
+    note: note.present ? note.value : this.note,
+    settledAmount: settledAmount ?? this.settledAmount,
     settledAt: settledAt.present ? settledAt.value : this.settledAt,
     settledTransactionId: settledTransactionId.present
         ? settledTransactionId.value
@@ -10453,7 +10718,13 @@ class SplitParticipantEntry extends DataClass
       shareAmount: data.shareAmount.present
           ? data.shareAmount.value
           : this.shareAmount,
-      isSettled: data.isSettled.present ? data.isSettled.value : this.isSettled,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      note: data.note.present ? data.note.value : this.note,
+      settledAmount: data.settledAmount.present
+          ? data.settledAmount.value
+          : this.settledAmount,
       settledAt: data.settledAt.present ? data.settledAt.value : this.settledAt,
       settledTransactionId: data.settledTransactionId.present
           ? data.settledTransactionId.value
@@ -10471,7 +10742,9 @@ class SplitParticipantEntry extends DataClass
           ..write('splitExpenseId: $splitExpenseId, ')
           ..write('personId: $personId, ')
           ..write('shareAmount: $shareAmount, ')
-          ..write('isSettled: $isSettled, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('note: $note, ')
+          ..write('settledAmount: $settledAmount, ')
           ..write('settledAt: $settledAt, ')
           ..write('settledTransactionId: $settledTransactionId, ')
           ..write('updatedAt: $updatedAt, ')
@@ -10487,7 +10760,9 @@ class SplitParticipantEntry extends DataClass
     splitExpenseId,
     personId,
     shareAmount,
-    isSettled,
+    categoryId,
+    note,
+    settledAmount,
     settledAt,
     settledTransactionId,
     updatedAt,
@@ -10502,7 +10777,9 @@ class SplitParticipantEntry extends DataClass
           other.splitExpenseId == this.splitExpenseId &&
           other.personId == this.personId &&
           other.shareAmount == this.shareAmount &&
-          other.isSettled == this.isSettled &&
+          other.categoryId == this.categoryId &&
+          other.note == this.note &&
+          other.settledAmount == this.settledAmount &&
           other.settledAt == this.settledAt &&
           other.settledTransactionId == this.settledTransactionId &&
           other.updatedAt == this.updatedAt &&
@@ -10516,7 +10793,9 @@ class SplitParticipantsCompanion
   final Value<String> splitExpenseId;
   final Value<String> personId;
   final Value<double> shareAmount;
-  final Value<bool> isSettled;
+  final Value<String?> categoryId;
+  final Value<String?> note;
+  final Value<double> settledAmount;
   final Value<DateTime?> settledAt;
   final Value<String?> settledTransactionId;
   final Value<DateTime> updatedAt;
@@ -10528,7 +10807,9 @@ class SplitParticipantsCompanion
     this.splitExpenseId = const Value.absent(),
     this.personId = const Value.absent(),
     this.shareAmount = const Value.absent(),
-    this.isSettled = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.note = const Value.absent(),
+    this.settledAmount = const Value.absent(),
     this.settledAt = const Value.absent(),
     this.settledTransactionId = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -10541,7 +10822,9 @@ class SplitParticipantsCompanion
     required String splitExpenseId,
     required String personId,
     required double shareAmount,
-    this.isSettled = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.note = const Value.absent(),
+    this.settledAmount = const Value.absent(),
     this.settledAt = const Value.absent(),
     this.settledTransactionId = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -10557,7 +10840,9 @@ class SplitParticipantsCompanion
     Expression<String>? splitExpenseId,
     Expression<String>? personId,
     Expression<double>? shareAmount,
-    Expression<bool>? isSettled,
+    Expression<String>? categoryId,
+    Expression<String>? note,
+    Expression<double>? settledAmount,
     Expression<DateTime>? settledAt,
     Expression<String>? settledTransactionId,
     Expression<DateTime>? updatedAt,
@@ -10570,7 +10855,9 @@ class SplitParticipantsCompanion
       if (splitExpenseId != null) 'split_expense_id': splitExpenseId,
       if (personId != null) 'person_id': personId,
       if (shareAmount != null) 'share_amount': shareAmount,
-      if (isSettled != null) 'is_settled': isSettled,
+      if (categoryId != null) 'category_id': categoryId,
+      if (note != null) 'note': note,
+      if (settledAmount != null) 'settled_amount': settledAmount,
       if (settledAt != null) 'settled_at': settledAt,
       if (settledTransactionId != null)
         'settled_transaction_id': settledTransactionId,
@@ -10586,7 +10873,9 @@ class SplitParticipantsCompanion
     Value<String>? splitExpenseId,
     Value<String>? personId,
     Value<double>? shareAmount,
-    Value<bool>? isSettled,
+    Value<String?>? categoryId,
+    Value<String?>? note,
+    Value<double>? settledAmount,
     Value<DateTime?>? settledAt,
     Value<String?>? settledTransactionId,
     Value<DateTime>? updatedAt,
@@ -10599,7 +10888,9 @@ class SplitParticipantsCompanion
       splitExpenseId: splitExpenseId ?? this.splitExpenseId,
       personId: personId ?? this.personId,
       shareAmount: shareAmount ?? this.shareAmount,
-      isSettled: isSettled ?? this.isSettled,
+      categoryId: categoryId ?? this.categoryId,
+      note: note ?? this.note,
+      settledAmount: settledAmount ?? this.settledAmount,
       settledAt: settledAt ?? this.settledAt,
       settledTransactionId: settledTransactionId ?? this.settledTransactionId,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -10624,8 +10915,14 @@ class SplitParticipantsCompanion
     if (shareAmount.present) {
       map['share_amount'] = Variable<double>(shareAmount.value);
     }
-    if (isSettled.present) {
-      map['is_settled'] = Variable<bool>(isSettled.value);
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (settledAmount.present) {
+      map['settled_amount'] = Variable<double>(settledAmount.value);
     }
     if (settledAt.present) {
       map['settled_at'] = Variable<DateTime>(settledAt.value);
@@ -10657,7 +10954,683 @@ class SplitParticipantsCompanion
           ..write('splitExpenseId: $splitExpenseId, ')
           ..write('personId: $personId, ')
           ..write('shareAmount: $shareAmount, ')
-          ..write('isSettled: $isSettled, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('note: $note, ')
+          ..write('settledAmount: $settledAmount, ')
+          ..write('settledAt: $settledAt, ')
+          ..write('settledTransactionId: $settledTransactionId, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PayablesTable extends Payables
+    with TableInfo<$PayablesTable, PayableEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PayablesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _personIdMeta = const VerificationMeta(
+    'personId',
+  );
+  @override
+  late final GeneratedColumn<String> personId = GeneratedColumn<String>(
+    'person_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _settledAmountMeta = const VerificationMeta(
+    'settledAmount',
+  );
+  @override
+  late final GeneratedColumn<double> settledAmount = GeneratedColumn<double>(
+    'settled_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _settledAtMeta = const VerificationMeta(
+    'settledAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> settledAt = GeneratedColumn<DateTime>(
+    'settled_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _settledTransactionIdMeta =
+      const VerificationMeta('settledTransactionId');
+  @override
+  late final GeneratedColumn<String> settledTransactionId =
+      GeneratedColumn<String>(
+        'settled_transaction_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    personId,
+    amount,
+    description,
+    date,
+    settledAmount,
+    settledAt,
+    settledTransactionId,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'payables';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PayableEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('person_id')) {
+      context.handle(
+        _personIdMeta,
+        personId.isAcceptableOrUnknown(data['person_id']!, _personIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_personIdMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_descriptionMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('settled_amount')) {
+      context.handle(
+        _settledAmountMeta,
+        settledAmount.isAcceptableOrUnknown(
+          data['settled_amount']!,
+          _settledAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('settled_at')) {
+      context.handle(
+        _settledAtMeta,
+        settledAt.isAcceptableOrUnknown(data['settled_at']!, _settledAtMeta),
+      );
+    }
+    if (data.containsKey('settled_transaction_id')) {
+      context.handle(
+        _settledTransactionIdMeta,
+        settledTransactionId.isAcceptableOrUnknown(
+          data['settled_transaction_id']!,
+          _settledTransactionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PayableEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PayableEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      personId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}person_id'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      )!,
+      settledAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}settled_amount'],
+      )!,
+      settledAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}settled_at'],
+      ),
+      settledTransactionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}settled_transaction_id'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $PayablesTable createAlias(String alias) {
+    return $PayablesTable(attachedDatabase, alias);
+  }
+}
+
+class PayableEntry extends DataClass implements Insertable<PayableEntry> {
+  final String id;
+  final String personId;
+  final double amount;
+  final String description;
+  final DateTime date;
+  final double settledAmount;
+  final DateTime? settledAt;
+  final String? settledTransactionId;
+  final DateTime updatedAt;
+  final bool isDeleted;
+  final DateTime? deletedAt;
+  const PayableEntry({
+    required this.id,
+    required this.personId,
+    required this.amount,
+    required this.description,
+    required this.date,
+    required this.settledAmount,
+    this.settledAt,
+    this.settledTransactionId,
+    required this.updatedAt,
+    required this.isDeleted,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['person_id'] = Variable<String>(personId);
+    map['amount'] = Variable<double>(amount);
+    map['description'] = Variable<String>(description);
+    map['date'] = Variable<DateTime>(date);
+    map['settled_amount'] = Variable<double>(settledAmount);
+    if (!nullToAbsent || settledAt != null) {
+      map['settled_at'] = Variable<DateTime>(settledAt);
+    }
+    if (!nullToAbsent || settledTransactionId != null) {
+      map['settled_transaction_id'] = Variable<String>(settledTransactionId);
+    }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  PayablesCompanion toCompanion(bool nullToAbsent) {
+    return PayablesCompanion(
+      id: Value(id),
+      personId: Value(personId),
+      amount: Value(amount),
+      description: Value(description),
+      date: Value(date),
+      settledAmount: Value(settledAmount),
+      settledAt: settledAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(settledAt),
+      settledTransactionId: settledTransactionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(settledTransactionId),
+      updatedAt: Value(updatedAt),
+      isDeleted: Value(isDeleted),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory PayableEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PayableEntry(
+      id: serializer.fromJson<String>(json['id']),
+      personId: serializer.fromJson<String>(json['personId']),
+      amount: serializer.fromJson<double>(json['amount']),
+      description: serializer.fromJson<String>(json['description']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      settledAmount: serializer.fromJson<double>(json['settledAmount']),
+      settledAt: serializer.fromJson<DateTime?>(json['settledAt']),
+      settledTransactionId: serializer.fromJson<String?>(
+        json['settledTransactionId'],
+      ),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'personId': serializer.toJson<String>(personId),
+      'amount': serializer.toJson<double>(amount),
+      'description': serializer.toJson<String>(description),
+      'date': serializer.toJson<DateTime>(date),
+      'settledAmount': serializer.toJson<double>(settledAmount),
+      'settledAt': serializer.toJson<DateTime?>(settledAt),
+      'settledTransactionId': serializer.toJson<String?>(settledTransactionId),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  PayableEntry copyWith({
+    String? id,
+    String? personId,
+    double? amount,
+    String? description,
+    DateTime? date,
+    double? settledAmount,
+    Value<DateTime?> settledAt = const Value.absent(),
+    Value<String?> settledTransactionId = const Value.absent(),
+    DateTime? updatedAt,
+    bool? isDeleted,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => PayableEntry(
+    id: id ?? this.id,
+    personId: personId ?? this.personId,
+    amount: amount ?? this.amount,
+    description: description ?? this.description,
+    date: date ?? this.date,
+    settledAmount: settledAmount ?? this.settledAmount,
+    settledAt: settledAt.present ? settledAt.value : this.settledAt,
+    settledTransactionId: settledTransactionId.present
+        ? settledTransactionId.value
+        : this.settledTransactionId,
+    updatedAt: updatedAt ?? this.updatedAt,
+    isDeleted: isDeleted ?? this.isDeleted,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  PayableEntry copyWithCompanion(PayablesCompanion data) {
+    return PayableEntry(
+      id: data.id.present ? data.id.value : this.id,
+      personId: data.personId.present ? data.personId.value : this.personId,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      date: data.date.present ? data.date.value : this.date,
+      settledAmount: data.settledAmount.present
+          ? data.settledAmount.value
+          : this.settledAmount,
+      settledAt: data.settledAt.present ? data.settledAt.value : this.settledAt,
+      settledTransactionId: data.settledTransactionId.present
+          ? data.settledTransactionId.value
+          : this.settledTransactionId,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PayableEntry(')
+          ..write('id: $id, ')
+          ..write('personId: $personId, ')
+          ..write('amount: $amount, ')
+          ..write('description: $description, ')
+          ..write('date: $date, ')
+          ..write('settledAmount: $settledAmount, ')
+          ..write('settledAt: $settledAt, ')
+          ..write('settledTransactionId: $settledTransactionId, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    personId,
+    amount,
+    description,
+    date,
+    settledAmount,
+    settledAt,
+    settledTransactionId,
+    updatedAt,
+    isDeleted,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PayableEntry &&
+          other.id == this.id &&
+          other.personId == this.personId &&
+          other.amount == this.amount &&
+          other.description == this.description &&
+          other.date == this.date &&
+          other.settledAmount == this.settledAmount &&
+          other.settledAt == this.settledAt &&
+          other.settledTransactionId == this.settledTransactionId &&
+          other.updatedAt == this.updatedAt &&
+          other.isDeleted == this.isDeleted &&
+          other.deletedAt == this.deletedAt);
+}
+
+class PayablesCompanion extends UpdateCompanion<PayableEntry> {
+  final Value<String> id;
+  final Value<String> personId;
+  final Value<double> amount;
+  final Value<String> description;
+  final Value<DateTime> date;
+  final Value<double> settledAmount;
+  final Value<DateTime?> settledAt;
+  final Value<String?> settledTransactionId;
+  final Value<DateTime> updatedAt;
+  final Value<bool> isDeleted;
+  final Value<DateTime?> deletedAt;
+  final Value<int> rowid;
+  const PayablesCompanion({
+    this.id = const Value.absent(),
+    this.personId = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.description = const Value.absent(),
+    this.date = const Value.absent(),
+    this.settledAmount = const Value.absent(),
+    this.settledAt = const Value.absent(),
+    this.settledTransactionId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PayablesCompanion.insert({
+    required String id,
+    required String personId,
+    required double amount,
+    required String description,
+    required DateTime date,
+    this.settledAmount = const Value.absent(),
+    this.settledAt = const Value.absent(),
+    this.settledTransactionId = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       personId = Value(personId),
+       amount = Value(amount),
+       description = Value(description),
+       date = Value(date);
+  static Insertable<PayableEntry> custom({
+    Expression<String>? id,
+    Expression<String>? personId,
+    Expression<double>? amount,
+    Expression<String>? description,
+    Expression<DateTime>? date,
+    Expression<double>? settledAmount,
+    Expression<DateTime>? settledAt,
+    Expression<String>? settledTransactionId,
+    Expression<DateTime>? updatedAt,
+    Expression<bool>? isDeleted,
+    Expression<DateTime>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (personId != null) 'person_id': personId,
+      if (amount != null) 'amount': amount,
+      if (description != null) 'description': description,
+      if (date != null) 'date': date,
+      if (settledAmount != null) 'settled_amount': settledAmount,
+      if (settledAt != null) 'settled_at': settledAt,
+      if (settledTransactionId != null)
+        'settled_transaction_id': settledTransactionId,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PayablesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? personId,
+    Value<double>? amount,
+    Value<String>? description,
+    Value<DateTime>? date,
+    Value<double>? settledAmount,
+    Value<DateTime?>? settledAt,
+    Value<String?>? settledTransactionId,
+    Value<DateTime>? updatedAt,
+    Value<bool>? isDeleted,
+    Value<DateTime?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return PayablesCompanion(
+      id: id ?? this.id,
+      personId: personId ?? this.personId,
+      amount: amount ?? this.amount,
+      description: description ?? this.description,
+      date: date ?? this.date,
+      settledAmount: settledAmount ?? this.settledAmount,
+      settledAt: settledAt ?? this.settledAt,
+      settledTransactionId: settledTransactionId ?? this.settledTransactionId,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (personId.present) {
+      map['person_id'] = Variable<String>(personId.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (settledAmount.present) {
+      map['settled_amount'] = Variable<double>(settledAmount.value);
+    }
+    if (settledAt.present) {
+      map['settled_at'] = Variable<DateTime>(settledAt.value);
+    }
+    if (settledTransactionId.present) {
+      map['settled_transaction_id'] = Variable<String>(
+        settledTransactionId.value,
+      );
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PayablesCompanion(')
+          ..write('id: $id, ')
+          ..write('personId: $personId, ')
+          ..write('amount: $amount, ')
+          ..write('description: $description, ')
+          ..write('date: $date, ')
+          ..write('settledAmount: $settledAmount, ')
           ..write('settledAt: $settledAt, ')
           ..write('settledTransactionId: $settledTransactionId, ')
           ..write('updatedAt: $updatedAt, ')
@@ -10689,6 +11662,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SplitExpensesTable splitExpenses = $SplitExpensesTable(this);
   late final $SplitParticipantsTable splitParticipants =
       $SplitParticipantsTable(this);
+  late final $PayablesTable payables = $PayablesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10709,6 +11683,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     people,
     splitExpenses,
     splitParticipants,
+    payables,
   ];
 }
 
@@ -11402,6 +12377,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> companyId,
       Value<bool> isExternalToAccount,
       Value<bool> isCashSpend,
+      Value<bool> isSettlement,
       Value<String> syncStatus,
       required DateTime createdAt,
       Value<DateTime> updatedAt,
@@ -11427,6 +12403,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> companyId,
       Value<bool> isExternalToAccount,
       Value<bool> isCashSpend,
+      Value<bool> isSettlement,
       Value<String> syncStatus,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -11521,6 +12498,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<bool> get isCashSpend => $composableBuilder(
     column: $table.isCashSpend,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSettlement => $composableBuilder(
+    column: $table.isSettlement,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11639,6 +12621,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isSettlement => $composableBuilder(
+    column: $table.isSettlement,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
@@ -11734,6 +12721,11 @@ class $$TransactionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get isSettlement => $composableBuilder(
+    column: $table.isSettlement,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => column,
@@ -11799,6 +12791,7 @@ class $$TransactionsTableTableManager
                 Value<String?> companyId = const Value.absent(),
                 Value<bool> isExternalToAccount = const Value.absent(),
                 Value<bool> isCashSpend = const Value.absent(),
+                Value<bool> isSettlement = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -11822,6 +12815,7 @@ class $$TransactionsTableTableManager
                 companyId: companyId,
                 isExternalToAccount: isExternalToAccount,
                 isCashSpend: isCashSpend,
+                isSettlement: isSettlement,
                 syncStatus: syncStatus,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -11847,6 +12841,7 @@ class $$TransactionsTableTableManager
                 Value<String?> companyId = const Value.absent(),
                 Value<bool> isExternalToAccount = const Value.absent(),
                 Value<bool> isCashSpend = const Value.absent(),
+                Value<bool> isSettlement = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 required DateTime createdAt,
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -11870,6 +12865,7 @@ class $$TransactionsTableTableManager
                 companyId: companyId,
                 isExternalToAccount: isExternalToAccount,
                 isCashSpend: isCashSpend,
+                isSettlement: isSettlement,
                 syncStatus: syncStatus,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -14983,6 +15979,9 @@ typedef $$PeopleTableCreateCompanionBuilder =
     PeopleCompanion Function({
       required String id,
       required String name,
+      Value<String?> phone,
+      Value<String?> upiId,
+      Value<String?> notes,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
@@ -14992,6 +15991,9 @@ typedef $$PeopleTableUpdateCompanionBuilder =
     PeopleCompanion Function({
       Value<String> id,
       Value<String> name,
+      Value<String?> phone,
+      Value<String?> upiId,
+      Value<String?> notes,
       Value<DateTime> updatedAt,
       Value<bool> isDeleted,
       Value<DateTime?> deletedAt,
@@ -15014,6 +16016,21 @@ class $$PeopleTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get upiId => $composableBuilder(
+    column: $table.upiId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15052,6 +16069,21 @@ class $$PeopleTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get phone => $composableBuilder(
+    column: $table.phone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get upiId => $composableBuilder(
+    column: $table.upiId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -15082,6 +16114,15 @@ class $$PeopleTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get phone =>
+      $composableBuilder(column: $table.phone, builder: (column) => column);
+
+  GeneratedColumn<String> get upiId =>
+      $composableBuilder(column: $table.upiId, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
@@ -15126,6 +16167,9 @@ class $$PeopleTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
+                Value<String?> phone = const Value.absent(),
+                Value<String?> upiId = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -15133,6 +16177,9 @@ class $$PeopleTableTableManager
               }) => PeopleCompanion(
                 id: id,
                 name: name,
+                phone: phone,
+                upiId: upiId,
+                notes: notes,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,
@@ -15142,6 +16189,9 @@ class $$PeopleTableTableManager
               ({
                 required String id,
                 required String name,
+                Value<String?> phone = const Value.absent(),
+                Value<String?> upiId = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -15149,6 +16199,9 @@ class $$PeopleTableTableManager
               }) => PeopleCompanion.insert(
                 id: id,
                 name: name,
+                phone: phone,
+                upiId: upiId,
+                notes: notes,
                 updatedAt: updatedAt,
                 isDeleted: isDeleted,
                 deletedAt: deletedAt,
@@ -15466,7 +16519,9 @@ typedef $$SplitParticipantsTableCreateCompanionBuilder =
       required String splitExpenseId,
       required String personId,
       required double shareAmount,
-      Value<bool> isSettled,
+      Value<String?> categoryId,
+      Value<String?> note,
+      Value<double> settledAmount,
       Value<DateTime?> settledAt,
       Value<String?> settledTransactionId,
       Value<DateTime> updatedAt,
@@ -15480,7 +16535,9 @@ typedef $$SplitParticipantsTableUpdateCompanionBuilder =
       Value<String> splitExpenseId,
       Value<String> personId,
       Value<double> shareAmount,
-      Value<bool> isSettled,
+      Value<String?> categoryId,
+      Value<String?> note,
+      Value<double> settledAmount,
       Value<DateTime?> settledAt,
       Value<String?> settledTransactionId,
       Value<DateTime> updatedAt,
@@ -15518,8 +16575,18 @@ class $$SplitParticipantsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get isSettled => $composableBuilder(
-    column: $table.isSettled,
+  ColumnFilters<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15578,8 +16645,18 @@ class $$SplitParticipantsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get isSettled => $composableBuilder(
-    column: $table.isSettled,
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -15634,8 +16711,18 @@ class $$SplitParticipantsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<bool> get isSettled =>
-      $composableBuilder(column: $table.isSettled, builder: (column) => column);
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get settledAt =>
       $composableBuilder(column: $table.settledAt, builder: (column) => column);
@@ -15699,7 +16786,9 @@ class $$SplitParticipantsTableTableManager
                 Value<String> splitExpenseId = const Value.absent(),
                 Value<String> personId = const Value.absent(),
                 Value<double> shareAmount = const Value.absent(),
-                Value<bool> isSettled = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<double> settledAmount = const Value.absent(),
                 Value<DateTime?> settledAt = const Value.absent(),
                 Value<String?> settledTransactionId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -15711,7 +16800,9 @@ class $$SplitParticipantsTableTableManager
                 splitExpenseId: splitExpenseId,
                 personId: personId,
                 shareAmount: shareAmount,
-                isSettled: isSettled,
+                categoryId: categoryId,
+                note: note,
+                settledAmount: settledAmount,
                 settledAt: settledAt,
                 settledTransactionId: settledTransactionId,
                 updatedAt: updatedAt,
@@ -15725,7 +16816,9 @@ class $$SplitParticipantsTableTableManager
                 required String splitExpenseId,
                 required String personId,
                 required double shareAmount,
-                Value<bool> isSettled = const Value.absent(),
+                Value<String?> categoryId = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<double> settledAmount = const Value.absent(),
                 Value<DateTime?> settledAt = const Value.absent(),
                 Value<String?> settledTransactionId = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -15737,7 +16830,9 @@ class $$SplitParticipantsTableTableManager
                 splitExpenseId: splitExpenseId,
                 personId: personId,
                 shareAmount: shareAmount,
-                isSettled: isSettled,
+                categoryId: categoryId,
+                note: note,
+                settledAmount: settledAmount,
                 settledAt: settledAt,
                 settledTransactionId: settledTransactionId,
                 updatedAt: updatedAt,
@@ -15774,6 +16869,326 @@ typedef $$SplitParticipantsTableProcessedTableManager =
       SplitParticipantEntry,
       PrefetchHooks Function()
     >;
+typedef $$PayablesTableCreateCompanionBuilder =
+    PayablesCompanion Function({
+      required String id,
+      required String personId,
+      required double amount,
+      required String description,
+      required DateTime date,
+      Value<double> settledAmount,
+      Value<DateTime?> settledAt,
+      Value<String?> settledTransactionId,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$PayablesTableUpdateCompanionBuilder =
+    PayablesCompanion Function({
+      Value<String> id,
+      Value<String> personId,
+      Value<double> amount,
+      Value<String> description,
+      Value<DateTime> date,
+      Value<double> settledAmount,
+      Value<DateTime?> settledAt,
+      Value<String?> settledTransactionId,
+      Value<DateTime> updatedAt,
+      Value<bool> isDeleted,
+      Value<DateTime?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $$PayablesTableFilterComposer
+    extends Composer<_$AppDatabase, $PayablesTable> {
+  $$PayablesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get personId => $composableBuilder(
+    column: $table.personId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get settledAt => $composableBuilder(
+    column: $table.settledAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get settledTransactionId => $composableBuilder(
+    column: $table.settledTransactionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PayablesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PayablesTable> {
+  $$PayablesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get personId => $composableBuilder(
+    column: $table.personId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get settledAt => $composableBuilder(
+    column: $table.settledAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get settledTransactionId => $composableBuilder(
+    column: $table.settledTransactionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PayablesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PayablesTable> {
+  $$PayablesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get personId =>
+      $composableBuilder(column: $table.personId, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<double> get settledAmount => $composableBuilder(
+    column: $table.settledAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get settledAt =>
+      $composableBuilder(column: $table.settledAt, builder: (column) => column);
+
+  GeneratedColumn<String> get settledTransactionId => $composableBuilder(
+    column: $table.settledTransactionId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$PayablesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PayablesTable,
+          PayableEntry,
+          $$PayablesTableFilterComposer,
+          $$PayablesTableOrderingComposer,
+          $$PayablesTableAnnotationComposer,
+          $$PayablesTableCreateCompanionBuilder,
+          $$PayablesTableUpdateCompanionBuilder,
+          (
+            PayableEntry,
+            BaseReferences<_$AppDatabase, $PayablesTable, PayableEntry>,
+          ),
+          PayableEntry,
+          PrefetchHooks Function()
+        > {
+  $$PayablesTableTableManager(_$AppDatabase db, $PayablesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PayablesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PayablesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PayablesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> personId = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<DateTime> date = const Value.absent(),
+                Value<double> settledAmount = const Value.absent(),
+                Value<DateTime?> settledAt = const Value.absent(),
+                Value<String?> settledTransactionId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PayablesCompanion(
+                id: id,
+                personId: personId,
+                amount: amount,
+                description: description,
+                date: date,
+                settledAmount: settledAmount,
+                settledAt: settledAt,
+                settledTransactionId: settledTransactionId,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String personId,
+                required double amount,
+                required String description,
+                required DateTime date,
+                Value<double> settledAmount = const Value.absent(),
+                Value<DateTime?> settledAt = const Value.absent(),
+                Value<String?> settledTransactionId = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PayablesCompanion.insert(
+                id: id,
+                personId: personId,
+                amount: amount,
+                description: description,
+                date: date,
+                settledAmount: settledAmount,
+                settledAt: settledAt,
+                settledTransactionId: settledTransactionId,
+                updatedAt: updatedAt,
+                isDeleted: isDeleted,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PayablesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PayablesTable,
+      PayableEntry,
+      $$PayablesTableFilterComposer,
+      $$PayablesTableOrderingComposer,
+      $$PayablesTableAnnotationComposer,
+      $$PayablesTableCreateCompanionBuilder,
+      $$PayablesTableUpdateCompanionBuilder,
+      (
+        PayableEntry,
+        BaseReferences<_$AppDatabase, $PayablesTable, PayableEntry>,
+      ),
+      PayableEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15808,4 +17223,6 @@ class $AppDatabaseManager {
       $$SplitExpensesTableTableManager(_db, _db.splitExpenses);
   $$SplitParticipantsTableTableManager get splitParticipants =>
       $$SplitParticipantsTableTableManager(_db, _db.splitParticipants);
+  $$PayablesTableTableManager get payables =>
+      $$PayablesTableTableManager(_db, _db.payables);
 }

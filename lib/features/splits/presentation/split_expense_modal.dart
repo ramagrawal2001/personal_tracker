@@ -85,6 +85,10 @@ class _SplitExpenseModalState extends ConsumerState<SplitExpenseModal> {
   SplitMode _mode = SplitMode.equal;
   final Set<String> _selectedPersonIds = {};
   final Map<String, TextEditingController> _shareControllers = {};
+  // null = "same category as the bill" (the common case — no extra tap
+  // needed). Set explicitly to split one bill across categories per person,
+  // e.g. ₹250 me/groceries, ₹250 Kunal/utilities.
+  final Map<String, String?> _personCategory = {};
   bool _saving = false;
   String? _error;
 
@@ -291,11 +295,43 @@ class _SplitExpenseModalState extends ConsumerState<SplitExpenseModal> {
                       } else {
                         _selectedPersonIds.remove(p.id);
                         _shareControllers.remove(p.id)?.dispose();
+                        _personCategory.remove(p.id);
                       }
                     }),
                   );
                 }).toList(),
               ),
+
+            if (participantIds.isNotEmpty && categories.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('Category per person (optional)', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+              const SizedBox(height: 6),
+              for (final id in participantIds) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(people.firstWhere((p) => p.id == id).name, style: TextStyle(fontSize: 13, color: AppColors.textPrimary))),
+                      SizedBox(
+                        width: 160,
+                        child: DropdownButtonFormField<String?>(
+                          isExpanded: true,
+                          isDense: true,
+                          value: categories.any((c) => c.id == _personCategory[id]) ? _personCategory[id] : null,
+                          dropdownColor: AppColors.surface,
+                          decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+                          items: [
+                            const DropdownMenuItem<String?>(value: null, child: Text('Same as bill', style: TextStyle(fontSize: 12))),
+                            ...categories.map((c) => DropdownMenuItem<String?>(value: c.id, child: Text(c.name, style: const TextStyle(fontSize: 12)))),
+                          ],
+                          onChanged: (v) => setState(() => _personCategory[id] = v),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
 
             if (_mode != SplitMode.equal && participantIds.isNotEmpty) ...[
               const SizedBox(height: 14),
@@ -472,15 +508,33 @@ class _SplitExpenseModalState extends ConsumerState<SplitExpenseModal> {
 
   void _showQuickAddPerson(BuildContext context) {
     final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final upiCtrl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
         title: Text('Add Person', style: TextStyle(color: AppColors.textPrimary)),
-        content: TextField(
-          controller: nameCtrl,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Name'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Phone (optional)'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: upiCtrl,
+              decoration: const InputDecoration(labelText: 'UPI ID (optional)'),
+            ),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -489,7 +543,11 @@ class _SplitExpenseModalState extends ConsumerState<SplitExpenseModal> {
               final name = nameCtrl.text.trim();
               if (name.isEmpty) return;
               try {
-                final added = await ref.read(financeNotifierProvider.notifier).addPerson(name);
+                final added = await ref.read(financeNotifierProvider.notifier).addPerson(
+                      name,
+                      phone: phoneCtrl.text.trim().isNotEmpty ? phoneCtrl.text.trim() : null,
+                      upiId: upiCtrl.text.trim().isNotEmpty ? upiCtrl.text.trim() : null,
+                    );
                 if (!ctx.mounted) return;
                 Navigator.pop(ctx);
                 setState(() => _selectedPersonIds.add(added.id));
@@ -556,7 +614,10 @@ class _SplitExpenseModalState extends ConsumerState<SplitExpenseModal> {
             categoryId: _categoryId,
             date: _selectedDate,
             mode: _mode,
-            shares: shares,
+            shares: {
+              for (final entry in shares.entries)
+                entry.key: (amount: entry.value, categoryId: _personCategory[entry.key], note: null),
+            },
           );
     } catch (e) {
       if (!mounted) return;

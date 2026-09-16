@@ -54,7 +54,7 @@ void main() {
     expect(notes, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 10);
+    expect(versionRow.data['user_version'], 11);
 
     // v3 additions: the tombstone column is present (the sync_outbox table it
     // shipped alongside is gone again as of v6 — checked below).
@@ -197,7 +197,7 @@ void main() {
     expect(companies, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 10);
+    expect(versionRow.data['user_version'], 11);
 
     final txCols = (await phase2.customSelect('PRAGMA table_info(transactions)').get())
         .map((r) => r.read<String>('name'))
@@ -260,7 +260,7 @@ void main() {
     expect(accounts.first.sortOrder, 0, reason: 'the new column must default to 0, not fail the migration');
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 10);
+    expect(versionRow.data['user_version'], 11);
 
     final acctCols = (await phase2.customSelect('PRAGMA table_info(accounts)').get())
         .map((r) => r.read<String>('name'))
@@ -309,7 +309,7 @@ void main() {
     expect(investments.first.lastAutoPostedMonth, null);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 10);
+    expect(versionRow.data['user_version'], 11);
 
     final invCols = (await phase2.customSelect('PRAGMA table_info(investments)').get())
         .map((r) => r.read<String>('name'))
@@ -372,11 +372,107 @@ void main() {
     expect(splitParticipants, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 10);
+    expect(versionRow.data['user_version'], 11);
 
     final txCols = (await phase2.customSelect('PRAGMA table_info(transactions)').get())
         .map((r) => r.read<String>('name'))
         .toSet();
     expect(txCols.contains('is_cash_spend'), isTrue);
+  });
+
+  test('v10 -> v11 upgrade adds people-splitting v2 fields and backfills settled_amount', () async {
+    final file = File('${Directory.systemTemp.path}/migration_check_v11_${DateTime.now().microsecondsSinceEpoch}.sqlite');
+    addTearDown(() {
+      if (file.existsSync()) file.deleteSync();
+    });
+
+    // ── Phase 1: simulate a real v10 install — split_participants still has
+    // the OLD is_settled boolean, no category_id/note, no payables table,
+    // people has no phone/upi_id/notes, transactions has no is_settlement. ──
+    final phase1 = AppDatabase.forTesting(NativeDatabase(file));
+    final m = Migrator(phase1);
+    await phase1.customStatement('PRAGMA journal_mode=WAL');
+    await m.createTable(phase1.accounts);
+    await m.createTable(phase1.categories);
+    await m.createTable(phase1.transactions);
+    await m.createTable(phase1.creditCards);
+    await m.createTable(phase1.loans);
+    await m.createTable(phase1.budgets);
+    await m.createTable(phase1.recurringPayments);
+    await m.createTable(phase1.investments);
+    await m.createTable(phase1.goals);
+    await m.createTable(phase1.notes);
+    await m.createTable(phase1.syncMeta);
+    await m.createTable(phase1.companies);
+    // AppDatabase.forTesting still runs the real onCreate on a brand-new
+    // file on its first statement, which builds every table at the CURRENT
+    // schema shape (people/split_expenses already match v11, no simulation
+    // needed there). split_participants is the one table whose *shape*
+    // actually changed (is_settled -> settled_amount), so it's dropped and
+    // recreated in the old shape to genuinely exercise the backfill below —
+    // everything else here relies on the auto-created current schema, same
+    // as every other test in this file.
+    await phase1.customStatement('DROP TABLE IF EXISTS split_participants');
+    await phase1.customStatement('''
+      CREATE TABLE split_participants (
+        id TEXT NOT NULL, split_expense_id TEXT NOT NULL, person_id TEXT NOT NULL,
+        share_amount REAL NOT NULL, is_settled BOOLEAN NOT NULL DEFAULT 0,
+        settled_at DATETIME NULL, settled_transaction_id TEXT NULL,
+        updated_at DATETIME NOT NULL, is_deleted BOOLEAN NOT NULL DEFAULT 0, deleted_at DATETIME NULL,
+        PRIMARY KEY (id)
+      )
+    ''');
+    // Drift's default (non-text) DateTime storage is unix epoch *seconds* as
+    // an INTEGER — a plain date string would insert fine (sqlite doesn't
+    // enforce column affinity) but throw on read-back once decoded as a
+    // typed DateTime, so every row actually read back through Drift below
+    // uses a real epoch value here.
+    final epoch = DateTime(2026, 1, 1).millisecondsSinceEpoch ~/ 1000;
+    await phase1.customStatement(
+      "INSERT INTO people (id, name, updated_at) VALUES ('p1', 'Rahul', $epoch)",
+    );
+    await phase1.customStatement(
+      "INSERT INTO split_expenses (id, title, total_amount, date, transaction_id, updated_at) "
+      "VALUES ('s1', 'Panipuri', 100, $epoch, 'tx1', $epoch)",
+    );
+    // One already-settled row (is_settled = 1) and one still-owed row.
+    await phase1.customStatement(
+      "INSERT INTO split_participants (id, split_expense_id, person_id, share_amount, is_settled, updated_at) "
+      "VALUES ('sp1', 's1', 'p1', 50, 1, $epoch)",
+    );
+    await phase1.customStatement(
+      "INSERT INTO split_participants (id, split_expense_id, person_id, share_amount, is_settled, updated_at) "
+      "VALUES ('sp2', 's1', 'p1', 30, 0, $epoch)",
+    );
+    await phase1.customStatement('PRAGMA user_version = 10');
+    await phase1.close();
+
+    // ── Phase 2: open with the real (v11) AppDatabase against the same file ──
+    final phase2 = AppDatabase.forTesting(NativeDatabase(file));
+    addTearDown(phase2.close);
+
+    final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
+    expect(versionRow.data['user_version'], 11);
+
+    final participants = await phase2.select(phase2.splitParticipants).get();
+    expect(participants.length, 2, reason: 'pre-existing splits must survive the upgrade');
+    final settled = participants.firstWhere((p) => p.id == 'sp1');
+    final unsettled = participants.firstWhere((p) => p.id == 'sp2');
+    expect(settled.settledAmount, 50, reason: 'an old is_settled=1 row becomes fully settled (settledAmount == shareAmount)');
+    expect(unsettled.settledAmount, 0, reason: 'an old is_settled=0 row stays at 0');
+
+    final peopleCols = (await phase2.customSelect('PRAGMA table_info(people)').get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(peopleCols.containsAll({'phone', 'upi_id', 'notes'}), isTrue);
+
+    // This throws "no such table" if the migration didn't run.
+    final payables = await phase2.select(phase2.payables).get();
+    expect(payables, isEmpty);
+
+    final txCols = (await phase2.customSelect('PRAGMA table_info(transactions)').get())
+        .map((r) => r.read<String>('name'))
+        .toSet();
+    expect(txCols.contains('is_settlement'), isTrue);
   });
 }

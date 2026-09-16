@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
-  computeAccountBalance, computeBudgetSpent, resolveSplitShares, type BalanceTxn, type SpentTxn,
+  computeAccountBalance, computeAllBalances, computeBudgetSpent, computePersonBalance,
+  resolveSplitShares, type BalanceTxn, type PayableRow, type ReceivableRow, type SpentTxn,
 } from "../src/data/derive";
 
 const acc = { id: "A", opening_balance: 1000 };
@@ -105,5 +106,35 @@ describe("resolveSplitShares — port of the app's split math", () => {
 
   test("no participants is always rejected", () => {
     expect(resolveSplitShares({ mode: "equal", totalAmount: 100, participantIds: [], participantInputs: {} })).toBeNull();
+  });
+});
+
+describe("computePersonBalance / computeAllBalances — port of FinanceState.personBalance", () => {
+  test("nets unsettled receivables against unsettled payables", () => {
+    const participants: ReceivableRow[] = [{ person_id: "p1", share_amount: 100, settled_amount: 40 }];
+    const payables: PayableRow[] = [{ person_id: "p1", amount: 20, settled_amount: 0 }];
+    // owed to me: 60, I owe: 20, net: +40
+    expect(computePersonBalance("p1", participants, payables)).toBe(40);
+  });
+
+  test("settled_amount defaults to 0 when absent", () => {
+    const participants: ReceivableRow[] = [{ person_id: "p1", share_amount: 50 }];
+    expect(computePersonBalance("p1", participants, [])).toBe(50);
+  });
+
+  test("can go negative when I owe more than they owe me", () => {
+    const payables: PayableRow[] = [{ person_id: "p1", amount: 100, settled_amount: 0 }];
+    expect(computePersonBalance("p1", [], payables)).toBe(-100);
+  });
+
+  test("computeAllBalances excludes people with a zero net (fully settled)", () => {
+    const people = [{ id: "p1", name: "Rahul" }, { id: "p2", name: "Settled Sam" }];
+    const participants: ReceivableRow[] = [
+      { person_id: "p1", share_amount: 100, settled_amount: 0 },
+      { person_id: "p2", share_amount: 50, settled_amount: 50 },
+    ];
+    expect(computeAllBalances(people, participants, [])).toEqual([
+      { person_id: "p1", name: "Rahul", balance: 100 },
+    ]);
   });
 });

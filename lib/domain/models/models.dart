@@ -174,6 +174,12 @@ class TransactionModel {
   // Kept as its own flag rather than reusing isExternalToAccount so the two
   // reasons stay distinguishable wherever a transaction is displayed.
   final bool isCashSpend;
+  // True only on the transaction a split/payable settlement creates (see
+  // FinanceNotifier.settlePerson/settlePayable) — a balance transfer, not
+  // real income or expense, so monthlyIncome/monthlyExpenses/category
+  // reports exclude it. An ordinary refund (e.g. a merchant return) leaves
+  // this false and keeps counting exactly as it always has.
+  final bool isSettlement;
   final SyncStatus syncStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -199,6 +205,7 @@ class TransactionModel {
     this.companyId,
     this.isExternalToAccount = false,
     this.isCashSpend = false,
+    this.isSettlement = false,
     this.syncStatus = SyncStatus.synced,
     required this.createdAt,
     DateTime? updatedAt,
@@ -230,6 +237,7 @@ class TransactionModel {
     String? companyId,
     bool? isExternalToAccount,
     bool? isCashSpend,
+    bool? isSettlement,
     SyncStatus? syncStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -252,6 +260,7 @@ class TransactionModel {
       creditCardId: clearCreditCardId ? null : (creditCardId ?? this.creditCardId),
       loanId: loanId ?? this.loanId,
       isCashSpend: isCashSpend ?? this.isCashSpend,
+      isSettlement: isSettlement ?? this.isSettlement,
       investmentId: investmentId ?? this.investmentId,
       companyId: companyId ?? this.companyId,
       isExternalToAccount: isExternalToAccount ?? this.isExternalToAccount,
@@ -805,24 +814,36 @@ class CompanyModel {
 class PersonModel {
   final String id;
   final String name;
+  final String? phone;
+  final String? upiId;
+  final String? notes;
   final DateTime updatedAt;
   final bool isDeleted;
 
   PersonModel({
     required this.id,
     required this.name,
+    this.phone,
+    this.upiId,
+    this.notes,
     DateTime? updatedAt,
     this.isDeleted = false,
   }) : updatedAt = updatedAt ?? DateTime.now();
 
   PersonModel copyWith({
     String? name,
+    String? phone,
+    String? upiId,
+    String? notes,
     DateTime? updatedAt,
     bool? isDeleted,
   }) {
     return PersonModel(
       id: id,
       name: name ?? this.name,
+      phone: phone ?? this.phone,
+      upiId: upiId ?? this.upiId,
+      notes: notes ?? this.notes,
       updatedAt: updatedAt ?? DateTime.now(),
       isDeleted: isDeleted ?? this.isDeleted,
     );
@@ -901,20 +922,33 @@ class SplitParticipantModel {
   final String splitExpenseId;
   final String personId;
   final double shareAmount;
-  final bool isSettled;
+  // Defaults to the parent SplitExpense's transaction's own category when
+  // null — set explicitly to split one bill across categories per person
+  // (e.g. ₹250 me/groceries, ₹250 Kunal/utilities).
+  final String? categoryId;
+  final String? note;
+  // How much of shareAmount has actually been paid back — supports partial
+  // settlement without splitting the row. isSettled is derived, never
+  // stored, so the two can never disagree.
+  final double settledAmount;
   final DateTime? settledAt;
-  // Set only when the repayment was recorded as a real transaction (e.g. a
-  // UPI transfer back to the paying account) rather than handed over in cash.
+  // Set only when the (last) repayment was recorded as a real transaction
+  // (e.g. a UPI transfer back to the paying account) rather than handed
+  // over in cash.
   final String? settledTransactionId;
   final DateTime updatedAt;
   final bool isDeleted;
+
+  bool get isSettled => settledAmount >= shareAmount - 0.01;
 
   SplitParticipantModel({
     required this.id,
     required this.splitExpenseId,
     required this.personId,
     required this.shareAmount,
-    this.isSettled = false,
+    this.categoryId,
+    this.note,
+    this.settledAmount = 0,
     this.settledAt,
     this.settledTransactionId,
     DateTime? updatedAt,
@@ -923,7 +957,9 @@ class SplitParticipantModel {
 
   SplitParticipantModel copyWith({
     double? shareAmount,
-    bool? isSettled,
+    String? categoryId,
+    String? note,
+    double? settledAmount,
     DateTime? settledAt,
     String? settledTransactionId,
     DateTime? updatedAt,
@@ -934,7 +970,66 @@ class SplitParticipantModel {
       splitExpenseId: splitExpenseId,
       personId: personId,
       shareAmount: shareAmount ?? this.shareAmount,
-      isSettled: isSettled ?? this.isSettled,
+      categoryId: categoryId ?? this.categoryId,
+      note: note ?? this.note,
+      settledAmount: settledAmount ?? this.settledAmount,
+      settledAt: settledAt ?? this.settledAt,
+      settledTransactionId: settledTransactionId ?? this.settledTransactionId,
+      updatedAt: updatedAt ?? DateTime.now(),
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
+}
+
+/// Money *I* owe someone else — the other direction from
+/// [SplitParticipantModel]. Not linked to one of my own transactions at
+/// creation time (I haven't paid anything yet — they paid, or it's a
+/// personal loan); [settlePayable] is what eventually creates the real
+/// expense when I pay them back.
+class PayableModel {
+  final String id;
+  final String personId;
+  final double amount;
+  final String description;
+  final DateTime date;
+  final double settledAmount;
+  final DateTime? settledAt;
+  final String? settledTransactionId;
+  final DateTime updatedAt;
+  final bool isDeleted;
+
+  bool get isSettled => settledAmount >= amount - 0.01;
+
+  PayableModel({
+    required this.id,
+    required this.personId,
+    required this.amount,
+    required this.description,
+    required this.date,
+    this.settledAmount = 0,
+    this.settledAt,
+    this.settledTransactionId,
+    DateTime? updatedAt,
+    this.isDeleted = false,
+  }) : updatedAt = updatedAt ?? DateTime.now();
+
+  PayableModel copyWith({
+    double? amount,
+    String? description,
+    DateTime? date,
+    double? settledAmount,
+    DateTime? settledAt,
+    String? settledTransactionId,
+    DateTime? updatedAt,
+    bool? isDeleted,
+  }) {
+    return PayableModel(
+      id: id,
+      personId: personId,
+      amount: amount ?? this.amount,
+      description: description ?? this.description,
+      date: date ?? this.date,
+      settledAmount: settledAmount ?? this.settledAmount,
       settledAt: settledAt ?? this.settledAt,
       settledTransactionId: settledTransactionId ?? this.settledTransactionId,
       updatedAt: updatedAt ?? DateTime.now(),

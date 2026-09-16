@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { AuthError } from "../auth/supabase-auth";
 import {
-  computeAccountBalance, computeBudgetSpent, resolveSplitShares,
-  type BalanceTxn, type SpentTxn, type SplitMode,
+  computeAccountBalance, computeAllBalances, computeBudgetSpent, computePersonBalance, resolveSplitShares,
+  type BalanceTxn, type PayableRow, type ReceivableRow, type SpentTxn, type SplitMode,
 } from "../data/derive";
 import { ENTITIES, ENTITY_NAMES, SPLIT_MODES, type EntityDef, type EntityName } from "../data/entities";
 import type { SupabaseRest } from "../data/supabase-rest";
@@ -108,6 +108,36 @@ function resolveRef(
   return { error: `Multiple ${kind}s named "${needle}" — use its id instead.` };
 }
 
+/**
+ * Guards the one invariant a generic Zod schema can't express: the sum of a
+ * split's participant shares must never exceed its total_amount (which would
+ * imply a negative payer share). Only split_participants writes go through
+ * this — the other entities have no cross-row sum to protect.
+ */
+async function checkSplitParticipantReconciles(
+  rest: SupabaseRest,
+  args: { splitExpenseId: string; shareAmount: number; excludeParticipantId?: string },
+): Promise<string | null> {
+  const split = (await rest.get("split_expenses", args.splitExpenseId)) as Record<string, any> | null;
+  if (!split) return `No split expense with id "${args.splitExpenseId}".`;
+  const siblings = (await rest.list("split_participants", {
+    eq: { split_expense_id: args.splitExpenseId },
+    limit: 500,
+  })) as Record<string, any>[];
+  const othersTotal = siblings
+    .filter((p) => p.id !== args.excludeParticipantId)
+    .reduce((sum, p) => sum + (p.share_amount ?? 0), 0);
+  const impliedPayerShare = split.total_amount - othersTotal - args.shareAmount;
+  if (impliedPayerShare < -0.01) {
+    return (
+      `This share doesn't reconcile: participants would owe ` +
+      `₹${(othersTotal + args.shareAmount).toFixed(2)} of a ₹${split.total_amount.toFixed(2)} ` +
+      `bill ("${split.title}") — that's more than the total. Reduce a share or raise the split's total_amount.`
+    );
+  }
+  return null;
+}
+
 export function registerTools(server: McpServerLike, deps: ToolDeps): void {
   const { rest } = deps;
 
@@ -190,6 +220,14 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
         updated_at: now,
       };
       if (name === "transactions" && !row.date) row.date = now;
+      if (name === "split_participants") {
+        const d = parsed.data as { split_expense_id: string; share_amount: number };
+        const err = await checkSplitParticipantReconciles(rest, {
+          splitExpenseId: d.split_expense_id,
+          shareAmount: d.share_amount,
+        });
+        if (err) return fail(err);
+      }
       try {
         const created = (await rest.insert(def.table, row)) as Record<string, unknown>;
         return ok(stripOmitted(name, created));
@@ -221,6 +259,17 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
         if (k in validated) fields[k] = validated[k];
       }
       if (Object.keys(fields).length === 0) return fail("No valid fields to update.");
+      if (name === "split_participants" && ("share_amount" in fields || "split_expense_id" in fields)) {
+        const existing = (await rest.get("split_participants", id)) as Record<string, any> | null;
+        if (existing) {
+          const splitExpenseId = (fields.split_expense_id as string) ?? existing.split_expense_id;
+          const shareAmount = (fields.share_amount as number) ?? existing.share_amount;
+          const err = await checkSplitParticipantReconciles(rest, {
+            splitExpenseId, shareAmount, excludeParticipantId: id,
+          });
+          if (err) return fail(err);
+        }
+      }
       try {
         const updated = (await rest.patch(def.table, id, {
           ...fields,
@@ -345,6 +394,11 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
               .number()
               .optional()
               .describe("Exact amount (custom), ratio (ratio), or percent (percentage). Ignored for equal."),
+            category: z
+              .string()
+              .optional()
+              .describe("Override category for just this person's share — defaults to the bill's own category."),
+            note: z.string().optional().describe("Note on just this person's share."),
           }),
         )
         .min(1),
@@ -369,8 +423,11 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
         }
 
         let categoryId: string | null = null;
+        const needCats = !!a.category || a.participants.some((p: { category?: string }) => p.category);
+        const cats = needCats
+          ? ((await rest.list("categories", { limit: 500 })) as { id: string; name: string }[])
+          : [];
         if (a.category) {
-          const cats = (await rest.list("categories", { limit: 500 })) as { id: string; name: string }[];
           const catRef = resolveRef("category", a.category, cats);
           if ("error" in catRef) return fail(catRef.error);
           categoryId = catRef.ok;
@@ -383,6 +440,7 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
         const now = new Date().toISOString();
         const participantIds: string[] = [];
         const participantInputs: Record<string, number> = {};
+        const participantExtras: Record<string, { categoryId: string | null; note: string | null }> = {};
         for (const p of a.participants) {
           const ref = resolveRef("person", p.person, people);
           let id: string;
@@ -403,6 +461,14 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
           }
           participantIds.push(id);
           participantInputs[id] = p.value ?? 0;
+
+          let pCategoryId: string | null = null;
+          if (p.category) {
+            const catRef = resolveRef("category", p.category, cats);
+            if ("error" in catRef) return fail(catRef.error);
+            pCategoryId = catRef.ok;
+          }
+          participantExtras[id] = { categoryId: pCategoryId, note: p.note ?? null };
         }
 
         const shares = resolveSplitShares({
@@ -462,7 +528,9 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
               split_expense_id: createdSplit.id,
               person_id: id,
               share_amount: shares[id],
-              is_settled: false,
+              category_id: participantExtras[id]?.categoryId ?? null,
+              note: participantExtras[id]?.note ?? null,
+              settled_amount: 0,
               created_at: now,
               updated_at: now,
             }),
@@ -477,20 +545,51 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
   );
 
   server.tool(
-    "settle_split",
-    "Mark a split participant's share as settled. Pass `account` if they paid you " +
-      "back via bank/UPI — this also records a real credit (a `refund` transaction) " +
-      "to that account. Omit it if they handed you cash: only the settled flag flips, " +
-      "your balance is untouched.",
+    "settle_person",
+    "Record money received from a person, applied to their oldest unsettled split shares " +
+      "first — fully covering each before moving to the next (partial settlement allowed, " +
+      "and the amount is capped at what's actually owed). Pass `account` if they paid you " +
+      "back via bank/UPI — this also records a real credit to that account, excluded from " +
+      "income/expense reports since it's a balance transfer, not new income. Omit it if they " +
+      "handed you cash: only the settled amounts update, your balance is untouched.",
     {
-      participant_id: z.string(),
-      account: z.string().optional().describe("If given, records a refund transaction crediting this account."),
+      person: z.string().describe("Name or id."),
+      amount: z.number().positive(),
+      account: z.string().optional().describe("If given, records a transaction crediting this account."),
     },
-    async ({ participant_id, account }) => {
+    async ({ person, amount, account }) => {
       try {
-        const participant = (await rest.get("split_participants", participant_id)) as Record<string, any> | null;
-        if (!participant) return fail("No split participant with that id.");
-        if (participant.is_settled) return fail("This participant's share is already settled.");
+        const people = (await rest.list("people", { limit: 500 })) as { id: string; name: string }[];
+        const personRef = resolveRef("person", person, people);
+        if ("error" in personRef) return fail(personRef.error);
+        const personId = personRef.ok;
+        const personName = people.find((p) => p.id === personId)?.name ?? person;
+
+        const [participants, splits] = (await Promise.all([
+          rest.list("split_participants", { eq: { person_id: personId }, limit: 500 }),
+          rest.list("split_expenses", { limit: 500 }),
+        ])) as [Record<string, any>[], Record<string, any>[]];
+        const splitDateById = new Map(splits.map((s) => [s.id, s.date as string]));
+        const rows = participants
+          .filter((p) => p.share_amount - (p.settled_amount ?? 0) > 0.01)
+          .sort((a2, b2) => {
+            const da = splitDateById.get(a2.split_expense_id) ?? "";
+            const db = splitDateById.get(b2.split_expense_id) ?? "";
+            return da < db ? -1 : da > db ? 1 : 0;
+          });
+        if (rows.length === 0) return fail(`${personName} has no unsettled split shares.`);
+
+        let remaining = amount;
+        const updates: { id: string; newSettled: number }[] = [];
+        for (const row of rows) {
+          if (remaining <= 0.01) break;
+          const owed = row.share_amount - (row.settled_amount ?? 0);
+          const applied = Math.min(remaining, owed);
+          updates.push({ id: row.id, newSettled: (row.settled_amount ?? 0) + applied });
+          remaining -= applied;
+        }
+        const totalApplied = amount - remaining;
+        if (totalApplied <= 0.01) return fail("Nothing to settle.");
 
         const now = new Date().toISOString();
         let settledTransactionId: string | null = null;
@@ -498,17 +597,16 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
           const accounts = (await rest.list("accounts", { limit: 500 })) as { id: string; name: string }[];
           const acctRef = resolveRef("account", account, accounts);
           if ("error" in acctRef) return fail(acctRef.error);
-
-          const split = (await rest.get("split_expenses", participant.split_expense_id)) as Record<string, any> | null;
           const createdTx = (await rest.insert("transactions", {
             id: crypto.randomUUID(),
             account_id: acctRef.ok,
             type: "refund",
-            amount: participant.share_amount,
-            merchant: split ? `Settled: ${split.title}` : "Split settlement",
+            amount: totalApplied,
+            merchant: `Settlement: ${personName}`,
             date: now,
             is_external_to_account: false,
             is_cash_spend: false,
+            is_settlement: true,
             tags: [],
             splits: [],
             sync_status: "synced",
@@ -518,13 +616,199 @@ export function registerTools(server: McpServerLike, deps: ToolDeps): void {
           settledTransactionId = createdTx.id;
         }
 
-        const updated = await rest.patch("split_participants", participant_id, {
-          is_settled: true,
-          settled_at: now,
-          settled_transaction_id: settledTransactionId,
+        const updated = [];
+        for (const u of updates) {
+          updated.push(
+            await rest.patch("split_participants", u.id, {
+              settled_amount: u.newSettled,
+              settled_at: now,
+              settled_transaction_id: settledTransactionId,
+              updated_at: now,
+            }),
+          );
+        }
+        return ok({
+          applied: totalApplied,
+          unapplied: remaining,
+          transaction_id: settledTransactionId,
+          updated_participants: updated,
+        });
+      } catch (e) {
+        return toToolError(e);
+      }
+    },
+  );
+
+  server.tool(
+    "add_payable",
+    "Log money you owe someone — they paid for something, or it's a personal loan. " +
+      "Separate from a bill you paid and split with others (use add_split_expense for that). " +
+      "Doesn't touch any account until settled.",
+    {
+      person: z.string().describe("Name or id — a new name is created automatically."),
+      amount: z.number().positive(),
+      description: z.string().trim().min(1),
+      date: z.string().datetime({ offset: true }).optional(),
+    },
+    async (a) => {
+      try {
+        const people = (await rest.list("people", { limit: 500 })) as { id: string; name: string }[];
+        const ref = resolveRef("person", a.person, people);
+        let personId: string;
+        if ("error" in ref) {
+          if (people.some((x) => x.name.toLowerCase() === a.person.toLowerCase())) return fail(ref.error);
+          const now0 = new Date().toISOString();
+          const created = (await rest.insert("people", {
+            id: crypto.randomUUID(), name: a.person, created_at: now0, updated_at: now0,
+          })) as { id: string };
+          personId = created.id;
+        } else {
+          personId = ref.ok;
+        }
+        const now = new Date().toISOString();
+        const created = await rest.insert("payables", {
+          id: crypto.randomUUID(),
+          person_id: personId,
+          amount: a.amount,
+          description: a.description,
+          date: a.date ?? now,
+          settled_amount: 0,
+          created_at: now,
           updated_at: now,
         });
-        return ok(updated);
+        return ok(created);
+      } catch (e) {
+        return toToolError(e);
+      }
+    },
+  );
+
+  server.tool(
+    "settle_payable",
+    "Pay off money you owe a person, applied to their oldest unsettled payables first — " +
+      "fully covering each before moving to the next (partial settlement allowed, capped at " +
+      "what's actually owed). Pass `account` when you actually pay them from an account/card " +
+      "— this records a real expense debiting that account, excluded from income/expense " +
+      "reports since it's a balance transfer, not new spending.",
+    {
+      person: z.string().describe("Name or id."),
+      amount: z.number().positive(),
+      account: z.string().optional().describe("If given, records a transaction debiting this account."),
+    },
+    async ({ person, amount, account }) => {
+      try {
+        const people = (await rest.list("people", { limit: 500 })) as { id: string; name: string }[];
+        const personRef = resolveRef("person", person, people);
+        if ("error" in personRef) return fail(personRef.error);
+        const personId = personRef.ok;
+        const personName = people.find((p) => p.id === personId)?.name ?? person;
+
+        const payables = (await rest.list("payables", {
+          eq: { person_id: personId },
+          limit: 500,
+        })) as Record<string, any>[];
+        const rows = payables
+          .filter((p) => p.amount - (p.settled_amount ?? 0) > 0.01)
+          .sort((a2, b2) => ((a2.date as string) < (b2.date as string) ? -1 : (a2.date as string) > (b2.date as string) ? 1 : 0));
+        if (rows.length === 0) return fail(`${personName} has no unsettled payables.`);
+
+        let remaining = amount;
+        const updates: { id: string; newSettled: number }[] = [];
+        for (const row of rows) {
+          if (remaining <= 0.01) break;
+          const owed = row.amount - (row.settled_amount ?? 0);
+          const applied = Math.min(remaining, owed);
+          updates.push({ id: row.id, newSettled: (row.settled_amount ?? 0) + applied });
+          remaining -= applied;
+        }
+        const totalApplied = amount - remaining;
+        if (totalApplied <= 0.01) return fail("Nothing to settle.");
+
+        const now = new Date().toISOString();
+        let settledTransactionId: string | null = null;
+        if (account) {
+          const accounts = (await rest.list("accounts", { limit: 500 })) as { id: string; name: string }[];
+          const acctRef = resolveRef("account", account, accounts);
+          if ("error" in acctRef) return fail(acctRef.error);
+          const createdTx = (await rest.insert("transactions", {
+            id: crypto.randomUUID(),
+            account_id: acctRef.ok,
+            type: "expense",
+            amount: totalApplied,
+            merchant: `Settlement: ${personName}`,
+            date: now,
+            is_external_to_account: false,
+            is_cash_spend: false,
+            is_settlement: true,
+            tags: [],
+            splits: [],
+            sync_status: "synced",
+            created_at: now,
+            updated_at: now,
+          })) as { id: string };
+          settledTransactionId = createdTx.id;
+        }
+
+        const updated = [];
+        for (const u of updates) {
+          updated.push(
+            await rest.patch("payables", u.id, {
+              settled_amount: u.newSettled,
+              settled_at: now,
+              settled_transaction_id: settledTransactionId,
+              updated_at: now,
+            }),
+          );
+        }
+        return ok({
+          applied: totalApplied,
+          unapplied: remaining,
+          transaction_id: settledTransactionId,
+          updated_payables: updated,
+        });
+      } catch (e) {
+        return toToolError(e);
+      }
+    },
+  );
+
+  server.tool(
+    "person_balance",
+    "Net balance with one person, computed live from unsettled split shares minus " +
+      "unsettled payables — never stored, so it can't drift. Positive = they owe you, " +
+      "negative = you owe them.",
+    { person: z.string().describe("Name or id.") },
+    async ({ person }) => {
+      try {
+        const people = (await rest.list("people", { limit: 500 })) as { id: string; name: string }[];
+        const ref = resolveRef("person", person, people);
+        if ("error" in ref) return fail(ref.error);
+        const [participants, payables] = (await Promise.all([
+          rest.list("split_participants", { eq: { person_id: ref.ok }, limit: 500 }),
+          rest.list("payables", { eq: { person_id: ref.ok }, limit: 500 }),
+        ])) as [ReceivableRow[], PayableRow[]];
+        const balance = computePersonBalance(ref.ok, participants, payables);
+        const name = people.find((p) => p.id === ref.ok)?.name ?? person;
+        return ok({ person_id: ref.ok, name, balance });
+      } catch (e) {
+        return toToolError(e);
+      }
+    },
+  );
+
+  server.tool(
+    "list_balances",
+    "List every person with a non-zero net balance (unsettled split shares minus " +
+      "unsettled payables). Positive = they owe you, negative = you owe them.",
+    {},
+    async () => {
+      try {
+        const [people, participants, payables] = (await Promise.all([
+          rest.list("people", { limit: 500 }),
+          rest.list("split_participants", { limit: 500 }),
+          rest.list("payables", { limit: 500 }),
+        ])) as [{ id: string; name: string }[], ReceivableRow[], PayableRow[]];
+        return ok(computeAllBalances(people, participants, payables));
       } catch (e) {
         return toToolError(e);
       }

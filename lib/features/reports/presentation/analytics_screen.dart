@@ -11,7 +11,6 @@ import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/section_header.dart';
-import '../../../domain/models/models.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -43,6 +42,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     final now = DateTime.now();
     final monthTxns = state.transactions.where((t) =>
       t.type == TransactionType.expense &&
+      !t.isSettlement && // a settle-a-payable transaction is a balance transfer, not spending
       t.date.year == now.year &&
       t.date.month == now.month
     ).toList();
@@ -50,18 +50,20 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     final Map<String, double> catSpend = {};
     for (final t in monthTxns) {
       final cat = t.categoryId ?? 'Uncategorised';
-      catSpend[cat] = (catSpend[cat] ?? 0) + t.amount;
+      // A split bill's full amount was debited from the account, but only
+      // my own share is "my spending" for category reporting purposes.
+      catSpend[cat] = (catSpend[cat] ?? 0) + state.myShareOf(t);
     }
     final sortedCats = catSpend.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
 
     // Monthly bar data (last 6 months)
-    final List<_MonthBar> monthBars = _buildMonthBars(state.transactions);
+    final List<_MonthBar> monthBars = _buildMonthBars(state);
 
     // Top merchants
     final Map<String, double> merchantMap = {};
-    for (final t in state.transactions.where((t) => t.type == TransactionType.expense)) {
+    for (final t in state.transactions.where((t) => t.type == TransactionType.expense && !t.isSettlement)) {
       final key = t.merchant?.isNotEmpty == true ? t.merchant! : (t.categoryId ?? 'Other');
-      merchantMap[key] = (merchantMap[key] ?? 0) + t.amount;
+      merchantMap[key] = (merchantMap[key] ?? 0) + state.myShareOf(t);
     }
     final topMerchants = (merchantMap.entries.toList()..sort((a, b) => b.value.compareTo(a.value))).take(6).toList();
     final maxMerchant = topMerchants.isEmpty ? 1.0 : topMerchants.first.value;
@@ -467,13 +469,15 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> with SingleTi
     ],
   );
 
-  List<_MonthBar> _buildMonthBars(List<TransactionModel> txns) {
+  List<_MonthBar> _buildMonthBars(FinanceState state) {
     final now = DateTime.now();
     return List.generate(6, (i) {
       final m = DateTime(now.year, now.month - (5 - i));
-      final monthTxns = txns.where((t) => t.date.year == m.year && t.date.month == m.month);
+      final monthTxns = state.transactions.where((t) => t.date.year == m.year && t.date.month == m.month && !t.isSettlement);
       final income = monthTxns.where((t) => t.type == TransactionType.income).fold(0.0, (s, t) => s + t.amount);
-      final exp = monthTxns.where((t) => t.type == TransactionType.expense).fold(0.0, (s, t) => s + t.amount);
+      // A split bill's full amount left the account, but only my own share
+      // is "my spending" for this trend, same as the category breakdown above.
+      final exp = monthTxns.where((t) => t.type == TransactionType.expense).fold(0.0, (s, t) => s + state.myShareOf(t));
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       return _MonthBar(label: months[m.month - 1], income: income, expenses: exp);
     });

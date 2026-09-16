@@ -30,10 +30,10 @@ describe("enum parity with the Flutter app", () => {
 });
 
 describe("entity registry", () => {
-  test("exactly the 13 v1 entities, notes excluded", () => {
+  test("exactly the 14 v1 entities, notes excluded", () => {
     expect([...ENTITY_NAMES].sort()).toEqual([
       "accounts", "budgets", "categories", "companies", "credit_cards",
-      "goals", "investments", "loans", "people", "recurring_payments",
+      "goals", "investments", "loans", "payables", "people", "recurring_payments",
       "split_expenses", "split_participants", "transactions",
     ]);
   });
@@ -81,6 +81,14 @@ describe("entity registry", () => {
     expect(ENTITIES.people.createSchema.safeParse({ name: "Rahul" }).success).toBe(true);
   });
 
+  test("people: phone/upi_id/notes are accepted and optional", () => {
+    const full = ENTITIES.people.createSchema.safeParse({
+      name: "Kunal", phone: "9876543210", upi_id: "kunal@upi", notes: "college friend",
+    });
+    expect(full.success).toBe(true);
+    expect(ENTITIES.people.createSchema.parse({ name: "Rahul" }).phone).toBeUndefined();
+  });
+
   test("split_expenses: mode enum, defaults to equal", () => {
     const base = { title: "Panipuri", total_amount: 100, transaction_id: "tx1" };
     expect(ENTITIES.split_expenses.createSchema.parse(base).mode).toBe("equal");
@@ -92,6 +100,26 @@ describe("entity registry", () => {
     const base = { split_expense_id: "s1", person_id: "p1" };
     expect(ENTITIES.split_participants.createSchema.safeParse({ ...base, share_amount: 50 }).success).toBe(true);
     expect(ENTITIES.split_participants.createSchema.safeParse({ ...base, share_amount: 0 }).success).toBe(false);
+  });
+
+  test("split_participants: category_id/note accepted, settled_amount defaults to 0 (replaces old is_settled bool)", () => {
+    const base = { split_expense_id: "s1", person_id: "p1", share_amount: 50 };
+    const r = ENTITIES.split_participants.createSchema.parse(base);
+    expect(r.settled_amount).toBe(0);
+    const withExtras = ENTITIES.split_participants.createSchema.safeParse({
+      ...base, category_id: "cat_food", note: "panipuri", settled_amount: 20,
+    });
+    expect(withExtras.success).toBe(true);
+    expect(ENTITIES.split_participants.createSchema.safeParse({ ...base, settled_amount: -5 }).success).toBe(false);
+  });
+
+  test("payables: person_id/amount/description required, settled_amount defaults to 0", () => {
+    expect(ENTITIES.payables.createSchema.safeParse({}).success).toBe(false);
+    const base = { person_id: "p1", amount: 500, description: "Cab split" };
+    const r = ENTITIES.payables.createSchema.parse(base);
+    expect(r.settled_amount).toBe(0);
+    expect(ENTITIES.payables.createSchema.safeParse({ ...base, amount: 0 }).success).toBe(false);
+    expect(ENTITIES.payables.createSchema.safeParse({ ...base, settled_amount: 100 }).success).toBe(true);
   });
 
   test("credit_cards: applies defaults", () => {

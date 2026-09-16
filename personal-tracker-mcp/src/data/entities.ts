@@ -188,6 +188,9 @@ export const SPLIT_MODES = ["equal", "custom", "ratio", "percentage"] as const;
 
 const personCreate = z.object({
   name: z.string().trim().min(1),
+  phone: optStr,
+  upi_id: optStr,
+  notes: optStr,
 }).strict();
 
 const splitExpenseCreate = z.object({
@@ -204,7 +207,23 @@ const splitParticipantCreate = z.object({
   split_expense_id: z.string().trim().min(1),
   person_id: z.string().trim().min(1),
   share_amount: z.number().positive(),
-  is_settled: z.boolean().default(false),
+  // Falls back to the parent split's transaction category when null — lets
+  // one bill split across categories per person.
+  category_id: optStr,
+  note: optStr,
+  // How much of share_amount has actually been paid back — replaces the old
+  // is_settled boolean, so a partial settlement doesn't need a second row.
+  settled_amount: z.number().min(0).default(0),
+  settled_at: isoDate.optional(),
+  settled_transaction_id: optStr,
+}).strict();
+
+const payableCreate = z.object({
+  person_id: z.string().trim().min(1),
+  amount: z.number().positive(),
+  description: z.string().trim().min(1),
+  date: isoDate.optional(),
+  settled_amount: z.number().min(0).default(0),
   settled_at: isoDate.optional(),
   settled_transaction_id: optStr,
 }).strict();
@@ -269,6 +288,10 @@ export const ENTITIES = {
   split_participants: {
     table: "split_participants", displayName: "split participant", uuidId: false,
     createSchema: splitParticipantCreate, updateSchema: splitParticipantCreate.partial(), omitFields: [],
+  },
+  payables: {
+    table: "payables", displayName: "payable", uuidId: false,
+    createSchema: payableCreate, updateSchema: payableCreate.partial(), omitFields: [],
   },
 } satisfies Record<string, EntityDef>;
 

@@ -48,6 +48,7 @@ class ReportsScreen extends ConsumerWidget {
     final now = DateTime.now();
     final monthTxns = financeState.transactions.where((t) =>
       t.type == TransactionType.expense &&
+      !t.isSettlement && // a settle-a-payable transaction is a balance transfer, not spending
       t.date.year == now.year &&
       t.date.month == now.month
     ).toList();
@@ -55,7 +56,9 @@ class ReportsScreen extends ConsumerWidget {
     final Map<String, double> catSpend = {};
     for (final t in monthTxns) {
       final catId = t.categoryId ?? 'Other';
-      catSpend[catId] = (catSpend[catId] ?? 0) + t.amount;
+      // A split bill's full amount was debited from the account, but only
+      // my own share is "my spending" for category reporting purposes.
+      catSpend[catId] = (catSpend[catId] ?? 0) + financeState.myShareOf(t);
     }
     final sortedCats = catSpend.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
 

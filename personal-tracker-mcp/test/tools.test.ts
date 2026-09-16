@@ -301,53 +301,222 @@ describe("add_split_expense", () => {
     });
     expect(r.isError).toBe(true);
   });
+
+  test("per-participant category/note are resolved and stored on the participant row", async () => {
+    const rest = restFor();
+    const { handlers } = harness(rest);
+    await handlers.get("add_split_expense")!({
+      title: "Groceries", total_amount: 500, account: "HDFC Savings",
+      mode: "custom", participants: [{ person: "Rahul", value: 250, category: "Food & Dining", note: "his half" }],
+    });
+    const participantCall = rest.insert.mock.calls.find((c: any) => c[0] === "split_participants")!;
+    expect(participantCall[1]).toMatchObject({
+      person_id: "p-rahul", share_amount: 250, category_id: "c-food", note: "his half", settled_amount: 0,
+    });
+  });
 });
 
-describe("settle_split", () => {
-  test("without account: only flips is_settled, no transaction recorded", async () => {
-    const get = vi.fn(async () => ({ id: "sp1", share_amount: 50, split_expense_id: "s1", is_settled: false }));
-    const patch = vi.fn(async (_t: string, _id: string, changes: any) => ({ id: "sp1", ...changes }));
-    const insert = vi.fn();
-    const { handlers } = harness({ get, patch, insert });
-
-    const r = await handlers.get("settle_split")!({ participant_id: "sp1" });
-    expect(r.isError).toBeFalsy();
-    expect(insert).not.toHaveBeenCalled();
-    expect(patch).toHaveBeenCalledWith("split_participants", "sp1", expect.objectContaining({ is_settled: true, settled_transaction_id: null }));
+describe("split_participants reconciliation guard", () => {
+  test("create_record rejects a share that would push the split over its total", async () => {
+    const get = vi.fn(async () => ({ id: "s1", title: "Panipuri", total_amount: 100 }));
+    const list = vi.fn(async () => [{ id: "sp-existing", share_amount: 60 }]);
+    const { handlers } = harness({ get, list });
+    const r = await handlers.get("create_record")!({
+      entity: "split_participants",
+      data: { split_expense_id: "s1", person_id: "p1", share_amount: 50 },
+    });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/doesn't reconcile/);
   });
 
-  test("with account: records a refund transaction and links it", async () => {
+  test("create_record allows a share that fits within the total", async () => {
+    const get = vi.fn(async () => ({ id: "s1", title: "Panipuri", total_amount: 100 }));
+    const list = vi.fn(async () => [{ id: "sp-existing", share_amount: 30 }]);
+    const insert = vi.fn(async (_t: string, row: any) => row);
+    const { handlers } = harness({ get, list, insert });
+    const r = await handlers.get("create_record")!({
+      entity: "split_participants",
+      data: { split_expense_id: "s1", person_id: "p1", share_amount: 50 },
+    });
+    expect(r.isError).toBeFalsy();
+    expect(insert).toHaveBeenCalled();
+  });
+
+  test("update_record re-checks reconciliation when share_amount changes", async () => {
     const get = vi.fn(async (t: string) =>
       t === "split_participants"
-        ? { id: "sp1", share_amount: 50, split_expense_id: "s1", is_settled: false }
-        : { id: "s1", title: "Panipuri" },
+        ? { id: "sp1", split_expense_id: "s1", share_amount: 30 }
+        : { id: "s1", title: "Panipuri", total_amount: 100 },
     );
-    const accounts = [{ id: "a-hdfc", name: "HDFC Savings" }];
-    const list = vi.fn(async () => accounts);
+    const list = vi.fn(async () => [{ id: "sp-other", share_amount: 60 }]);
+    const { handlers } = harness({ get, list });
+    const r = await handlers.get("update_record")!({
+      entity: "split_participants", id: "sp1", changes: { share_amount: 50 },
+    });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/doesn't reconcile/);
+  });
+});
+
+describe("settle_person", () => {
+  function restFor() {
+    const people = [{ id: "p1", name: "Rahul" }];
+    const splits = [
+      { id: "s-old", date: "2026-01-01T00:00:00.000Z" },
+      { id: "s-new", date: "2026-06-01T00:00:00.000Z" },
+    ];
+    const participants = [
+      { id: "sp-old", person_id: "p1", split_expense_id: "s-old", share_amount: 40, settled_amount: 0 },
+      { id: "sp-new", person_id: "p1", split_expense_id: "s-new", share_amount: 40, settled_amount: 0 },
+    ];
+    return {
+      people, splits, participants,
+      list: vi.fn(async (t: string) =>
+        t === "people" ? people : t === "split_expenses" ? splits : t === "split_participants" ? participants : [],
+      ),
+      insert: vi.fn(async (_t: string, row: any) => row),
+      patch: vi.fn(async (_t: string, id: string, changes: any) => ({ id, ...changes })),
+    };
+  }
+
+  test("without account: only settled_amount updates, no transaction recorded", async () => {
+    const rest = restFor();
+    const { handlers } = harness(rest);
+    const r = await handlers.get("settle_person")!({ person: "Rahul", amount: 40 });
+    expect(r.isError).toBeFalsy();
+    expect(rest.insert).not.toHaveBeenCalled();
+    expect(rest.patch).toHaveBeenCalledWith(
+      "split_participants", "sp-old",
+      expect.objectContaining({ settled_amount: 40, settled_transaction_id: null }),
+    );
+  });
+
+  test("applies oldest-first across multiple splits and caps at what's owed", async () => {
+    const rest = restFor();
+    const { handlers } = harness(rest);
+    const r = await handlers.get("settle_person")!({ person: "Rahul", amount: 50 });
+    expect(r.isError).toBeFalsy();
+    const patchCalls = rest.patch.mock.calls.map((c: any) => [c[1], c[2].settled_amount]);
+    expect(patchCalls).toEqual(
+      expect.arrayContaining([
+        ["sp-old", 40],
+        ["sp-new", 10],
+      ]),
+    );
+    const parsed = parse(r);
+    expect(parsed.applied).toBe(50);
+  });
+
+  test("records a real credit transaction when an account is given", async () => {
+    const rest: any = restFor();
+    rest.list = vi.fn(async (t: string) =>
+      t === "people" ? rest.people
+        : t === "split_expenses" ? rest.splits
+        : t === "split_participants" ? rest.participants
+        : t === "accounts" ? [{ id: "a-hdfc", name: "HDFC Savings" }]
+        : [],
+    );
+    const { handlers } = harness(rest);
+    await handlers.get("settle_person")!({ person: "Rahul", amount: 40, account: "HDFC Savings" });
+    const txCall = rest.insert.mock.calls.find((c: any) => c[0] === "transactions")!;
+    expect(txCall[1]).toMatchObject({ type: "refund", amount: 40, account_id: "a-hdfc", is_settlement: true });
+  });
+
+  test("person with nothing unsettled is rejected", async () => {
+    const rest = restFor();
+    rest.participants.forEach((p: any) => (p.settled_amount = p.share_amount));
+    const { handlers } = harness(rest);
+    const r = await handlers.get("settle_person")!({ person: "Rahul", amount: 10 });
+    expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/no unsettled split shares/);
+  });
+
+  test("unknown person is rejected", async () => {
+    const rest = restFor();
+    const { handlers } = harness(rest);
+    const r = await handlers.get("settle_person")!({ person: "Nobody", amount: 10 });
+    expect(r.isError).toBe(true);
+  });
+});
+
+describe("add_payable / settle_payable", () => {
+  test("add_payable resolves an existing person and inserts the row", async () => {
+    const list = vi.fn(async (t: string) => (t === "people" ? [{ id: "p1", name: "Aniket" }] : []));
     const insert = vi.fn(async (_t: string, row: any) => row);
-    const patch = vi.fn(async (_t: string, _id: string, changes: any) => ({ id: "sp1", ...changes }));
-    const { handlers } = harness({ get, list, insert, patch });
+    const { handlers } = harness({ list, insert });
+    const r = await handlers.get("add_payable")!({ person: "Aniket", amount: 300, description: "Cab" });
+    expect(r.isError).toBeFalsy();
+    const [table, row] = insert.mock.calls[0];
+    expect(table).toBe("payables");
+    expect(row).toMatchObject({ person_id: "p1", amount: 300, description: "Cab", settled_amount: 0 });
+  });
 
-    await handlers.get("settle_split")!({ participant_id: "sp1", account: "HDFC Savings" });
-    const [txCall] = insert.mock.calls;
-    expect(txCall).toEqual(["transactions", expect.objectContaining({ type: "refund", amount: 50, account_id: "a-hdfc" })]);
-    expect(patch).toHaveBeenCalledWith(
-      "split_participants", "sp1",
-      expect.objectContaining({ is_settled: true, settled_transaction_id: txCall[1].id }),
+  test("add_payable auto-creates an unknown person", async () => {
+    const list = vi.fn(async (t: string) => (t === "people" ? [] : []));
+    const insert = vi.fn(async (_t: string, row: any) => row);
+    const { handlers } = harness({ list, insert });
+    await handlers.get("add_payable")!({ person: "Priya", amount: 100, description: "Loan" });
+    const personInsert = insert.mock.calls.find((c: any) => c[0] === "people")!;
+    expect(personInsert[1]).toMatchObject({ name: "Priya" });
+  });
+
+  test("settle_payable applies oldest-first and records an expense when an account is given", async () => {
+    const people = [{ id: "p1", name: "Aniket" }];
+    const payables = [
+      { id: "pay-old", person_id: "p1", amount: 100, settled_amount: 0, date: "2026-01-01T00:00:00.000Z" },
+      { id: "pay-new", person_id: "p1", amount: 100, settled_amount: 0, date: "2026-06-01T00:00:00.000Z" },
+    ];
+    const accounts = [{ id: "a-hdfc", name: "HDFC Savings" }];
+    const list = vi.fn(async (t: string) =>
+      t === "people" ? people : t === "payables" ? payables : t === "accounts" ? accounts : [],
     );
+    const insert = vi.fn(async (_t: string, row: any) => row);
+    const patch = vi.fn(async (_t: string, id: string, changes: any) => ({ id, ...changes }));
+    const { handlers } = harness({ list, insert, patch });
+
+    const r = await handlers.get("settle_payable")!({ person: "Aniket", amount: 150, account: "HDFC Savings" });
+    expect(r.isError).toBeFalsy();
+    const txCall = insert.mock.calls.find((c: any) => c[0] === "transactions")!;
+    expect(txCall[1]).toMatchObject({ type: "expense", amount: 150, account_id: "a-hdfc", is_settlement: true });
+    const patchCalls = patch.mock.calls.map((c: any) => [c[1], c[2].settled_amount]);
+    expect(patchCalls).toEqual(expect.arrayContaining([["pay-old", 100], ["pay-new", 50]]));
   });
 
-  test("already-settled participant is rejected", async () => {
-    const get = vi.fn(async () => ({ id: "sp1", share_amount: 50, is_settled: true }));
-    const { handlers } = harness({ get });
-    const r = await handlers.get("settle_split")!({ participant_id: "sp1" });
+  test("settle_payable with nothing unsettled is rejected", async () => {
+    const people = [{ id: "p1", name: "Aniket" }];
+    const list = vi.fn(async (t: string) => (t === "people" ? people : t === "payables" ? [] : []));
+    const { handlers } = harness({ list });
+    const r = await handlers.get("settle_payable")!({ person: "Aniket", amount: 10 });
     expect(r.isError).toBe(true);
+    expect(r.content[0].text).toMatch(/no unsettled payables/);
+  });
+});
+
+describe("person_balance / list_balances", () => {
+  test("person_balance nets unsettled receivables against unsettled payables", async () => {
+    const people = [{ id: "p1", name: "Rahul" }];
+    const participants = [{ person_id: "p1", share_amount: 100, settled_amount: 40 }];
+    const payables = [{ person_id: "p1", amount: 20, settled_amount: 0 }];
+    const list = vi.fn(async (t: string) =>
+      t === "people" ? people : t === "split_participants" ? participants : t === "payables" ? payables : [],
+    );
+    const { handlers } = harness({ list });
+    const r = await handlers.get("person_balance")!({ person: "Rahul" });
+    // owed to me: 100-40=60; I owe: 20-0=20; net = 40
+    expect(parse(r)).toMatchObject({ person_id: "p1", name: "Rahul", balance: 40 });
   });
 
-  test("unknown participant id is rejected", async () => {
-    const get = vi.fn(async () => null);
-    const { handlers } = harness({ get });
-    const r = await handlers.get("settle_split")!({ participant_id: "nope" });
-    expect(r.isError).toBe(true);
+  test("list_balances only returns people with a non-zero net", async () => {
+    const people = [{ id: "p1", name: "Rahul" }, { id: "p2", name: "Settled Sam" }];
+    const participants = [
+      { person_id: "p1", share_amount: 100, settled_amount: 0 },
+      { person_id: "p2", share_amount: 50, settled_amount: 50 },
+    ];
+    const list = vi.fn(async (t: string) =>
+      t === "people" ? people : t === "split_participants" ? participants : t === "payables" ? [] : [],
+    );
+    const { handlers } = harness({ list });
+    const r = await handlers.get("list_balances")!({});
+    expect(parse(r)).toEqual([{ person_id: "p1", name: "Rahul", balance: 100 }]);
   });
 });

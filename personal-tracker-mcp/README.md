@@ -8,9 +8,9 @@ Design: [`../docs/superpowers/specs/2026-09-08-personal-tracker-mcp-design.md`](
 
 ## What it can do
 
-13 entities — `accounts`, `transactions`, `categories`, `credit_cards`, `loans`,
+14 entities — `accounts`, `transactions`, `categories`, `credit_cards`, `loans`,
 `budgets`, `recurring_payments`, `investments`, `goals`, `companies`, `people`,
-`split_expenses`, `split_participants`.
+`split_expenses`, `split_participants`, `payables`.
 
 Tools:
 
@@ -19,12 +19,16 @@ Tools:
 | `whoami` | Which account this connector is signed in as. |
 | `list_records` | List one entity (deleted rows excluded). `accounts` + `with_account_balance` attaches a live-computed `calculated_balance`; `budgets` + `with_budget_spent` recomputes `spent_amount`. |
 | `get_record` | One record by id. |
-| `create_record` | Create a record; `data` is validated per entity (the error names the bad field). |
-| `update_record` | Patch fields on a record. |
+| `create_record` | Create a record; `data` is validated per entity (the error names the bad field). Writes to `split_participants` are also checked against their parent split's total — a share that would push participants' total owed above the bill is rejected with a clear message. |
+| `update_record` | Patch fields on a record. Same `split_participants` reconciliation check applies when `share_amount` changes. |
 | `delete_record` | Soft-delete (recoverable in the app). |
 | `add_transaction` | Add income / expense / transfer, resolving account & category by name. |
-| `add_split_expense` | Log a bill paid in full and split with others — the full amount debits your account/card, each participant's share is tracked as money owed to you. Resolves account/card/category/people by name (new person names are created automatically). Modes: equal, custom, ratio, percentage. |
-| `settle_split` | Mark a split participant's share settled; optionally records a real credit (`refund` transaction) if they paid back via bank/UPI. |
+| `add_split_expense` | Log a bill paid in full and split with others — the full amount debits your account/card, each participant's share is tracked as money owed to you. Resolves account/card/category/people by name (new person names are created automatically). Modes: equal, custom, ratio, percentage. Each participant can override the category and add a note on just their share. |
+| `settle_person` | Record money received from a person, applied to their oldest unsettled split shares first (partial settlement allowed). Optionally records a real credit if they paid back via bank/UPI — excluded from income reports (it's a balance transfer). |
+| `add_payable` | Log money you owe someone — a personal loan, or something they paid for — separate from a bill you split. Resolves/creates the person by name. |
+| `settle_payable` | Pay off money you owe a person, applied to their oldest unsettled payables first (partial settlement allowed). Optionally records a real expense if you paid from an account — excluded from expense reports (it's a balance transfer). |
+| `person_balance` | Net balance with one person, computed live from unsettled split shares minus unsettled payables. Positive = they owe you, negative = you owe them. |
+| `list_balances` | Every person with a non-zero net balance. |
 
 Not supported: `notes` (encrypted at rest), full card/account numbers, IFSC, CVV
 (client-side encrypted — the server has no key). Deletes are soft.

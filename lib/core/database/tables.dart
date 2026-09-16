@@ -61,6 +61,9 @@ class Transactions extends Table {
   // v9: cash "Pay With" — same reference-account-only meaning as
   // isExternalToAccount above, kept as its own flag for clarity elsewhere.
   BoolColumn get isCashSpend => boolean().withDefault(const Constant(false))();
+  // v11: set only on a transaction a split/payable settlement creates — a
+  // balance transfer, excluded from income/expense/category reporting.
+  BoolColumn get isSettlement => boolean().withDefault(const Constant(false))();
   TextColumn get syncStatus => text().withDefault(const Constant('synced'))(); // SyncStatus enum name
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -259,6 +262,9 @@ class SyncMeta extends Table {
 class People extends Table {
   TextColumn get id => text()();
   TextColumn get name => text()();
+  TextColumn get phone => text().nullable()();
+  TextColumn get upiId => text().nullable()();
+  TextColumn get notes => text().nullable()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
   DateTimeColumn get deletedAt => dateTime().nullable()();
@@ -289,7 +295,32 @@ class SplitParticipants extends Table {
   TextColumn get splitExpenseId => text()();
   TextColumn get personId => text()();
   RealColumn get shareAmount => real()();
-  BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
+  // Falls back to the parent split's transaction category when null — lets
+  // one bill split across categories per person.
+  TextColumn get categoryId => text().nullable()();
+  TextColumn get note => text().nullable()();
+  // v11: replaces the old isSettled boolean — how much of shareAmount has
+  // actually been paid back, so a partial settlement doesn't need to split
+  // the row. isSettled is now derived (settledAmount >= shareAmount).
+  RealColumn get settledAmount => real().withDefault(const Constant(0))();
+  DateTimeColumn get settledAt => dateTime().nullable()();
+  TextColumn get settledTransactionId => text().nullable()();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+@DataClassName('PayableEntry')
+class Payables extends Table {
+  TextColumn get id => text()();
+  TextColumn get personId => text()();
+  RealColumn get amount => real()();
+  TextColumn get description => text()();
+  DateTimeColumn get date => dateTime()();
+  RealColumn get settledAmount => real().withDefault(const Constant(0))();
   DateTimeColumn get settledAt => dateTime().nullable()();
   TextColumn get settledTransactionId => text().nullable()();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();

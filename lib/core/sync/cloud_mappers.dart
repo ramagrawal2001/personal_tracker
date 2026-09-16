@@ -35,6 +35,7 @@ const Map<Type, String> kTableForModel = {
   PersonModel: 'people',
   SplitExpenseModel: 'split_expenses',
   SplitParticipantModel: 'split_participants',
+  PayableModel: 'payables',
   NoteModel: 'notes',
 };
 
@@ -53,6 +54,7 @@ const List<String> kSyncedTables = <String>[
   'people',
   'split_expenses',
   'split_participants',
+  'payables',
   'notes',
 ];
 
@@ -164,6 +166,7 @@ extension TransactionCloud on TransactionModel {
         'company_id': companyId,
         'is_external_to_account': isExternalToAccount,
         'is_cash_spend': isCashSpend,
+        'is_settlement': isSettlement,
         'sync_status': syncStatus.name,
         'tags': tags,
         'splits': splits.map((s) => s.toMap()).toList(),
@@ -194,6 +197,7 @@ extension TransactionCloud on TransactionModel {
         companyId: m['company_id'] as String?,
         isExternalToAccount: _bool(m['is_external_to_account']),
         isCashSpend: _bool(m['is_cash_spend']),
+        isSettlement: _bool(m['is_settlement']),
         syncStatus: SyncStatus.values.byName(m['sync_status'] as String? ?? 'synced'),
         createdAt: _dt(m['created_at']),
         updatedAt: _dt(m['updated_at']),
@@ -473,6 +477,9 @@ extension PersonCloud on PersonModel {
   Map<String, dynamic> toCloudJson() => {
         'id': id,
         'name': name,
+        'phone': phone,
+        'upi_id': upiId,
+        'notes': notes,
         'is_deleted': isDeleted,
         'deleted_at': _isoN(isDeleted ? updatedAt : null),
         'created_at': _iso(updatedAt),
@@ -482,6 +489,9 @@ extension PersonCloud on PersonModel {
   static PersonModel fromCloud(Map<String, dynamic> m) => PersonModel(
         id: m['id'] as String,
         name: m['name'] as String,
+        phone: m['phone'] as String?,
+        upiId: m['upi_id'] as String?,
+        notes: m['notes'] as String?,
         updatedAt: _dt(m['updated_at']),
         isDeleted: _bool(m['is_deleted']),
       );
@@ -519,7 +529,9 @@ extension SplitParticipantCloud on SplitParticipantModel {
         'split_expense_id': splitExpenseId,
         'person_id': personId,
         'share_amount': shareAmount,
-        'is_settled': isSettled,
+        'category_id': categoryId,
+        'note': note,
+        'settled_amount': settledAmount,
         'settled_at': _isoN(settledAt),
         'settled_transaction_id': settledTransactionId,
         'is_deleted': isDeleted,
@@ -533,7 +545,39 @@ extension SplitParticipantCloud on SplitParticipantModel {
         splitExpenseId: m['split_expense_id'] as String,
         personId: m['person_id'] as String,
         shareAmount: _d(m['share_amount']),
-        isSettled: _bool(m['is_settled']),
+        categoryId: m['category_id'] as String?,
+        note: m['note'] as String?,
+        settledAmount: _dN(m['settled_amount']) ?? 0,
+        settledAt: _dtN(m['settled_at']),
+        settledTransactionId: m['settled_transaction_id'] as String?,
+        updatedAt: _dt(m['updated_at']),
+        isDeleted: _bool(m['is_deleted']),
+      );
+}
+
+extension PayableCloud on PayableModel {
+  Map<String, dynamic> toCloudJson() => {
+        'id': id,
+        'person_id': personId,
+        'amount': amount,
+        'description': description,
+        'date': _iso(date),
+        'settled_amount': settledAmount,
+        'settled_at': _isoN(settledAt),
+        'settled_transaction_id': settledTransactionId,
+        'is_deleted': isDeleted,
+        'deleted_at': _isoN(isDeleted ? updatedAt : null),
+        'created_at': _iso(updatedAt),
+        'updated_at': _iso(updatedAt),
+      };
+
+  static PayableModel fromCloud(Map<String, dynamic> m) => PayableModel(
+        id: m['id'] as String,
+        personId: m['person_id'] as String,
+        amount: _d(m['amount']),
+        description: m['description'] as String,
+        date: _dt(m['date']),
+        settledAmount: _dN(m['settled_amount']) ?? 0,
         settledAt: _dtN(m['settled_at']),
         settledTransactionId: m['settled_transaction_id'] as String?,
         updatedAt: _dt(m['updated_at']),

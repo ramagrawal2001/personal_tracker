@@ -98,6 +98,51 @@ export function resolveSplitShares(args: {
   }
 }
 
+export interface ReceivableRow {
+  person_id: string;
+  share_amount: number;
+  settled_amount?: number;
+}
+export interface PayableRow {
+  person_id: string;
+  amount: number;
+  settled_amount?: number;
+}
+
+/**
+ * Port of FinanceState.personBalance (lib/core/database/finance_repository.dart).
+ * Positive = they owe you (net unsettled receivables); negative = you owe
+ * them (net unsettled payables). Always derived from live rows — never
+ * stored, so it can't drift out of sync with the splits/payables it's built from.
+ */
+export function computePersonBalance(
+  personId: string,
+  participants: readonly ReceivableRow[],
+  payables: readonly PayableRow[],
+): number {
+  const receivable = participants
+    .filter((p) => p.person_id === personId)
+    .reduce((sum, p) => sum + (p.share_amount - (p.settled_amount ?? 0)), 0);
+  const payable = payables
+    .filter((p) => p.person_id === personId)
+    .reduce((sum, p) => sum + (p.amount - (p.settled_amount ?? 0)), 0);
+  return receivable - payable;
+}
+
+/**
+ * Port of FinanceState.allPersonBalances — every person with a non-zero net
+ * balance (the same 0.01 tolerance used everywhere else for float drift).
+ */
+export function computeAllBalances(
+  people: readonly { id: string; name: string }[],
+  participants: readonly ReceivableRow[],
+  payables: readonly PayableRow[],
+): { person_id: string; name: string; balance: number }[] {
+  return people
+    .map((p) => ({ person_id: p.id, name: p.name, balance: computePersonBalance(p.id, participants, payables) }))
+    .filter((r) => Math.abs(r.balance) > 0.01);
+}
+
 export interface SpentTxn {
   category_id: string | null;
   type: string;
