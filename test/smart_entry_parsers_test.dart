@@ -62,6 +62,17 @@ void main() {
       expect(r.categoryId, 'cat_groceries');
     });
 
+    test('"cash" uses the Cash account when the user keeps one', () async {
+      await n.addAccount(name: 'Wallet', type: AccountType.cash, openingBalance: 2000);
+      final walletId = n.state.accounts.firstWhere((a) => a.name == 'Wallet').id;
+      final r = TransactionTextParser(n.state, clock: () => clock).parse('120 chai cash');
+      expect(r.accountId, walletId);
+      expect(r.payCardId, isNull);
+      final ai = AiTransactionService.resolve({'type': 'expense', 'amount': 120, 'pay_with': 'cash'}, n.state);
+      expect(ai.accountId, walletId);
+      expect(ai.payCardId, isNull);
+    });
+
     test('income keywords', () {
       final r = p().parse('received 50000 salary sbi');
       expect(r.type, TransactionType.income);
@@ -271,6 +282,18 @@ UPI transaction ID 512345678901''');
       expect(r.categoryId, 'cat_freelance');
       expect(r.payCardId, isNull, reason: 'income never has a pay-with card');
     });
+  });
+
+  test('chat models ranked first, speech/guard models dropped', () {
+    final r = AiTransactionService.rankChatModels([
+      'allam-2-7b', 'canopylabs/orpheus-arabic-saudi', 'whisper-large-v3', 'meta-llama/llama-guard-4-12b',
+      'llama-3.1-8b-instant', 'openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'qwen/qwen3-32b',
+    ]);
+    expect(r.first, 'openai/gpt-oss-120b');
+    expect(r, isNot(contains('whisper-large-v3')));
+    expect(r, isNot(contains('canopylabs/orpheus-arabic-saudi')));
+    expect(r, isNot(contains('meta-llama/llama-guard-4-12b')));
+    expect(r.last, 'allam-2-7b');
   });
 
   test('MerchantCategorizer uses word boundaries', () {

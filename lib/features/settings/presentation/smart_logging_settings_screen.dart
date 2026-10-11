@@ -121,12 +121,21 @@ class _SmartLoggingSettingsScreenState extends ConsumerState<SmartLoggingSetting
     try {
       final models = await AiTransactionService.listModels(c);
       if (!mounted) return;
+      // The provider retired the configured model → switch to the best
+      // available chat model instead of leaving AI silently broken.
+      String? switched;
+      if (models.isNotEmpty && !models.contains(c.model)) {
+        switched = models.first;
+        _modelCtrl.text = switched;
+        await _saveAi(enabled: true);
+      }
+      if (!mounted) return;
       setState(() {
         _models = models;
         _testOk = true;
-        _testResult = models.contains(c.model) || models.isEmpty
-            ? 'Connected ✓ — ${models.length} models available'
-            : 'Connected ✓ — but "${c.model}" isn\'t listed. Pick a model below.';
+        _testResult = switched != null
+            ? 'Connected ✓ — "${c.model}" is no longer offered, switched to "$switched"'
+            : 'Connected ✓ — ${models.length} chat models available';
       });
     } catch (e) {
       // Don't leave AI "on" with a key that can't work.

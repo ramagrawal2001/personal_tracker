@@ -49,6 +49,15 @@ class EntityResolver {
     return const ResolvedInstrument();
   }
 
+  /// "Paid cash": debit the user's Cash account when they keep one (so its
+  /// balance tracks reality), else the untracked "Cash" pay-with option.
+  ResolvedInstrument cash([List<String> matched = const []]) {
+    for (final a in _accounts) {
+      if (a.type == AccountType.cash) return ResolvedInstrument(accountId: a.id, matchedWords: matched);
+    }
+    return ResolvedInstrument(payCardId: kCashPaySentinel, matchedWords: matched);
+  }
+
   ResolvedInstrument _forCard(CardModel c, List<String> words) {
     if (c.cardType == CardType.debit) {
       return ResolvedInstrument(accountId: c.linkedAccountId, payCardId: c.id, matchedWords: words);
@@ -60,9 +69,7 @@ class EntityResolver {
   /// when nothing matches — the caller keeps its own default.
   ResolvedInstrument fromText(String text) {
     final words = _tokens(text);
-    if (words.any(cashWords.contains)) {
-      return ResolvedInstrument(payCardId: kCashPaySentinel, matchedWords: words.where(cashWords.contains).toList());
-    }
+    if (words.any(cashWords.contains)) return cash(words.where(cashWords.contains).toList());
 
     // Only explicit "xx1234" / "*1234" / "ending 1234" forms — a bare 4-digit
     // number in typed text is far more likely to be the amount.
