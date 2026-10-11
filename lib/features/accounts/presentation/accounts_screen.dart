@@ -199,30 +199,39 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                   items: AccountType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.displayName))).toList(),
                   onChanged: (v) => setSheetState(() => selectedType = v ?? selectedType),
                 ),
-                const SizedBox(height: 12),
-                TextField(controller: bankCtrl, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Bank (optional)', LucideIcons.building2)),
-                const SizedBox(height: 12),
-                TextField(controller: last4Ctrl, maxLength: 4, keyboardType: TextInputType.number, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Last 4 digits (optional)', LucideIcons.hash)),
+                if (selectedType != AccountType.cash) ...[
+                  const SizedBox(height: 12),
+                  TextField(controller: bankCtrl, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Bank (optional)', LucideIcons.building2)),
+                  const SizedBox(height: 12),
+                  TextField(controller: last4Ctrl, maxLength: 4, keyboardType: TextInputType.number, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Last 4 digits (optional)', LucideIcons.hash)),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: openingCtrl,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   style: TextStyle(color: AppColors.textPrimary),
-                  decoration: _dec('Opening Balance (${CurrencyFormatter.symbol})', LucideIcons.indianRupee).copyWith(errorText: error),
+                  decoration: _dec(
+                    selectedType == AccountType.cash
+                        ? 'Cash Amount (${CurrencyFormatter.symbol})'
+                        : 'Opening Balance (${CurrencyFormatter.symbol})',
+                    LucideIcons.indianRupee,
+                  ).copyWith(errorText: error),
                 ),
-                const SizedBox(height: 16),
-                Row(children: [
-                  Icon(LucideIcons.lock, size: 13, color: AppColors.primary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(acc.encAccountNumber != null ? 'Replace sensitive details' : 'Add sensitive details',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  ),
-                ]),
-                const SizedBox(height: 8),
-                TextField(controller: acctNumCtrl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Full account number (leave blank to keep)', LucideIcons.hash)),
-                const SizedBox(height: 12),
-                TextField(controller: ifscCtrl, textCapitalization: TextCapitalization.characters, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('IFSC / routing (leave blank to keep)', LucideIcons.landmark)),
+                if (selectedType != AccountType.cash) ...[
+                  const SizedBox(height: 16),
+                  Row(children: [
+                    Icon(LucideIcons.lock, size: 13, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(acc.encAccountNumber != null ? 'Replace sensitive details' : 'Add sensitive details',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  TextField(controller: acctNumCtrl, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], style: TextStyle(color: AppColors.textPrimary), decoration: _dec('Full account number (leave blank to keep)', LucideIcons.hash)),
+                  const SizedBox(height: 12),
+                  TextField(controller: ifscCtrl, textCapitalization: TextCapitalization.characters, style: TextStyle(color: AppColors.textPrimary), decoration: _dec('IFSC / routing (leave blank to keep)', LucideIcons.landmark)),
+                ],
                 const SizedBox(height: 24),
                 SizedBox(width: double.infinity, child: ElevatedButton(
                   onPressed: () async {

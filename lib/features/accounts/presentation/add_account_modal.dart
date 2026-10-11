@@ -110,73 +110,85 @@ class _AddAccountModalState extends ConsumerState<AddAccountModal> {
                 );
               }).toList(),
               onChanged: (val) {
-                if (val != null) setState(() => _selectedType = val);
+                if (val == null) return;
+                setState(() {
+                  _selectedType = val;
+                  if (val == AccountType.cash && _nameController.text.trim().isEmpty) {
+                    _nameController.text = 'Cash';
+                  }
+                });
               },
             ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _bankController,
-                    decoration: const InputDecoration(
-                      labelText: 'Bank Name',
-                      prefixIcon: Icon(LucideIcons.building, size: 18),
+            if (_selectedType != AccountType.cash) ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _bankController,
+                      decoration: const InputDecoration(
+                        labelText: 'Bank Name',
+                        prefixIcon: Icon(LucideIcons.building, size: 18),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _last4Controller,
-                    keyboardType: TextInputType.number,
-                    maxLength: 4,
-                    decoration: const InputDecoration(
-                      labelText: 'Last 4 Digits',
-                      counterText: '',
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _last4Controller,
+                      keyboardType: TextInputType.number,
+                      maxLength: 4,
+                      decoration: const InputDecoration(
+                        labelText: 'Last 4 Digits',
+                        counterText: '',
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
             const SizedBox(height: 14),
             TextField(
               controller: _openingBalanceController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                labelText: 'Opening Balance (${CurrencyFormatter.symbol})',
+                labelText: _selectedType == AccountType.cash
+                    ? 'Cash Amount (${CurrencyFormatter.symbol})'
+                    : 'Opening Balance (${CurrencyFormatter.symbol})',
                 hintText: '50000',
                 prefixText: '${CurrencyFormatter.symbol} ',
               ),
             ),
-            const SizedBox(height: 18),
-            Row(children: [
-              Icon(LucideIcons.lock, size: 13, color: AppColors.primary),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text('Sensitive details (encrypted on this device)',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+            if (_selectedType != AccountType.cash) ...[
+              const SizedBox(height: 18),
+              Row(children: [
+                Icon(LucideIcons.lock, size: 13, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text('Sensitive details (encrypted on this device)',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _accountNumberController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'Full Account Number',
+                  prefixIcon: Icon(LucideIcons.hash, size: 18),
+                ),
               ),
-            ]),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _accountNumberController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Full Account Number',
-                prefixIcon: Icon(LucideIcons.hash, size: 18),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _ifscController,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(
+                  labelText: 'IFSC / Routing Number',
+                  prefixIcon: Icon(LucideIcons.landmark, size: 18),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _ifscController,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'IFSC / Routing Number',
-                prefixIcon: Icon(LucideIcons.landmark, size: 18),
-              ),
-            ),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
