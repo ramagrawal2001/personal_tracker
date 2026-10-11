@@ -123,3 +123,7 @@ enum InvestmentType {
   }
 }
 
+
+/// Sentinel "Pay With" value for "Cash" (Quick Add dropdown, templates and
+/// smart-entry drafts) — not a real card id, so it never matches a card.
+const String kCashPaySentinel = '__cash__';

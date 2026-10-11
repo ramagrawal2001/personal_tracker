@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Log an expense or income in one tap</string>
+    <string name="shortcut_expense">Add expense</string>
+    <string name="shortcut_expense_long">Log an expense</string>
+    <string name="shortcut_income">Add income</string>
+    <string name="shortcut_income_long">Log income</string>
+    <string name="shortcut_voice">Voice entry</string>
+    <string name="shortcut_voice_long">Log by voice</string>
+    <string name="shortcut_scan">Scan receipt</string>
+    <string name="shortcut_scan_long">Scan a receipt or UPI screenshot</string>
+    <string name="notification_listener_label">Aspyric payment capture</string>
+    <string name="tile_label">Log expense</string>
+</resources>

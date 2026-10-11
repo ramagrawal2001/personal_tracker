@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +15,13 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/utils/responsive.dart';
 import '../auth/presentation/auth_repository.dart';
 import '../auth/presentation/cipher_recovery_prompt.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/services/notification_service.dart';
+import '../../core/services/smart_entry/capture_inbox.dart';
+import '../../core/services/smart_entry/native_capture_bridge.dart';
+import '../../core/services/smart_entry/parsed_transaction.dart';
+import '../../core/services/smart_entry/smart_entry.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../transactions/presentation/quick_add_modal.dart';
 import '../import_export/presentation/csv_import_modal.dart';
 
@@ -50,10 +59,24 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   AppModule _activeModule = AppModule.finance;
   int _notesNavIndex = 0;
   bool _recoveryPromptOpen = false;
+  StreamSubscription<LaunchAction>? _actionSub;
 
   @override
   void initState() {
     super.initState();
+    // Widget / tile / app-shortcut / share-sheet / Shortcuts-link actions.
+    // The shell only exists once signed in and past the biometric gate, so
+    // none of these can bypass the lock.
+    _actionSub = NativeCaptureBridge.actions.listen(_handleAction);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await NotificationService.ensurePermissionOnce();
+      await _syncCaptures();
+      final initial = await NativeCaptureBridge.takeInitialAction();
+      for (final a in [...NativeCaptureBridge.takeBufferedActions(), ?initial]) {
+        if (mounted) await _handleAction(a);
+      }
+    });
     // Fresh device after a password reset: the DEK is locked. Raise the
     // recovery prompt on the first authenticated frame, and again if the lock
     // state flips later (e.g. an interactive login on this device).
@@ -70,14 +93,93 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   void dispose() {
     SecretCipherService.needsRecoveryListenable.removeListener(_maybeShowRecoveryPrompt);
     WidgetsBinding.instance.removeObserver(this);
+    _actionSub?.cancel();
     super.dispose();
+  }
+
+  Future<void> _syncCaptures() async {
+    await ref.read(captureInboxProvider.notifier).syncFromNative();
+    _updateWidget();
+  }
+
+  /// Pushes "spent today" + inbox count to the Android home-screen widget.
+  void _updateWidget() {
+    if (!NativeCaptureBridge.isAndroid) return;
+    final fin = ref.read(financeNotifierProvider);
+    final now = DateTime.now();
+    var spent = 0.0;
+    for (final t in fin.transactions) {
+      if (t.isDeleted || t.isSettlement || t.type != TransactionType.expense) continue;
+      if (t.date.year == now.year && t.date.month == now.month && t.date.day == now.day) spent += t.amount;
+    }
+    NativeCaptureBridge.updateWidget(
+      todaySpent: CurrencyFormatter.format(spent),
+      pending: ref.read(captureInboxProvider).items.length,
+    );
+  }
+
+  void _openInbox() {
+    final here = GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+    if (here != '/inbox') context.push('/inbox');
+  }
+
+  Future<void> _handleAction(LaunchAction a) async {
+    if (!mounted) return;
+    switch (a.kind) {
+      case 'add':
+        await QuickAddModal.show(
+          context,
+          initialType: a.params['type'] == 'income' ? TransactionType.income : TransactionType.expense,
+        );
+      case 'voice':
+        await QuickAddModal.show(context, startWith: QuickAddStart.voice);
+      case 'scan':
+        await QuickAddModal.show(context, startWith: QuickAddStart.scan);
+      case 'image':
+        final path = a.params['path'];
+        if (path != null) await QuickAddModal.show(context, initialImagePath: path);
+      case 'inbox':
+        await _syncCaptures();
+        if (mounted) _openInbox();
+      case 'captured':
+        await _syncCaptures();
+      case 'capture':
+        final text = a.params['text']?.trim();
+        if (text == null || text.isEmpty) return;
+        if (a.params['source'] == 'share') {
+          // Shared from another app → straight into Quick Add, pre-filled.
+          await QuickAddModal.show(context, initialSmartText: text, initialSmartSource: CaptureSource.share);
+        } else {
+          // iOS Shortcuts automation (bank SMS) → Review Inbox.
+          final res = await SmartEntry.fromText(text, ref.read(financeNotifierProvider), source: CaptureSource.shortcut);
+          final added = await ref.read(captureInboxProvider.notifier).add(
+                res.draft.copyWith(rawText: text),
+                CaptureSource.shortcut,
+              );
+          if (!mounted) return;
+          _updateWidget();
+          _openInbox();
+          if (!added) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Already captured (or no amount found)'),
+              behavior: SnackBarBehavior.floating,
+            ));
+          }
+        }
+    }
+    if (mounted) _updateWidget();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       final finance = ref.read(financeNotifierProvider.notifier);
-      finance.refreshFromCloud().then((_) => finance.processDueSipAutoPosts());
+      finance.refreshFromCloud().then((_) async {
+        await finance.processDueSipAutoPosts();
+        await finance.processDueRecurringAutoPosts();
+        if (mounted) _updateWidget();
+      });
+      _syncCaptures();
       ref.read(notesProvider.notifier).refreshFromCloud();
     }
   }
@@ -113,6 +215,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
         location.startsWith('/net-worth') ||
         location.startsWith('/analytics') ||
         location.startsWith('/settings') ||
+        location.startsWith('/inbox') ||
         location.startsWith('/profile') ||
         location.startsWith('/companies') ||
         location.startsWith('/splits') ||
@@ -214,6 +317,8 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
                           childAspectRatio: 1.15,
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
+                            _buildMenuItem(ctx, 'Inbox', LucideIcons.inbox, AppColors.primary, () { Navigator.pop(ctx); context.push('/inbox'); },
+                                badge: ref.read(captureInboxProvider).items.length),
                             _buildMenuItem(ctx, 'Cards', LucideIcons.creditCard, AppColors.creditCard, () { Navigator.pop(ctx); context.push('/credit-cards'); }),
                             _buildMenuItem(ctx, 'Loans', LucideIcons.landmark, AppColors.loan, () { Navigator.pop(ctx); context.push('/loans'); }),
                             _buildMenuItem(ctx, 'Budgets', LucideIcons.pieChart, AppColors.warning, () { Navigator.pop(ctx); context.push('/budgets'); }),
@@ -242,7 +347,24 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildMenuItem(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildMenuItem(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap, {int badge = 0}) {
+    final item = _menuTile(title, icon, color, onTap);
+    if (badge <= 0) return item;
+    return Stack(clipBehavior: Clip.none, children: [
+      Positioned.fill(child: item),
+      Positioned(
+        top: 4,
+        right: 4,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(color: AppColors.expense, borderRadius: BorderRadius.circular(10)),
+          child: Text('$badge', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _menuTile(String title, IconData icon, Color color, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(

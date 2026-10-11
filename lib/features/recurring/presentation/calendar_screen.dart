@@ -477,7 +477,13 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 const SizedBox(height: 8),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Auto-Pay', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                  title: Text('Auto-Pay — log it for me', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                  subtitle: Text(
+                    accountId == null
+                        ? 'Pick a ${isIncome ? 'Credited To' : 'Pay From'} account above to auto-log this on its due date'
+                        : 'A transaction is logged automatically on each due date',
+                    style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+                  ),
                   value: isAutoPay,
                   activeColor: AppColors.primary,
                   onChanged: (v) => setSheetState(() => isAutoPay = v),

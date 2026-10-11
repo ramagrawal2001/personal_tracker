@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -20,39 +22,82 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.aspyric.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>aspyric</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-
-	<!-- Biometric / Face ID -->
-	<key>NSFaceIDUsageDescription</key>
-	<string>Aspyric uses Face ID to securely lock your financial data.</string>
-
-	<!-- Camera for profile photo -->
-	<key>NSCameraUsageDescription</key>
-	<string>Aspyric needs camera access to set your profile photo.</string>
-
-	<!-- Photo Library for profile photo -->
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Aspyric needs photo library access to set your profile photo.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Aspyric needs permission to save photos to your library.</string>
-
-	<!-- Local Notifications -->
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-		<string>remote-notification</string>
-	</array>
-
-	<!-- Network -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
 		<false/>
 	</dict>
-
+	<key>NSCameraUsageDescription</key>
+	<string>Aspyric uses the camera to scan receipts and to set your profile photo.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Aspyric uses Face ID to securely lock your financial data.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Aspyric uses the microphone so you can log transactions by voice.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Aspyric needs permission to save photos to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aspyric reads the receipt or payment screenshot you pick, and your profile photo.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Aspyric turns what you say into a transaction (for example: 450 Swiggy HDFC card).</string>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>minus.circle</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Add expense</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.aspyric.add_expense</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>plus.circle</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Add income</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.aspyric.add_income</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>mic</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Voice entry</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.aspyric.voice</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>doc.text.viewfinder</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Scan receipt</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.aspyric.scan</string>
+		</dict>
+	</array>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -70,9 +115,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
 </dict>
 </plist>

@@ -9,12 +9,19 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../domain/models/models.dart';
+import '../../../core/services/smart_entry/capture_inbox.dart';
+import '../../../core/services/smart_entry/entry_suggestions.dart';
+import '../../../core/services/smart_entry/ai_transaction_service.dart';
+import '../../../core/services/smart_entry/parsed_transaction.dart';
+import '../../../core/services/smart_entry/quick_templates.dart';
 import 'log_salary_modal.dart';
+import 'smart_entry_bar.dart';
 import '../../splits/presentation/split_expense_modal.dart';
 
-/// Sentinel `_selectedPayCardId` value for "Cash" in the "Pay With" dropdown
-/// — not a real card id, so it never matches anything in `payCards`.
-const String kCashPaySentinel = '__cash__';
+/// What Quick Add should kick off as soon as it opens (widget / shortcut /
+/// tile entry points).
+enum QuickAddStart { none, voice, scan }
+
 
 /// Parses the Amount field: a plain number ("120.5"), or a single binary
 /// arithmetic expression between exactly two numbers ("100/3", "45+10.5",
@@ -54,12 +61,32 @@ class QuickAddModal extends ConsumerStatefulWidget {
   final String? initialCreditCardId;
   final String? initialLoanId;
 
+  /// Pre-fill from a smart-entry draft (review inbox, shared text…).
+  final ParsedTransaction? initialDraft;
+
+  /// Review-inbox item this entry confirms — removed from the inbox on save.
+  final String? captureId;
+
+  /// Text to run through the smart parser as soon as the sheet opens.
+  final String? initialSmartText;
+  final CaptureSource initialSmartSource;
+
+  /// Image (receipt / screenshot) to OCR as soon as the sheet opens.
+  final String? initialImagePath;
+  final QuickAddStart startWith;
+
   const QuickAddModal({
     super.key,
     this.existing,
     this.initialType,
     this.initialCreditCardId,
     this.initialLoanId,
+    this.initialDraft,
+    this.captureId,
+    this.initialSmartText,
+    this.initialSmartSource = CaptureSource.typed,
+    this.initialImagePath,
+    this.startWith = QuickAddStart.none,
   });
 
   static Future<void> show(
@@ -68,6 +95,12 @@ class QuickAddModal extends ConsumerStatefulWidget {
     TransactionType? initialType,
     String? initialCreditCardId,
     String? initialLoanId,
+    ParsedTransaction? initialDraft,
+    String? captureId,
+    String? initialSmartText,
+    CaptureSource initialSmartSource = CaptureSource.typed,
+    String? initialImagePath,
+    QuickAddStart startWith = QuickAddStart.none,
   }) async {
     await AdaptiveModal.show(
       context: context,
@@ -76,6 +109,12 @@ class QuickAddModal extends ConsumerStatefulWidget {
         initialType: initialType,
         initialCreditCardId: initialCreditCardId,
         initialLoanId: initialLoanId,
+        initialDraft: initialDraft,
+        captureId: captureId,
+        initialSmartText: initialSmartText,
+        initialSmartSource: initialSmartSource,
+        initialImagePath: initialImagePath,
+        startWith: startWith,
       ),
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
@@ -112,6 +151,14 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
 
   bool get _isEditing => widget.existing != null;
 
+  // Fields the user changed by hand — smart defaults never overwrite these.
+  bool _accountTouched = false;
+  bool _categoryTouched = false;
+  bool _payTouched = false;
+  bool _aiAvailable = false;
+  String? _filledHint;
+  final _smartBarKey = GlobalKey<SmartEntryBarState>();
+
   @override
   void initState() {
     super.initState();
@@ -129,7 +176,249 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       _amountController.text = existing.amount.toStringAsFixed(existing.amount.truncateToDouble() == existing.amount ? 0 : 2);
       _merchantController.text = existing.merchant ?? '';
       _notesController.text = existing.description ?? '';
+      return;
     }
+
+    // New entry: start from how the user last logged this type.
+    if (widget.initialCreditCardId == null && widget.initialLoanId == null) {
+      _applyLastDefaults(_selectedType);
+    }
+    if (widget.initialDraft != null) _applyDraft(widget.initialDraft!, announce: false, rebuild: false);
+
+    AiTransactionService.isUsable().then((v) {
+      if (mounted && v != _aiAvailable) setState(() => _aiAvailable = v);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final bar = _smartBarKey.currentState;
+      if (bar == null) return;
+      if (widget.initialImagePath != null) {
+        bar.scanImagePath(widget.initialImagePath!);
+      } else if (widget.initialSmartText != null) {
+        bar.parseExternal(widget.initialSmartText!, widget.initialSmartSource);
+      } else if (widget.startWith == QuickAddStart.voice) {
+        bar.startVoice();
+      } else if (widget.startWith == QuickAddStart.scan) {
+        bar.startScan();
+      }
+    });
+  }
+
+  EntrySuggestions get _suggestions => EntrySuggestions(ref.read(financeNotifierProvider));
+
+  /// Account / pay-with / category from the most recent transaction of [type].
+  void _applyLastDefaults(TransactionType type) {
+    final last = _suggestions.lastOfType(type);
+    if (last == null) return;
+    if (!_accountTouched) _selectedAccountId = last.accountId;
+    if (!_categoryTouched && last.categoryId != null) _selectedCategoryId = last.categoryId;
+    if (!_payTouched && type == TransactionType.expense) _selectedPayCardId = EntrySuggestions.payCardOf(last);
+  }
+
+  /// Fills untouched fields from the user's history with [merchant].
+  void _applyMerchantMemory(String merchant) {
+    final mem = _suggestions.forMerchant(merchant);
+    if (mem == null) return;
+    setState(() {
+      if (!_categoryTouched && mem.categoryId != null && mem.type == _selectedType) _selectedCategoryId = mem.categoryId;
+      if (!_accountTouched && mem.accountId != null) _selectedAccountId = mem.accountId;
+      if (!_payTouched && _selectedType == TransactionType.expense && mem.type == TransactionType.expense) {
+        _selectedPayCardId = mem.payCardId;
+      }
+    });
+  }
+
+  String _fmtAmount(double a) => a.toStringAsFixed(a.truncateToDouble() == a ? 0 : 2);
+
+  /// Pre-fills the form from a smart-entry draft. Only fields the draft
+  /// actually found are written; explicit values in the draft win over
+  /// remembered defaults.
+  void _applyDraft(ParsedTransaction d, {bool announce = true, bool usedAi = false, bool rebuild = true}) {
+    void apply() {
+      if (d.type == TransactionType.income || d.type == TransactionType.expense) {
+        if (d.type != _selectedType) {
+          _selectedType = d.type!;
+          _applyLastDefaults(_selectedType);
+        }
+      }
+      if (d.amount != null && d.amount! > 0) _amountController.text = _fmtAmount(d.amount!);
+      if (d.merchant != null && d.merchant!.isNotEmpty) {
+        _merchantController.text = d.merchant!;
+        final mem = _suggestions.forMerchant(d.merchant!);
+        if (mem != null) {
+          if (!_categoryTouched && mem.categoryId != null && mem.type == _selectedType) _selectedCategoryId = mem.categoryId;
+          if (!_accountTouched && mem.accountId != null) _selectedAccountId = mem.accountId;
+          if (!_payTouched && _selectedType == TransactionType.expense) _selectedPayCardId = mem.payCardId;
+        }
+      }
+      if (d.categoryId != null) _selectedCategoryId = d.categoryId;
+      if (d.accountId != null) _selectedAccountId = d.accountId;
+      if (d.payCardId != null && _selectedType == TransactionType.expense) _selectedPayCardId = d.payCardId;
+      if (d.date != null) _selectedDate = d.date!;
+      if (d.notes != null && d.notes!.isNotEmpty && _notesController.text.isEmpty) _notesController.text = d.notes!;
+      if (announce) {
+        final bits = <String>[
+          if (d.amount != null) CurrencyFormatter.format(d.amount!, showDecimals: d.amount! != d.amount!.truncateToDouble()),
+          if (d.merchant != null) d.merchant!,
+          if (d.date != null) DateFormatter.formatShort(d.date!),
+        ];
+        _filledHint = '${usedAi ? '✨ AI filled' : 'Filled'}: ${bits.join(' · ')} — check & save';
+      }
+    }
+
+    rebuild ? setState(apply) : apply();
+  }
+
+  void _applyTemplate(QuickTemplate t) {
+    setState(() {
+      if (t.type != _selectedType) _selectedType = t.type;
+      if (t.amount != null) _amountController.text = _fmtAmount(t.amount!);
+      _merchantController.text = t.merchant ?? '';
+      if (t.categoryId != null) {
+        _selectedCategoryId = t.categoryId;
+        _categoryTouched = true;
+      }
+      if (t.accountId != null) {
+        _selectedAccountId = t.accountId;
+        _accountTouched = true;
+      }
+      if (t.type == TransactionType.expense) {
+        _selectedPayCardId = t.payCardId;
+        _payTouched = true;
+      }
+      _filledHint = 'Template "${t.label}" applied — check & save';
+    });
+  }
+
+  void _applyCombo(MerchantMemory m) {
+    setState(() {
+      if (m.type != _selectedType) _selectedType = m.type;
+      _amountController.text = _fmtAmount(m.lastAmount);
+      _merchantController.text = m.merchant;
+      if (m.categoryId != null) _selectedCategoryId = m.categoryId;
+      if (m.accountId != null) _selectedAccountId = m.accountId;
+      if (m.type == TransactionType.expense) _selectedPayCardId = m.payCardId;
+      _filledHint = null;
+    });
+  }
+
+  Future<void> _saveAsTemplate() async {
+    final amount = parseAmountExpression(_amountController.text.trim());
+    final merchant = _merchantController.text.trim();
+    final defaultLabel = [
+      if (merchant.isNotEmpty) merchant,
+      if (amount != null) CurrencyFormatter.format(amount),
+    ].join(' ');
+    final ctrl = TextEditingController(text: defaultLabel.isEmpty ? _selectedType.displayName : defaultLabel);
+    final label = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Save as one-tap template', style: TextStyle(color: AppColors.textPrimary, fontSize: 17)),
+        content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(labelText: 'Chip label')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (label == null || label.isEmpty) return;
+    await ref.read(quickTemplatesProvider.notifier).add(
+          label: label,
+          type: _selectedType,
+          amount: amount,
+          merchant: merchant.isEmpty ? null : merchant,
+          categoryId: _selectedCategoryId,
+          accountId: _selectedAccountId,
+          payCardId: _selectedType == TransactionType.expense ? _selectedPayCardId : null,
+        );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Template "$label" saved — it shows at the top of Quick Add'), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  Widget _buildShortcutChips(FinanceState financeState) {
+    final templates = ref.watch(quickTemplatesProvider);
+    final combos = EntrySuggestions(financeState).frequentCombos(limit: 5).where((c) {
+      // Don't repeat a combo the user already pinned as a template.
+      return !templates.any((t) => (t.merchant ?? '').toLowerCase() == c.merchant.toLowerCase() && t.amount == c.lastAmount);
+    }).toList();
+    if (templates.isEmpty && combos.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: [
+          for (final t in templates)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onLongPress: () async {
+                  final ok = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: AppColors.surface,
+                      title: Text('Remove "${t.label}"?', style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep')),
+                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text('Remove', style: TextStyle(color: AppColors.expense))),
+                      ],
+                    ),
+                  );
+                  if (ok == true) ref.read(quickTemplatesProvider.notifier).remove(t.id);
+                },
+                child: ActionChip(
+                  avatar: Icon(LucideIcons.star, size: 13, color: AppColors.warning),
+                  label: Text(t.label, style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                  backgroundColor: AppColors.surfaceLight,
+                  side: BorderSide(color: AppColors.border),
+                  onPressed: () => _applyTemplate(t),
+                ),
+              ),
+            ),
+          for (final c in combos)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ActionChip(
+                avatar: Icon(LucideIcons.history, size: 13, color: AppColors.textMuted),
+                label: Text('${c.merchant} ${CurrencyFormatter.format(c.lastAmount)}', style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+                backgroundColor: AppColors.surfaceLight,
+                side: BorderSide(color: AppColors.border),
+                onPressed: () => _applyCombo(c),
+              ),
+            ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildMerchantSuggestions() {
+    final q = _merchantController.text.trim();
+    if (q.isEmpty) return const SizedBox.shrink();
+    final matches = _suggestions.matchMerchants(q, type: _selectedType).where((m) => m.toLowerCase() != q.toLowerCase()).toList();
+    if (matches.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        children: [
+          for (final m in matches)
+            ActionChip(
+              label: Text(m, style: TextStyle(fontSize: 12, color: AppColors.textPrimary)),
+              visualDensity: VisualDensity.compact,
+              backgroundColor: AppColors.surfaceLight,
+              side: BorderSide(color: AppColors.border),
+              onPressed: () {
+                _merchantController.text = m;
+                _merchantController.selection = TextSelection.collapsed(offset: m.length);
+                _applyMerchantMemory(m);
+              },
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -246,6 +535,22 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 ),
               ],
             ),
+            if (!_isEditing) ...[
+              SmartEntryBar(
+                key: _smartBarKey,
+                aiAvailable: _aiAvailable,
+                onParsed: (d, {required usedAi, required source}) => _applyDraft(d, usedAi: usedAi),
+              ),
+              _buildShortcutChips(financeState),
+              if (_filledHint != null) ...[
+                const SizedBox(height: 8),
+                Row(children: [
+                  Icon(LucideIcons.checkCircle2, size: 14, color: AppColors.income),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(_filledHint!, style: TextStyle(fontSize: 12, color: AppColors.textSecondary))),
+                ]),
+              ],
+            ],
             if (_isEditing && financeState.splitExpenses.any((s) => s.transactionId == widget.existing!.id)) ...[
               const SizedBox(height: 10),
               Container(
@@ -424,7 +729,12 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                   child: Text('${acc.name} (${CurrencyFormatter.format(acc.calculatedBalance)})'),
                 );
               }).toList(),
-              onChanged: accountLocked ? null : (val) => setState(() => _selectedAccountId = val),
+              onChanged: accountLocked
+                  ? null
+                  : (val) => setState(() {
+                        _selectedAccountId = val;
+                        _accountTouched = true;
+                      }),
             ),
             if (debitLinkedAccount != null) ...[
               const SizedBox(height: 6),
@@ -580,7 +890,10 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                     child: Text('Cash'),
                   ),
                 ],
-                onChanged: (val) => setState(() => _selectedPayCardId = val),
+                onChanged: (val) => setState(() {
+                  _selectedPayCardId = val;
+                  _payTouched = true;
+                }),
               ),
               if (selectedPayCard != null && selectedPayCard.cardType == CardType.debit && debitLinkedAccount == null) ...[
                 const SizedBox(height: 6),
@@ -612,12 +925,23 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                     child: Text(cat.name),
                   );
                 }).toList(),
-                onChanged: (val) => setState(() => _selectedCategoryId = val),
+                onChanged: (val) => setState(() {
+                  _selectedCategoryId = val;
+                  _categoryTouched = true;
+                }),
               ),
               const SizedBox(height: 14),
 
               TextField(
+                key: const Key('merchant_field'),
                 controller: _merchantController,
+                textCapitalization: TextCapitalization.words,
+                onChanged: (v) {
+                  // Exact match of a known merchant → pull its usual
+                  // category / account / card into any untouched field.
+                  if (!_isEditing) _applyMerchantMemory(v);
+                  setState(() {});
+                },
                 decoration: InputDecoration(
                   labelText: _selectedType == TransactionType.income && _selectedCategoryId == 'cat_freelance'
                       ? 'Client / Source (e.g. Acme LLC, Fiverr)'
@@ -626,6 +950,7 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                           : 'Merchant / Payee Name (e.g. Swiggy, Amazon)',
                 ),
               ),
+              if (!_isEditing) _buildMerchantSuggestions(),
               const SizedBox(height: 14),
             ],
 
@@ -635,7 +960,18 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
                 labelText: 'Notes / Description (Optional)',
               ),
             ),
-            const SizedBox(height: 24),
+            if (!_isEditing && (_selectedType == TransactionType.expense || _selectedType == TransactionType.income))
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _saveAsTemplate,
+                  icon: Icon(LucideIcons.star, size: 14, color: AppColors.warning),
+                  label: Text('Save as template', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ),
+              )
+            else
+              const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
             // Save Button
             SizedBox(
@@ -680,7 +1016,11 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
         onSelected: _isEditing
             ? null
             : (val) {
-                if (val) setState(() => _selectedType = type);
+                if (!val) return;
+                setState(() {
+                  _selectedType = type;
+                  _applyLastDefaults(type);
+                });
               },
       ),
     );
@@ -814,6 +1154,9 @@ class _QuickAddModalState extends ConsumerState<QuickAddModal> {
       return;
     }
 
+    if (widget.captureId != null) {
+      await ref.read(captureInboxProvider.notifier).markLogged(widget.captureId!);
+    }
     if (!mounted) return;
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(

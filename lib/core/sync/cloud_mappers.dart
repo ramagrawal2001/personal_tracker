@@ -17,6 +17,10 @@ const String kPrefEmergencyBuffer = 'finance_emergency_buffer';
 const String kPrefCurrencySymbol = 'finance_currency_symbol';
 const String kPrefBiometricEnabled = 'finance_biometric_enabled';
 const String kPrefSipDebitAccount = 'finance_sip_debit_account_id';
+
+/// Device-local: when Auto-Pay recurring auto-posting first ran on this
+/// install. Occurrences due before it are never back-filled.
+const String kPrefRecurringAutoPostSince = 'finance_recurring_autopost_since';
 const String kPrefRoundUpEnabled = 'finance_round_up_enabled';
 const String kPrefAutoBackupEnabled = 'finance_auto_backup_enabled';
 

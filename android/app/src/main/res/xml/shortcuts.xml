@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="add_expense"
+        android:shortcutLongLabel="@string/shortcut_expense_long"
+        android:shortcutShortLabel="@string/shortcut_expense">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="aspyric://add?type=expense&amp;source=shortcut"
+            android:targetClass="com.aspyric.app.MainActivity"
+            android:targetPackage="com.aspyric.app" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="add_income"
+        android:shortcutLongLabel="@string/shortcut_income_long"
+        android:shortcutShortLabel="@string/shortcut_income">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="aspyric://add?type=income&amp;source=shortcut"
+            android:targetClass="com.aspyric.app.MainActivity"
+            android:targetPackage="com.aspyric.app" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="voice"
+        android:shortcutLongLabel="@string/shortcut_voice_long"
+        android:shortcutShortLabel="@string/shortcut_voice">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="aspyric://voice?source=shortcut"
+            android:targetClass="com.aspyric.app.MainActivity"
+            android:targetPackage="com.aspyric.app" />
+    </shortcut>
+    <shortcut
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutId="scan"
+        android:shortcutLongLabel="@string/shortcut_scan_long"
+        android:shortcutShortLabel="@string/shortcut_scan">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="aspyric://scan?source=shortcut"
+            android:targetClass="com.aspyric.app.MainActivity"
+            android:targetPackage="com.aspyric.app" />
+    </shortcut>
+</shortcuts>

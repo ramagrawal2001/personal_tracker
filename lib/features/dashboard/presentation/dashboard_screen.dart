@@ -11,6 +11,7 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/app_scaffold.dart';
 import '../../../core/widgets/summary_card.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/services/smart_entry/capture_inbox.dart';
 import 'widgets/net_worth_card.dart';
 import 'widgets/safe_to_spend_card.dart';
 import 'widgets/money_summary_card.dart';
@@ -24,6 +25,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final financeState = ref.watch(financeNotifierProvider);
     final themeMode = ref.watch(themeProvider);
+    final pendingCaptures = ref.watch(captureInboxProvider).items.length;
 
     return AppScaffold(
       title: 'Dashboard',
@@ -116,6 +118,34 @@ class DashboardScreen extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (pendingCaptures > 0) ...[
+                    InkWell(
+                      key: const Key('dashboard_inbox_banner'),
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => context.push('/inbox'),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+                        ),
+                        child: Row(children: [
+                          Icon(LucideIcons.inbox, size: 18, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '$pendingCaptures detected transaction${pendingCaptures == 1 ? '' : 's'} to review',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                            ),
+                          ),
+                          Text('Review', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                          Icon(LucideIcons.chevronRight, size: 16, color: AppColors.primary),
+                        ]),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
                   // Net Worth Card - Full width
                   SizedBox(
                     width: double.infinity,
