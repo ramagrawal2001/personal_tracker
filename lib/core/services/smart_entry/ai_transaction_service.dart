@@ -37,7 +37,7 @@ const kAiPresets = <AiProviderPreset>[
     id: 'groq',
     name: 'Groq (free tier)',
     baseUrl: 'https://api.groq.com/openai/v1',
-    defaultModel: 'llama-3.3-70b-versatile',
+    defaultModel: 'openai/gpt-oss-20b',
     keyUrl: 'https://console.groq.com/keys',
     note: 'Very fast, generous free tier. Recommended.',
   ),
@@ -166,6 +166,35 @@ class AiTransactionService {
         if (c.presetId == 'openrouter') 'X-Title': 'Aspyric',
       };
 
+  /// Orders model ids for picking a chat model: drops speech / moderation /
+  /// embedding / image models and ranks good, fast instruction models first.
+  @visibleForTesting
+  static List<String> rankChatModels(List<String> ids) {
+    final skip = RegExp(r'whisper|tts|orpheus|playai|guard|embed|moderation|vision-preview|image|imagen|veo|lyria|aqa|audio|transcribe|speech|safeguard', caseSensitive: false);
+    int score(String id) {
+      final m = id.toLowerCase();
+      var s = 0;
+      if (m.contains('gpt-oss-120b')) s += 60;
+      if (m.contains('gpt-oss-20b')) s += 55;
+      if (m.contains('llama-3.3-70b') || m.contains('llama-4')) s += 50;
+      if (m.contains('gemini') && m.contains('flash')) s += 50;
+      if (m.contains('qwen3') || m.contains('qwen-3')) s += 40;
+      if (m.contains('kimi') || m.contains('deepseek')) s += 35;
+      if (m.contains('llama')) s += 20;
+      if (m.contains('instant') || m.contains('flash-lite')) s += 5;
+      if (m.endsWith(':free')) s += 10;
+      if (m.contains('preview') || m.contains('exp')) s -= 5;
+      return s;
+    }
+
+    final kept = ids.where((id) => !skip.hasMatch(id)).toList()
+      ..sort((a, b) {
+        final c = score(b).compareTo(score(a));
+        return c != 0 ? c : a.compareTo(b);
+      });
+    return kept;
+  }
+
   /// Lists the provider's model ids (also a cheap "is my key valid?" check).
   static Future<List<String>> listModels(AiConfig c) async {
     final client = clientFactory();
@@ -179,9 +208,8 @@ class AiTransactionService {
           .map((m) => (m as Map)['id']?.toString() ?? '')
           .where((id) => id.isNotEmpty)
           .map((id) => id.startsWith('models/') ? id.substring(7) : id)
-          .toList()
-        ..sort();
-      return ids;
+          .toList();
+      return rankChatModels(ids);
     } finally {
       client.close();
     }
@@ -250,6 +278,15 @@ Cards: ${jsonEncode(cards)}''';
         ],
         'response_format': {'type': 'json_object'},
       };
+      // Debug builds only: what leaves the phone (the API key is a header and
+      // is never logged).
+      if (kDebugMode) {
+        debugPrint('AI ▶ ${c.baseUrl} model=${c.model} source=${source.name}');
+        debugPrint('AI ▶ user text: $text');
+        debugPrint('AI ▶ context sent: accounts=$accounts cards=$cards '
+            'expenseCats=${expenseCats.length} incomeCats=${incomeCats.length}');
+      }
+      final started = DateTime.now();
       var res = await client
           .post(Uri.parse('${c.baseUrl}/chat/completions'), headers: _headers(c), body: jsonEncode(payload))
           .timeout(const Duration(seconds: 25));
@@ -263,6 +300,7 @@ Cards: ${jsonEncode(cards)}''';
       if (res.statusCode != 200) throw AiException(_errorText(res));
       final body = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       final content = (((body['choices'] as List).first as Map)['message'] as Map)['content']?.toString() ?? '';
+      if (kDebugMode) debugPrint('AI ◀ ${DateTime.now().difference(started).inMilliseconds}ms $content');
       final json = extractJson(content);
       if (json == null) throw AiException('AI returned no usable answer');
       return resolve(json, state, rawText: text);
@@ -326,7 +364,9 @@ Cards: ${jsonEncode(cards)}''';
     final pay = str('pay_with');
     if (type == TransactionType.expense && pay != null) {
       if (pay.toLowerCase() == 'cash') {
-        payCardId = kCashPaySentinel;
+        final c = resolver.cash();
+        payCardId = c.payCardId;
+        accountId = c.accountId ?? accountId;
       } else {
         final cardName = pay.replaceAll(RegExp(r'\s*\((credit|debit) card\)\s*$', caseSensitive: false), '').toLowerCase();
         for (final card in state.creditCards) {
