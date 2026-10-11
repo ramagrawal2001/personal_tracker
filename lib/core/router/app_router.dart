@@ -1,3 +1,5 @@
+import '../../features/settings/presentation/smart_logging_settings_screen.dart';
+import '../../features/transactions/presentation/capture_inbox_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -120,6 +122,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         GoRoute(path: '/reports',      builder: (_, __) => const ReportsScreen()),
         GoRoute(path: '/analytics',    builder: (_, __) => const AnalyticsScreen()),
         GoRoute(path: '/settings',     builder: (_, __) => const SettingsScreen()),
+        GoRoute(path: '/settings/smart-logging', builder: (_, __) => const SmartLoggingSettingsScreen()),
+        GoRoute(path: '/inbox',        builder: (_, __) => const CaptureInboxScreen()),
         GoRoute(path: '/profile',      builder: (_, __) => const ProfileScreen()),
         // Notes module
         GoRoute(path: '/notes',        builder: (_, __) => const NotesScreen()),

@@ -6,6 +6,19 @@
 > duplicated here.
 
 ## Recently completed (for context — not pending)
+- Faster transaction logging (`lib/core/services/smart_entry/`): smart
+  defaults + merchant memory from history, one-tap templates & frequent
+  combos, one-line text parser ("450 zomato hdfc yesterday"), voice entry
+  (on-device speech), receipt / UPI-screenshot OCR (ML Kit on Android, Vision
+  on iOS), optional free AI provider (Groq / Gemini / OpenRouter, any
+  OpenAI-compatible) layered over the offline parsers, Review Inbox fed by
+  Android bank-SMS + payment-app-notification capture and iOS Shortcuts
+  (`aspyric://capture?text=`), share-to-app, Android home-screen widget,
+  quick-settings tile, app-icon shortcuts, and Auto-Pay recurring payments
+  now auto-logged on their due date. Notification fixes: local timezone
+  (was UTC), daily reminder no longer wipes payment reminders, permission
+  requested after sign-in, exact→inexact alarm fallback, iOS foreground
+  display, monochrome Android status icon.
 - Credit-card due/statement day dropdowns extended to day 31 (were capped at 28).
 - Credit-card "Pay With" in Add Transaction — charge a purchase to a credit
   card (bumps outstanding) alongside the existing debit-card flow.

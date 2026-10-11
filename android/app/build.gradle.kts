@@ -41,6 +41,9 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.multidex:multidex:2.0.1")
+    implementation("androidx.core:core-ktx:1.13.1")
+    // On-device OCR for receipt / UPI-screenshot scanning (bundled model, free, offline)
+    implementation("com.google.mlkit:text-recognition:16.0.1")
 }
 
 flutter {

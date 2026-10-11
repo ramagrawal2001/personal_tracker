@@ -838,6 +838,7 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       // Catch up any SIP that fell due while the app was closed. Idempotent and
       // a no-op without a configured SIP debit account.
       unawaited(processDueSipAutoPosts());
+      unawaited(processDueRecurringAutoPosts());
     } catch (e, st) {
       debugPrint('FinanceNotifier: failed to load persisted data: $e\n$st');
     }
@@ -3025,6 +3026,95 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       }
     } finally {
       _sipAutoPostRunning = false;
+    }
+  }
+
+  bool _recurringAutoPostRunning = false;
+
+  /// Logs every due occurrence of each Auto-Pay recurring payment (rent,
+  /// Netflix, maid…) as a real transaction and advances its next due date.
+  ///
+  /// Idempotent: each occurrence carries a `rec:<id>:<yyyy-mm-dd>` tag, so a
+  /// re-run (or a second device after a cloud refresh) never double-posts.
+  /// Occurrences that fell due *before* auto-posting was first switched on
+  /// for this install are skipped (just advanced past) rather than
+  /// back-filled — flipping the feature on must not dump months of history
+  /// into the ledger. Payments without a "Pay From" account are left alone.
+  Future<void> processDueRecurringAutoPosts([DateTime? clock]) async {
+    if (_recurringAutoPostRunning) return;
+    final now = clock ?? DateTime.now();
+    _recurringAutoPostRunning = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final sinceMs = prefs.getInt(kPrefRecurringAutoPostSince);
+      final since = sinceMs == null
+          ? DateTime(now.year, now.month, now.day)
+          : DateTime.fromMillisecondsSinceEpoch(sinceMs);
+      if (sinceMs == null) await prefs.setInt(kPrefRecurringAutoPostSince, since.millisecondsSinceEpoch);
+
+      DateTime step(DateTime d, PaymentFrequency f) {
+        DateTime months(int n) {
+          final y = d.year + (d.month - 1 + n) ~/ 12;
+          final m = (d.month - 1 + n) % 12 + 1;
+          final last = DateTime(y, m + 1, 0).day;
+          return DateTime(y, m, d.day.clamp(1, last), d.hour, d.minute);
+        }
+
+        return switch (f) {
+          PaymentFrequency.daily => d.add(const Duration(days: 1)),
+          PaymentFrequency.weekly => d.add(const Duration(days: 7)),
+          PaymentFrequency.monthly => months(1),
+          PaymentFrequency.quarterly => months(3),
+          PaymentFrequency.yearly => months(12),
+        };
+      }
+
+      String day(DateTime d) =>
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+      for (final r in List<RecurringPaymentModel>.from(state.recurringPayments)) {
+        if (r.isDeleted || !r.isAutoPay || r.amount <= 0) continue;
+        final accountId = r.accountId;
+        if (accountId == null || !state.accounts.any((a) => a.id == accountId && !a.isDeleted)) continue;
+
+        var due = r.nextDueDate;
+        var guard = 0;
+        var failed = false;
+        while (!due.isAfter(now) && guard++ < 60) {
+          final tag = 'rec:${r.id}:${day(due)}';
+          final dueDay = DateTime(due.year, due.month, due.day);
+          final alreadyPosted = state.transactions.any((t) => !t.isDeleted && t.tags.contains(tag));
+          if (!alreadyPosted && !dueDay.isBefore(since)) {
+            try {
+              await addTransaction(
+                accountId: accountId,
+                type: r.isIncome ? TransactionType.income : TransactionType.expense,
+                amount: r.amount,
+                categoryId: r.isIncome ? (r.companyId != null ? 'cat_salary' : r.categoryId) : r.categoryId,
+                merchant: r.title,
+                date: dueDay,
+                description: 'Auto-logged recurring payment',
+                tags: ['recurring-auto', tag],
+                companyId: r.isIncome ? r.companyId : null,
+              );
+            } catch (e) {
+              debugPrint('FinanceNotifier.processDueRecurringAutoPosts(${r.id}) failed: $e');
+              failed = true; // retry this occurrence next time
+              break;
+            }
+          }
+          due = step(due, r.frequency);
+        }
+        if (!failed && due != r.nextDueDate) {
+          try {
+            await updateRecurringPayment(r.id, nextDueDate: due);
+          } catch (e) {
+            debugPrint('FinanceNotifier.processDueRecurringAutoPosts: advancing ${r.id} failed: $e');
+          }
+        }
+      }
+    } finally {
+      _recurringAutoPostRunning = false;
     }
   }
 

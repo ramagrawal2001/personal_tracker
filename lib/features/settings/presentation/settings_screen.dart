@@ -319,6 +319,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 18),
 
+          // ── Smart logging ──────────────────────────────────────────────
+          const SectionLabel(label: 'Faster logging'),
+          AppCard(
+            child: ListTile(
+              key: const Key('smart_logging_tile'),
+              contentPadding: EdgeInsets.zero,
+              onTap: () => context.push('/settings/smart-logging'),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: AppDecorations.iconBadge(AppColors.primary),
+                child: Icon(LucideIcons.sparkles, color: AppColors.primary, size: 18),
+              ),
+              title: Text('Smart Logging', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+              subtitle: Text('Free AI, voice, SMS & UPI auto-capture, widget, shortcuts',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+              trailing: Icon(LucideIcons.chevronRight, size: 18, color: AppColors.textMuted),
+            ),
+          ),
+          const SizedBox(height: 18),
+
           // ── Notifications ──────────────────────────────────────────────
           const SectionLabel(label: 'Notifications'),
           AppCard(
@@ -369,6 +389,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         PaymentReminders.compute(ref.read(financeNotifierProvider), DateTime.now()),
                       );
                     }
+                  },
+                ),
+                Divider(color: AppColors.border, height: 1),
+                ListTile(
+                  key: const Key('test_notification_tile'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(LucideIcons.bellRing, color: AppColors.textMuted, size: 18),
+                  title: Text('Send test notification', style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                  subtitle: Text('Check that notifications reach this device', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  onTap: () async {
+                    final granted = await NotificationService.showTest();
+                    final pending = await NotificationService.pendingCount();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(granted
+                          ? 'Sent ✓ — $pending reminder${pending == 1 ? '' : 's'} scheduled'
+                          : 'Notifications are blocked — allow them for Aspyric in system settings'),
+                      backgroundColor: granted ? AppColors.income : AppColors.expense,
+                      behavior: SnackBarBehavior.floating,
+                    ));
                   },
                 ),
               ],
