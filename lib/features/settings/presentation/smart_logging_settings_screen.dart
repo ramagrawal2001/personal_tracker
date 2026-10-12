@@ -35,6 +35,10 @@ class _SmartLoggingSettingsScreenState extends ConsumerState<SmartLoggingSetting
   bool _notifAccess = false;
   bool _smsPermission = false;
 
+  /// False for the default Android release APK (no SMS / notification-listener
+  /// permissions, so Play Protect lets it be sideloaded).
+  bool _captureSupported = true;
+
   @override
   void initState() {
     super.initState();
@@ -70,6 +74,8 @@ class _SmartLoggingSettingsScreenState extends ConsumerState<SmartLoggingSetting
   }
 
   Future<void> _refreshPermissions() async {
+    final supported = !NativeCaptureBridge.isAndroid || await NativeCaptureBridge.captureSupported();
+    if (mounted && supported != _captureSupported) setState(() => _captureSupported = supported);
     final access = await NativeCaptureBridge.notificationAccessEnabled();
     final sms = await NativeCaptureBridge.hasSmsPermission();
     if (!mounted) return;
@@ -335,7 +341,42 @@ class _SmartLoggingSettingsScreenState extends ConsumerState<SmartLoggingSetting
 
           // ── Auto-capture ──────────────────────────────────────────────
           const SectionLabel(label: 'Auto-capture'),
-          if (NativeCaptureBridge.isAndroid)
+          if (NativeCaptureBridge.isAndroid && !_captureSupported)
+            AppCard(
+              key: const Key('automation_capture_card'),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _row(
+                  icon: LucideIcons.messageSquare,
+                  color: AppColors.primary,
+                  title: 'Bank SMS via an automation app',
+                  subtitle: 'Google Play Protect blocks sideloaded apps that read SMS, so this build doesn\'t. '
+                      'A free automation app from the Play Store can forward bank SMS to Aspyric\'s Review Inbox instead.',
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'MacroDroid (free on Play Store):\n'
+                  '1. Add Macro → Trigger: SMS Received → "Any number", content contains: debited  '
+                  '(add more triggers for "credited" and "spent")\n'
+                  '2. Action: Connectivity → Send Intent\n'
+                  '   • Target: Broadcast\n'
+                  '   • Action: com.aspyric.app.CAPTURE_TEXT\n'
+                  '   • Package: com.aspyric.app\n'
+                  '   • Extra 1 name: text   value: [sms_message]\n'
+                  '3. Save. Each bank SMS now shows up in the Review Inbox with a notification.',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.5),
+                ),
+                const SizedBox(height: 10),
+                const _CopyBox(text: 'com.aspyric.app.CAPTURE_TEXT'),
+                const SizedBox(height: 10),
+                Text(
+                  'Tasker / Automate work the same way (explicit broadcast, extra "text"). '
+                  'You can also share any SMS or payment screenshot to Aspyric. '
+                  'Want direct SMS & UPI-app capture? Install the "full" APK from a computer over USB (adb install) — Play Protect doesn\'t block that.',
+                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                ),
+              ]),
+            )
+          else if (NativeCaptureBridge.isAndroid)
             AppCard(
               child: Column(children: [
                 SwitchListTile(

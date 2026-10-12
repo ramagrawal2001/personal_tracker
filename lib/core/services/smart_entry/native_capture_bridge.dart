@@ -142,6 +142,11 @@ class NativeCaptureBridge {
   static Future<String?> localTimezone() => _invoke<String>('localTimezone');
 
   // ── Android-only capture controls ────────────────────────────────────
+  /// False on iOS and on the default ("standard") Android release APK, which
+  /// leaves out the SMS / notification-listener permissions so Google Play
+  /// Protect doesn't block sideloading it.
+  static Future<bool> captureSupported() async => await _invoke<bool>('captureSupported') ?? false;
+
   static Future<bool> hasSmsPermission() async => await _invoke<bool>('hasSmsPermission') ?? false;
   static Future<bool> requestSmsPermission() async => await _invoke<bool>('requestSmsPermission') ?? false;
 

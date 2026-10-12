@@ -1,0 +1,45 @@
+<!--
+  "Full capture" overlay manifest: bank-SMS receiver + payment-app
+  notification listener.
+
+  Google Play Protect's enhanced fraud protection (India and other markets)
+  blocks installing an APK from a browser / file manager / chat app when it
+  declares RECEIVE_SMS, READ_SMS or a notification listener. So these are
+  NOT in the main manifest: the default release APK installs normally, and
+  this overlay is merged only into
+    - debug & profile builds (installed over adb, which isn't blocked), and
+    - release builds made with the Gradle property aspyricCapture=true
+  The app detects at runtime whether these were included
+  (MainActivity "captureSupported") and adapts the Smart Logging screen.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Flutter tooling (hot reload / debugger) for debug & profile builds -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Smart capture: bank SMS (opt-in, requested at runtime) -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+
+    <application>
+        <!-- Bank SMS capture (only acts when enabled in Settings) -->
+        <receiver
+            android:name=".SmsCaptureReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- UPI / bank app notification capture (user grants access in system settings) -->
+        <service
+            android:name=".PaymentNotificationListener"
+            android:exported="true"
+            android:label="@string/notification_listener_label"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

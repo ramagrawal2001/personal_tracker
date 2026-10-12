@@ -27,10 +27,14 @@ class CaptureInboxScreen extends ConsumerStatefulWidget {
 
 class _CaptureInboxScreenState extends ConsumerState<CaptureInboxScreen> {
   bool _scanning = false;
+  bool _captureSupported = true;
 
   @override
   void initState() {
     super.initState();
+    NativeCaptureBridge.captureSupported().then((v) {
+      if (mounted && NativeCaptureBridge.isAndroid && v != _captureSupported) setState(() => _captureSupported = v);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(captureInboxProvider.notifier).syncFromNative());
   }
 
@@ -79,13 +83,13 @@ class _CaptureInboxScreenState extends ConsumerState<CaptureInboxScreen> {
     final inbox = ref.watch(captureInboxProvider);
     final fin = ref.watch(financeNotifierProvider);
     final items = inbox.items;
-    final captureOff = NativeCaptureBridge.isAndroid && !inbox.smsEnabled && !inbox.notificationsEnabled;
+    final captureOff = NativeCaptureBridge.isAndroid && _captureSupported && !inbox.smsEnabled && !inbox.notificationsEnabled;
 
     return AppScaffold(
       title: 'Review Inbox',
       showBackButton: true,
       actions: [
-        if (NativeCaptureBridge.isAndroid)
+        if (NativeCaptureBridge.isAndroid && _captureSupported)
           IconButton(
             tooltip: 'Scan SMS from the last 7 days',
             icon: _scanning
@@ -111,6 +115,13 @@ class _CaptureInboxScreenState extends ConsumerState<CaptureInboxScreen> {
               icon: LucideIcons.zap,
               text: 'Turn on auto-capture to have bank SMS and UPI payments land here automatically.',
               action: 'Set up',
+              onTap: () => context.push('/settings/smart-logging'),
+            ),
+          if (NativeCaptureBridge.isAndroid && !_captureSupported && items.isEmpty)
+            _InfoBanner(
+              icon: LucideIcons.zap,
+              text: 'Forward bank SMS here automatically with a free automation app (MacroDroid).',
+              action: 'How',
               onTap: () => context.push('/settings/smart-logging'),
             ),
           if (NativeCaptureBridge.isIOS)

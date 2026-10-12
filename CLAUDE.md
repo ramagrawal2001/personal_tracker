@@ -20,6 +20,12 @@ flutter run -d ios
 flutter build apk
 flutter build ios
 
+# Android release variants (Smart Logging auto-capture):
+flutter build apk --release                          # "standard" — sideload-safe, no SMS/notification-listener perms
+flutter build apk --release -PaspyricCapture=true    # "full" — direct SMS + UPI-app capture; install via adb
+# (Play Protect blocks sideloading APKs that declare RECEIVE_SMS/READ_SMS/notification listener.
+#  Debug/profile builds always include capture; -PaspyricCapture=false strips it for testing.)
+
 # Pub
 flutter pub get
 flutter pub upgrade
