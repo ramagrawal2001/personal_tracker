@@ -46,6 +46,19 @@ dependencies {
     implementation("com.google.mlkit:text-recognition:16.0.1")
 }
 
+// Bank-SMS + payment-notification capture (src/capture/AndroidManifest.xml).
+// Play Protect blocks sideloading APKs that declare those permissions, so:
+//   release          → off unless  -PaspyricCapture=true   ("full" APK, install via adb)
+//   debug / profile  → on  unless  -PaspyricCapture=false  (installed over adb anyway)
+val captureProp = (project.findProperty("aspyricCapture") as String?)?.toBoolean()
+android.sourceSets {
+    if (captureProp ?: true) {
+        getByName("debug").manifest.srcFile("src/capture/AndroidManifest.xml")
+        getByName("profile").manifest.srcFile("src/capture/AndroidManifest.xml")
+    }
+    if (captureProp == true) getByName("release").manifest.srcFile("src/capture/AndroidManifest.xml")
+}
+
 flutter {
     source = "../.."
 }

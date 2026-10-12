@@ -63,7 +63,8 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "drainCaptured" -> result.success(CaptureStore.drain(this))
                 "localTimezone" -> result.success(TimeZone.getDefault().id)
-                "hasSmsPermission" -> result.success(hasSms())
+                "captureSupported" -> result.success(captureSupported())
+                "hasSmsPermission" -> result.success(captureSupported() && hasSms())
                 "requestSmsPermission" -> requestSms(result)
                 "scanSmsInbox" -> {
                     val days = (call.argument<Int>("days") ?: 7).coerceIn(1, 90)
@@ -76,6 +77,7 @@ class MainActivity : FlutterFragmentActivity() {
                     NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
                 )
                 "openNotificationAccessSettings" -> {
+                    if (!captureSupported()) return@setMethodCallHandler result.success(null)
                     val i = if (Build.VERSION.SDK_INT >= 30) {
                         Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).putExtra(
                             Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
@@ -185,11 +187,25 @@ class MainActivity : FlutterFragmentActivity() {
 
     // ── SMS ──────────────────────────────────────────────────────────────
 
+    /**
+     * Whether this APK includes the SMS receiver + notification listener
+     * (src/capture/AndroidManifest.xml). The default release APK leaves them
+     * out so Play Protect doesn't block sideloading it.
+     */
+    private fun captureSupported(): Boolean = try {
+        @Suppress("DEPRECATION")
+        val info = packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
+        info.requestedPermissions?.contains(Manifest.permission.RECEIVE_SMS) == true
+    } catch (e: Exception) {
+        false
+    }
+
     private fun hasSms(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
 
     private fun requestSms(result: MethodChannel.Result) {
+        if (!captureSupported()) return result.success(false)
         if (hasSms()) return result.success(true)
         pendingSmsResult?.success(false)
         pendingSmsResult = result

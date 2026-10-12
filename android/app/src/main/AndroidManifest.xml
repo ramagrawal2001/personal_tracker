@@ -23,10 +23,6 @@
     <!-- Network state for offline sync -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Smart capture: bank SMS (opt-in, requested at runtime) -->
-    <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="android.permission.READ_SMS" />
-
     <!-- Voice entry (on-device speech recognition) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
@@ -83,26 +79,19 @@
              go_router from also trying to open them as page paths. -->
         <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
 
-        <!-- Bank SMS capture (only acts when enabled in Settings) -->
+        <!-- Bank SMS forwarded by an automation app (MacroDroid / Tasker) —
+             needs no SMS permission in Aspyric itself. -->
         <receiver
-            android:name=".SmsCaptureReceiver"
-            android:exported="true"
-            android:permission="android.permission.BROADCAST_SMS">
-            <intent-filter android:priority="999">
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            android:name=".CaptureIntentReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.aspyric.app.CAPTURE_TEXT" />
             </intent-filter>
         </receiver>
 
-        <!-- UPI / bank app notification capture (user grants access in system settings) -->
-        <service
-            android:name=".PaymentNotificationListener"
-            android:exported="true"
-            android:label="@string/notification_listener_label"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
+        <!-- SMS receiver + payment-notification listener live in
+             src/capture/AndroidManifest.xml: Play Protect blocks sideloaded
+             APKs that declare them (see android/app/build.gradle.kts). -->
 
         <!-- Home-screen quick-add widget -->
         <receiver
