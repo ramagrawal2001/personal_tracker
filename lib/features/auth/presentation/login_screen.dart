@@ -7,7 +7,6 @@ import '../../../core/database/finance_repository.dart';
 import '../../../core/services/email_otp_service.dart';
 import 'auth_repository.dart';
 import 'otp_verification_screen.dart';
-import 'forgot_password_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -154,7 +153,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _openForgotPassword() {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
+    // A real route, not Navigator.push: verifying the recovery code signs the
+    // user in, and the router guard would then rebuild /login's stack and
+    // drop an imperatively pushed page before the new password is set.
+    context.go('/forgot-password');
   }
 
   @override

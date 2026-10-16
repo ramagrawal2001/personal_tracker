@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException, OtpType;
 
 import 'supabase_service.dart';
 
@@ -27,6 +28,18 @@ class EmailOtpService {
   // ── Generate & send OTP via Resend ───────────────────────────────────────
   static Future<bool> sendOtp(String email, {OtpPurpose purpose = OtpPurpose.verify}) async {
     final normalised = email.trim().toLowerCase();
+
+    // Password reset uses Supabase's own recovery OTP: verifying it is what
+    // gives the user a session, and `updateUser(password:)` needs one.
+    if (purpose == OtpPurpose.resetPassword) {
+      if (!SupabaseService.isInitialized) return false;
+      try {
+        await SupabaseService.client.auth.resetPasswordForEmail(normalised);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
 
     // Test-account (debug builds only): skip real send, just store the known OTP
     if (_isTestAccount(normalised)) {
@@ -79,8 +92,30 @@ class EmailOtpService {
   }
 
   // ── Verify OTP ────────────────────────────────────────────────────────────
-  static Future<OtpResult> verifyOtp(String email, String enteredOtp) async {
+  static Future<OtpResult> verifyOtp(String email, String enteredOtp,
+      {OtpPurpose purpose = OtpPurpose.verify}) async {
     final normalised = email.trim().toLowerCase();
+
+    // Recovery code issued by Supabase — on success the client now holds a
+    // session for this user, which the new-password step relies on.
+    if (purpose == OtpPurpose.resetPassword) {
+      if (!SupabaseService.isInitialized) return OtpResult.notFound;
+      try {
+        final res = await SupabaseService.client.auth.verifyOTP(
+          email: normalised,
+          token: enteredOtp.trim(),
+          type: OtpType.recovery,
+        );
+        return res.session != null ? OtpResult.ok : OtpResult.wrong;
+      } on AuthException catch (e) {
+        if (e.code == 'over_request_rate_limit') return OtpResult.tooManyAttempts;
+        // Supabase reports wrong and expired codes alike as `otp_expired`.
+        return OtpResult.wrong;
+      } catch (_) {
+        return OtpResult.wrong;
+      }
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final storedOtp    = prefs.getString('otp_code_$normalised');
     final storedExpiry = prefs.getInt('otp_expiry_$normalised') ?? 0;
