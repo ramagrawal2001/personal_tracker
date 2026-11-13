@@ -68,8 +68,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               code == null
                   ? 'This device was set up from a password or a recovery code, so it does not hold the recovery code itself. Check the device where you first signed up.'
                   : firstTime
-                      ? 'Write this down and keep it safe. It is the only way to recover your encrypted card & bank details if you lose every signed-in device and forget your password.'
-                      : 'Keep this somewhere safe. It unlocks your encrypted card & bank details on a new device if you forget your password.',
+                      ? 'Write this down and keep it safe. It is the only way to recover your encrypted notes if you lose every signed-in device and forget your password.'
+                      : 'Keep this somewhere safe. It unlocks your encrypted notes on a new device if you forget your password.',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
             ),
             if (code != null) ...[
@@ -454,7 +454,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 18),
                   ),
                   title: Text('Encryption Recovery Code', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                  subtitle: Text('Recovers your encrypted card & bank details on a new device', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  subtitle: Text('Recovers your encrypted notes on a new device', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
                   onTap: () => _showRecoveryCodeDialog(null),
                 ),
@@ -467,7 +467,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     child: Icon(LucideIcons.keyRound, color: AppColors.primary, size: 18),
                   ),
                   title: Text('Restore Encrypted Data', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                  subtitle: Text('Card/CVV/PIN showing blank or wrong? Unlock them with a recovery code or previous password', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                  subtitle: Text('Notes showing blank or garbled? Unlock them with a recovery code or previous password', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                   trailing: Icon(LucideIcons.chevronRight, color: AppColors.textMuted, size: 18),
                   onTap: () {
                     final userId = ref.read(authNotifierProvider).user?.id;

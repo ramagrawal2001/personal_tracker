@@ -7,9 +7,6 @@ class Accounts extends Table {
   TextColumn get type => text()(); // AccountType enum name
   TextColumn get bank => text().nullable()();
   TextColumn get accountNumberLast4 => text().nullable()();
-  // v4: sensitive bank details — AES-GCM ciphertext blobs, never plaintext.
-  TextColumn get encAccountNumber => text().nullable()();
-  TextColumn get encIfsc => text().nullable()();
   RealColumn get openingBalance => real().withDefault(const Constant(0.0))();
   TextColumn get currency => text().withDefault(const Constant('INR'))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
@@ -90,10 +87,6 @@ class CreditCards extends Table {
   TextColumn get colorHex => text().nullable()();
   BoolColumn get isVirtual => boolean().withDefault(const Constant(false))();
   TextColumn get notes => text().nullable()();
-  // v4: sensitive card details — AES-GCM ciphertext blobs, never plaintext.
-  TextColumn get encCardNumber => text().nullable()();
-  TextColumn get encCvv => text().nullable()();
-  TextColumn get encPin => text().nullable()();
   RealColumn get creditLimit => real().withDefault(const Constant(0))();
   RealColumn get currentOutstanding => real().withDefault(const Constant(0))();
   IntColumn get statementDay => integer().withDefault(const Constant(1))();
