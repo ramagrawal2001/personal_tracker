@@ -325,8 +325,6 @@ Future<List<String>> runSalaryFlowSweep(WidgetTester tester, {String? screenshot
     await tester.enterText(tf.at(1), 'SweepBank');
     await tester.enterText(tf.at(2), '4242');
     await tester.enterText(tf.at(3), 'Sweep Holder');
-    await tester.enterText(tf.at(4), '4111111111111111'); // card number
-    await tester.enterText(tf.at(5), '123'); // CVV
 
     // Statement Day / Due Day are plain (non-form) int dropdowns in the Add
     // Card sheet — DropdownButton<int>, distinct from the nullable
@@ -372,10 +370,12 @@ Future<List<String>> runSalaryFlowSweep(WidgetTester tester, {String? screenshot
     }
   });
 
-  // ───────────────── credit card: edit pre-fills sensitive details ───────
-  await step('credit-card-edit-prefill', () async {
+  // ───────────────── credit card: edit pre-fills and updates last 4 ───────
+  // Full number / CVV / PIN are no longer stored — the Edit sheet carries a
+  // plain "Last 4 digits" field instead.
+  await step('credit-card-edit-last4', () async {
     if (fs().creditCards.isEmpty) {
-      failures.add('credit-card-edit-prefill: no card to edit (creation step must have failed)');
+      failures.add('credit-card-edit-last4: no card to edit (creation step must have failed)');
       return;
     }
     await go('/credit-cards');
@@ -384,35 +384,35 @@ Future<List<String>> runSalaryFlowSweep(WidgetTester tester, {String? screenshot
     await tester.tap(find.byType(PopupMenuButton<String>).first);
     await settle();
     await tapText('Edit');
-    // _showEditCardSheet is now async (decrypts before showing) — give it
-    // room to finish before asserting the sheet appeared.
     await pumpUntil(() => present('Edit Card'), frames: 300);
     await settle();
     if (!present('Edit Card')) {
-      failures.add('credit-card-edit-prefill: Edit Card sheet never appeared');
+      failures.add('credit-card-edit-last4: Edit Card sheet never appeared');
       return;
     }
-    final tf = find.byType(TextField);
-    // For a credit card: name(0) bank(1) holder(2) limit(3) cardNumber(4)
-    // cvv(5) pin(6). Statement/Due Day are dropdowns, not TextFields.
-    if (tf.evaluate().length < 7) {
-      failures.add('credit-card-edit-prefill: expected 7 text fields in Edit Card, found ${tf.evaluate().length}');
+    final last4 = find.widgetWithText(TextField, 'Last 4 digits');
+    if (last4.evaluate().isEmpty) {
+      failures.add('credit-card-edit-last4: no "Last 4 digits" field in Edit Card');
       return;
     }
-    await tester.ensureVisible(tf.at(4));
+    final prefilled = tester.widget<TextField>(last4).controller?.text ?? '';
+    if (prefilled != '4242') {
+      failures.add('credit-card-edit-last4: last 4 field is "$prefilled", expected "4242"');
+    }
+    for (final label in ['CVV', 'ATM PIN']) {
+      if (present(label)) failures.add('credit-card-edit-last4: "$label" field should no longer exist');
+    }
+    await tester.ensureVisible(last4);
     await settle();
-    await shot('edit_card_prefilled_secrets');
-    final numberField = tester.widget<TextField>(tf.at(4));
-    final cvvField = tester.widget<TextField>(tf.at(5));
-    final prefilledNumber = numberField.controller?.text ?? '';
-    final prefilledCvv = cvvField.controller?.text ?? '';
-    if (prefilledNumber.isEmpty) {
-      failures.add('credit-card-edit-prefill: card number field is blank — should show the decrypted number');
-    } else if (!prefilledNumber.endsWith('1111')) {
-      failures.add('credit-card-edit-prefill: card number field is "$prefilledNumber", expected to end in 1111');
-    }
-    if (prefilledCvv != '123') {
-      failures.add('credit-card-edit-prefill: CVV field is "$prefilledCvv", expected "123"');
+    await shot('edit_card_last4');
+    await tester.enterText(last4, '9876');
+    final save = find.widgetWithText(ElevatedButton, 'Save Changes');
+    await tester.ensureVisible(save);
+    await settle();
+    await tester.tap(save);
+    await pumpUntil(() => fs().creditCards.first.last4 == '9876');
+    if (fs().creditCards.first.last4 != '9876') {
+      failures.add('credit-card-edit-last4: last4 is "${fs().creditCards.first.last4}" after save, expected "9876"');
     }
   });
 

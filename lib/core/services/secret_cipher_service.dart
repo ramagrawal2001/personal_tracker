@@ -20,8 +20,9 @@ import 'supabase_service.dart';
 ///
 /// Threat model: the app *operator* — anyone who can read the local SQLite file
 /// or browse the Supabase Postgres tables — must not be able to read a user's
-/// sensitive fields (full card number, CVV, ATM PIN, full bank account number,
-/// IFSC, and later notes). The logged-in *user* sees everything transparently:
+/// encrypted fields (Notes: title, body, checklist, labels). Full card / bank
+/// numbers, CVV and PIN are deliberately not stored at all — only last-4
+/// digits. The logged-in *user* sees everything transparently:
 /// no extra passphrase, no reveal gate.
 ///
 /// Envelope scheme:

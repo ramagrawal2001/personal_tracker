@@ -39,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
   /// stuck on the v1 schema forever — Drift only runs `onCreate` for a
   /// brand-new database file, so an upgrade path is required here.
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -124,12 +124,10 @@ class AppDatabase extends _$AppDatabase {
               }
             }
 
-            await addV4(creditCards, creditCards.encCardNumber);
-            await addV4(creditCards, creditCards.encCvv);
-            await addV4(creditCards, creditCards.encPin);
+            // The v4 encrypted card/bank secret columns (enc_card_number,
+            // enc_cvv, enc_pin, enc_account_number, enc_ifsc) are no longer
+            // part of the schema — v12 drops them — so only colour is added.
             await addV4(creditCards, creditCards.colorHex);
-            await addV4(accounts, accounts.encAccountNumber);
-            await addV4(accounts, accounts.encIfsc);
           }
           if (from < 5) {
             // v5: credit-card last-payment tracking (drives payment reminders).
@@ -279,6 +277,26 @@ class AppDatabase extends _$AppDatabase {
             final txCols11 = await v11Cols('transactions');
             if (!txCols11.contains(transactions.isSettlement.name)) {
               await m.addColumn(transactions, transactions.isSettlement);
+            }
+          }
+          if (from < 12) {
+            // v12: stop keeping full card number / CVV / ATM PIN and full bank
+            // account number / IFSC at all — only last-4 digits remain. The
+            // encrypted columns are dropped (bundled SQLite >= 3.35 supports
+            // DROP COLUMN). Guarded so a path that never added them is a no-op.
+            const dropped = <String, List<String>>{
+              'credit_cards': ['enc_card_number', 'enc_cvv', 'enc_pin'],
+              'accounts': ['enc_account_number', 'enc_ifsc'],
+            };
+            for (final entry in dropped.entries) {
+              final cols = (await customSelect('PRAGMA table_info(${entry.key})').get())
+                  .map((row) => row.read<String>('name'))
+                  .toSet();
+              for (final col in entry.value) {
+                if (cols.contains(col)) {
+                  await customStatement('ALTER TABLE ${entry.key} DROP COLUMN $col');
+                }
+              }
             }
           }
         },

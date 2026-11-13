@@ -5,6 +5,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/services/email_otp_service.dart';
+import 'auth_repository.dart';
 import 'otp_verification_screen.dart';
 
 enum _ForgotStep { email, otp, newPassword, done }
@@ -46,7 +47,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     if (ok) {
       setState(() => _step = _ForgotStep.otp);
     } else {
-      setState(() => _error = 'Could not send OTP. Please check your email and try again.');
+      setState(() => _error = 'Could not send the reset code. Check the email address, or wait a minute and try again.');
     }
   }
 
@@ -55,8 +56,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Future<void> _resetPassword() async {
-    final pass = _newPassCtrl.text;
-    final confirm = _confirmPassCtrl.text;
+    // Trimmed to match the login screen, which trims before signing in.
+    final pass = _newPassCtrl.text.trim();
+    final confirm = _confirmPassCtrl.text.trim();
     if (pass.length < 6) {
       setState(() => _error = 'Password must be at least 6 characters');
       return;
@@ -67,9 +69,25 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     }
     setState(() { _loading = true; _error = null; });
     try {
+      // The recovery-code session from the OTP step authorises this call.
       await Supabase.instance.client.auth.updateUser(UserAttributes(password: pass));
+      // End the recovery session: signing in again with the new password runs
+      // the normal login path, including field-encryption key setup.
+      await ref.read(authNotifierProvider.notifier).signOut();
+      if (!mounted) return;
       setState(() { _step = _ForgotStep.done; _loading = false; });
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.code == 'same_password'
+            ? 'New password must be different from your old one.'
+            : e.code == 'weak_password'
+                ? 'Password is too weak. Use at least 6 characters.'
+                : 'Failed to update password. Please try again.';
+        _loading = false;
+      });
     } catch (e) {
+      if (!mounted) return;
       setState(() { _error = 'Failed to update password. Please try again.'; _loading = false; });
     }
   }
@@ -83,7 +101,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(LucideIcons.arrowLeft, color: AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.go('/login'),
         ),
         title: Text('Forgot Password', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary, fontSize: 17)),
       ),

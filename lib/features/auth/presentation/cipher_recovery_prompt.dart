@@ -9,7 +9,7 @@ import '../../../core/theme/app_colors.dart';
 /// encryption DEK could not be opened — a fresh device after a password change
 /// / reset, where the cloud DEK wrapper is still under the OLD key. Until the
 /// user supplies their previous password or their recovery code every encrypted
-/// card / bank / note field stays locked, so this prompt is shown prominently
+/// note field stays locked, so this prompt is shown prominently
 /// and is not barrier-dismissable: the only way past without unlocking is the
 /// explicit "Skip for now" (the prompt then re-appears on the next launch).
 ///
@@ -98,8 +98,8 @@ class _CipherRecoveryPromptState extends ConsumerState<CipherRecoveryPrompt> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'This device signed in after a password change, so your saved card, '
-              'bank and note details are still locked. Enter your '
+              'This device signed in after a password change, so your saved '
+              'notes are still locked. Enter your '
               '${isCode ? 'recovery code' : 'previous password'} and your current '
               'password to unlock them.',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),

@@ -1561,8 +1561,6 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     String? bank,
     String? accountNumberLast4,
     required double openingBalance,
-    String? encAccountNumber,
-    String? encIfsc,
   }) async {
     final now = DateTime.now();
     // New accounts append to the end of the user's chosen order rather than
@@ -1580,8 +1578,6 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       calculatedBalance: openingBalance,
       createdAt: now,
       updatedAt: now,
-      encAccountNumber: encAccountNumber,
-      encIfsc: encIfsc,
       sortOrder: nextSortOrder,
     );
 
@@ -1605,10 +1601,6 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     String? colorHex,
     bool isVirtual = false,
     String? notes,
-    // Encrypted sensitive details (AES-GCM ciphertext blobs, never plaintext).
-    String? encCardNumber,
-    String? encCvv,
-    String? encPin,
     // Credit-card fields
     double creditLimit = 0,
     int statementDay = 1,
@@ -1632,9 +1624,6 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       colorHex: colorHex,
       isVirtual: isVirtual,
       notes: notes,
-      encCardNumber: encCardNumber,
-      encCvv: encCvv,
-      encPin: encPin,
       creditLimit: creditLimit,
       currentOutstanding: 0.0,
       statementDay: statementDay,
@@ -1684,9 +1673,6 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     CardColorPreset? colorPreset,
     String? colorHex,
     String? notes,
-    String? encCardNumber,
-    String? encCvv,
-    String? encPin,
     double? creditLimit,
     double? currentOutstanding,
     int? statementDay,
@@ -1710,9 +1696,6 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
       colorPreset: colorPreset,
       colorHex: colorHex,
       notes: notes,
-      encCardNumber: encCardNumber,
-      encCvv: encCvv,
-      encPin: encPin,
       creditLimit: creditLimit,
       currentOutstanding: currentOutstanding,
       statementDay: statementDay,
@@ -2672,12 +2655,12 @@ class FinanceNotifier extends StateNotifier<FinanceState> with CloudDirectWrite 
     state = state.copyWith(accounts: state.accounts.where((a) => a.id != id).toList());
   }
 
-  Future<void> updateAccount(String id, {String? name, AccountType? type, String? bank, String? accountNumberLast4, double? openingBalance, String? encAccountNumber, String? encIfsc}) async {
+  Future<void> updateAccount(String id, {String? name, AccountType? type, String? bank, String? accountNumberLast4, double? openingBalance}) async {
     final existing = state.accounts.where((a) => a.id == id).toList();
     if (existing.isEmpty) return;
     final draft = existing.first.copyWith(
       name: name, type: type, bank: bank, accountNumberLast4: accountNumberLast4,
-      openingBalance: openingBalance, encAccountNumber: encAccountNumber, encIfsc: encIfsc,
+      openingBalance: openingBalance,
     );
 
     final serverTs = await pushToCloud('accounts', draft.toCloudJson());

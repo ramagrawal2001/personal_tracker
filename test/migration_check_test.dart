@@ -54,7 +54,7 @@ void main() {
     expect(notes, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 11);
+    expect(versionRow.data['user_version'], 12);
 
     // v3 additions: the tombstone column is present (the sync_outbox table it
     // shipped alongside is gone again as of v6 — checked below).
@@ -71,15 +71,17 @@ void main() {
     expect(tableNames.contains('sync_outbox'), isFalse);
     expect(tableNames.contains('sync_meta'), isTrue);
 
-    // v4 additions: encrypted secret columns are present and default to null.
+    // v4/v5 card columns are present; the v4 encrypted secret columns are
+    // never created (v12 removed them from the schema).
     final cardCols = (await phase2.customSelect('PRAGMA table_info(credit_cards)').get())
         .map((r) => r.read<String>('name'))
         .toSet();
-    expect(cardCols.containsAll({'enc_card_number', 'enc_cvv', 'enc_pin', 'color_hex', 'last_payment_date', 'last_payment_amount'}), isTrue);
+    expect(cardCols.containsAll({'color_hex', 'last_payment_date', 'last_payment_amount'}), isTrue);
+    expect(cardCols.intersection({'enc_card_number', 'enc_cvv', 'enc_pin'}), isEmpty);
     final acctCols = (await phase2.customSelect('PRAGMA table_info(accounts)').get())
         .map((r) => r.read<String>('name'))
         .toSet();
-    expect(acctCols.containsAll({'enc_account_number', 'enc_ifsc'}), isTrue);
+    expect(acctCols.intersection({'enc_account_number', 'enc_ifsc'}), isEmpty);
   });
 
   test('v5 -> v6 upgrade drops sync_outbox and prunes stale sync_meta rows, keeping the rest', () async {
@@ -197,7 +199,7 @@ void main() {
     expect(companies, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 11);
+    expect(versionRow.data['user_version'], 12);
 
     final txCols = (await phase2.customSelect('PRAGMA table_info(transactions)').get())
         .map((r) => r.read<String>('name'))
@@ -260,7 +262,7 @@ void main() {
     expect(accounts.first.sortOrder, 0, reason: 'the new column must default to 0, not fail the migration');
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 11);
+    expect(versionRow.data['user_version'], 12);
 
     final acctCols = (await phase2.customSelect('PRAGMA table_info(accounts)').get())
         .map((r) => r.read<String>('name'))
@@ -309,7 +311,7 @@ void main() {
     expect(investments.first.lastAutoPostedMonth, null);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 11);
+    expect(versionRow.data['user_version'], 12);
 
     final invCols = (await phase2.customSelect('PRAGMA table_info(investments)').get())
         .map((r) => r.read<String>('name'))
@@ -372,7 +374,7 @@ void main() {
     expect(splitParticipants, isEmpty);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 11);
+    expect(versionRow.data['user_version'], 12);
 
     final txCols = (await phase2.customSelect('PRAGMA table_info(transactions)').get())
         .map((r) => r.read<String>('name'))
@@ -452,7 +454,7 @@ void main() {
     addTearDown(phase2.close);
 
     final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
-    expect(versionRow.data['user_version'], 11);
+    expect(versionRow.data['user_version'], 12);
 
     final participants = await phase2.select(phase2.splitParticipants).get();
     expect(participants.length, 2, reason: 'pre-existing splits must survive the upgrade');
@@ -474,5 +476,65 @@ void main() {
         .map((r) => r.read<String>('name'))
         .toSet();
     expect(txCols.contains('is_settlement'), isTrue);
+  });
+
+  test('v11 -> v12 upgrade drops the encrypted card/bank secret columns, keeping the rows', () async {
+    final file = File('${Directory.systemTemp.path}/migration_check_v12_${DateTime.now().microsecondsSinceEpoch}.sqlite');
+    addTearDown(() {
+      if (file.existsSync()) file.deleteSync();
+    });
+
+    // ── Phase 1: a v11 install whose cards/accounts still carry the v4
+    // encrypted secret columns, populated.
+    final phase1 = AppDatabase.forTesting(NativeDatabase(file));
+    await phase1.customSelect('SELECT 1').get(); // create the current schema
+    await phase1.customStatement('ALTER TABLE credit_cards ADD COLUMN enc_card_number TEXT');
+    await phase1.customStatement('ALTER TABLE credit_cards ADD COLUMN enc_cvv TEXT');
+    await phase1.customStatement('ALTER TABLE credit_cards ADD COLUMN enc_pin TEXT');
+    await phase1.customStatement('ALTER TABLE accounts ADD COLUMN enc_account_number TEXT');
+    await phase1.customStatement('ALTER TABLE accounts ADD COLUMN enc_ifsc TEXT');
+
+    final now = DateTime(2026, 1, 1);
+    await phase1.into(phase1.accounts).insert(AccountModel(
+          id: 'acc1',
+          name: 'Savings',
+          type: AccountType.savingsAccount,
+          accountNumberLast4: '4321',
+          openingBalance: 100,
+          calculatedBalance: 100,
+          createdAt: now,
+          updatedAt: now,
+        ).toCompanion());
+    await phase1.into(phase1.creditCards).insert(CardModel(
+          id: 'card1',
+          cardType: CardType.credit,
+          name: 'Card',
+          bank: 'Bank',
+          last4: '1234',
+          cardholderName: 'Holder',
+          updatedAt: now,
+        ).toCompanion());
+    await phase1.customStatement("UPDATE credit_cards SET enc_card_number = 'iv:ct', enc_cvv = 'iv:ct', enc_pin = 'iv:ct'");
+    await phase1.customStatement("UPDATE accounts SET enc_account_number = 'iv:ct', enc_ifsc = 'iv:ct'");
+    await phase1.customStatement('PRAGMA user_version = 11');
+    await phase1.close();
+
+    // ── Phase 2: open with the real AppDatabase ──
+    final phase2 = AppDatabase.forTesting(NativeDatabase(file));
+    addTearDown(phase2.close);
+
+    Future<Set<String>> cols(String table) async =>
+        (await phase2.customSelect('PRAGMA table_info($table)').get()).map((r) => r.read<String>('name')).toSet();
+
+    expect((await cols('credit_cards')).intersection({'enc_card_number', 'enc_cvv', 'enc_pin'}), isEmpty);
+    expect((await cols('accounts')).intersection({'enc_account_number', 'enc_ifsc'}), isEmpty);
+
+    final card = await phase2.select(phase2.creditCards).getSingle();
+    expect(card.last4, '1234');
+    final acc = await phase2.select(phase2.accounts).getSingle();
+    expect(acc.accountNumberLast4, '4321');
+
+    final versionRow = await phase2.customSelect('PRAGMA user_version').getSingle();
+    expect(versionRow.data['user_version'], 12);
   });
 }

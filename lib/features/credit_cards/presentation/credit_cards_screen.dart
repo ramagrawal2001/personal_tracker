@@ -7,11 +7,9 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_decorations.dart';
 import '../../../core/database/finance_repository.dart';
-import '../../../core/services/secret_cipher_service.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/secret_reveal_sheet.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../../../domain/models/models.dart';
@@ -228,7 +226,6 @@ return SingleChildScrollView(
                     onPayBill: () => QuickAddModal.show(context, initialType: TransactionType.creditCardPayment, initialCreditCardId: c.id),
                     onEdit: () => _showEditCardSheet(c),
                     onDelete: () => _confirmDelete(c),
-                    onViewSecrets: () => _showCardSecrets(c),
                   );
                 }),
               ],
@@ -327,35 +324,14 @@ return SingleChildScrollView(
     );
   }
 
-  void _showCardSecrets(CardModel card) {
-    AdaptiveModal.show(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => _CardSecretsSheet(card: card),
-    );
-  }
-
   Future<void> _showEditCardSheet(CardModel card) async {
-    // Decrypt the existing sensitive fields (if any) so the edit form opens
-    // pre-filled instead of blank — previously it always started empty,
-    // which looked like the saved number/CVV/PIN had been lost.
-    final cipher = ref.read(secretCipherServiceProvider);
-    if (!cipher.isReady) await cipher.restoreFromCache();
-    if (!mounted) return;
-    final hasSecrets = card.encCardNumber != null || card.encCvv != null || card.encPin != null;
-    final secretsLocked = !cipher.isReady && hasSecrets;
-
     final nameCtrl = TextEditingController(text: card.name);
     final bankCtrl = TextEditingController(text: card.bank);
     final holderCtrl = TextEditingController(text: card.cardholderName);
     final limitCtrl = TextEditingController(text: card.creditLimit.toStringAsFixed(0));
     int statementDay = card.statementDay.clamp(1, 31);
     int dueDay = card.dueDay.clamp(1, 31);
-    final numCtrl = TextEditingController(text: cipher.isReady ? (cipher.decryptField(card.encCardNumber) ?? '') : '');
-    final cvvCtrl = TextEditingController(text: cipher.isReady ? (cipher.decryptField(card.encCvv) ?? '') : '');
-    final pinCtrl = TextEditingController(text: cipher.isReady ? (cipher.decryptField(card.encPin) ?? '') : '');
+    final last4Ctrl = TextEditingController(text: card.last4);
     final isCredit = card.cardType == CardType.credit;
     final isDebit = card.cardType == CardType.debit;
     final linkableAccounts = ref
@@ -451,36 +427,14 @@ return SingleChildScrollView(
                       onChanged: (v) => setSheetState(() => linkedAccountId = v),
                     ),
                 ],
-                const SizedBox(height: 16),
-                Row(children: [
-                  Icon(LucideIcons.lock, size: 13, color: AppColors.primary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(hasSecrets ? 'Sensitive details' : 'Add sensitive details',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                  ),
-                ]),
-                if (secretsLocked) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Encrypted details are locked on this device — sign in again to view them. Leave fields blank to keep the saved values.',
-                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-                  ),
-                ],
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 TextField(
-                  controller: numCtrl,
+                  controller: last4Ctrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  maxLength: 19,
-                  decoration: const InputDecoration(labelText: 'Card Number (leave blank to keep)', counterText: ''),
+                  maxLength: 4,
+                  decoration: const InputDecoration(labelText: 'Last 4 digits', counterText: ''),
                 ),
-                const SizedBox(height: 12),
-                Row(children: [
-                  Expanded(child: TextField(controller: cvvCtrl, obscureText: true, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], maxLength: 4, decoration: const InputDecoration(labelText: 'CVV', counterText: ''))),
-                  const SizedBox(width: 12),
-                  Expanded(child: TextField(controller: pinCtrl, obscureText: true, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], maxLength: 6, decoration: const InputDecoration(labelText: 'ATM PIN', counterText: ''))),
-                ]),
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -541,22 +495,10 @@ return SingleChildScrollView(
                           return;
                         }
                       }
-                      final rawNum = numCtrl.text.replaceAll(RegExp(r'\D'), '');
-                      String? encNum, encCvv, encPin, newLast4;
-                      if (rawNum.isNotEmpty || cvvCtrl.text.trim().isNotEmpty || pinCtrl.text.trim().isNotEmpty) {
-                        final cipher = ref.read(secretCipherServiceProvider);
-                        if (!cipher.isReady) await cipher.restoreFromCache();
-                        if (cipher.isReady) {
-                          if (rawNum.isNotEmpty) {
-                            encNum = cipher.encryptField(rawNum);
-                            if (rawNum.length >= 4) newLast4 = rawNum.substring(rawNum.length - 4);
-                          }
-                          if (cvvCtrl.text.trim().isNotEmpty) encCvv = cipher.encryptField(cvvCtrl.text.trim());
-                          if (pinCtrl.text.trim().isNotEmpty) encPin = cipher.encryptField(pinCtrl.text.trim());
-                        } else {
-                          setSheetState(() => error = 'Secure storage is locked — sign in again to edit encrypted details');
-                          return;
-                        }
+                      final newLast4 = last4Ctrl.text.trim();
+                      if (newLast4.length != 4) {
+                        setSheetState(() => error = 'Enter the last 4 digits of the card');
+                        return;
                       }
                       try {
                         await ref.read(financeNotifierProvider.notifier).updateCard(
@@ -566,9 +508,6 @@ return SingleChildScrollView(
                           cardholderName: holderCtrl.text.trim(),
                           last4: newLast4,
                           colorHex: colorHex,
-                          encCardNumber: encNum,
-                          encCvv: encCvv,
-                          encPin: encPin,
                           creditLimit: limit,
                           statementDay: statementDay,
                           dueDay: dueDay,
@@ -1000,10 +939,8 @@ class _CardListTile extends StatelessWidget {
   final VoidCallback onPayBill;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
-  final VoidCallback onViewSecrets;
-  const _CardListTile({required this.card, this.linkedAccount, required this.onPayBill, required this.onEdit, required this.onDelete, required this.onViewSecrets});
+  const _CardListTile({required this.card, this.linkedAccount, required this.onPayBill, required this.onEdit, required this.onDelete});
 
-  bool get _hasSecrets => card.encCardNumber != null || card.encCvv != null || card.encPin != null;
 
   @override
   Widget build(BuildContext context) {
@@ -1103,17 +1040,6 @@ class _CardListTile extends StatelessWidget {
                         ],
                       ),
                     ),
-                  if (_hasSecrets)
-                    PopupMenuItem(
-                      value: 'secrets',
-                      child: Row(
-                        children: [
-                          Icon(LucideIcons.lock, size: 14, color: AppColors.primary),
-                          SizedBox(width: 8),
-                          Text('Card details', style: TextStyle(color: AppColors.textPrimary)),
-                        ],
-                      ),
-                    ),
                   PopupMenuItem(
                     value: 'edit',
                     child: Row(
@@ -1138,8 +1064,6 @@ class _CardListTile extends StatelessWidget {
                 onSelected: (v) {
                   if (v == 'pay') {
                     onPayBill();
-                  } else if (v == 'secrets') {
-                    onViewSecrets();
                   } else if (v == 'edit') {
                     onEdit();
                   } else {
@@ -1373,25 +1297,6 @@ class _SummaryItem extends StatelessWidget {
   );
 }
 
-// ─── Card Secrets Sheet ───────────────────────────────────────────────────────
-class _CardSecretsSheet extends StatelessWidget {
-  final CardModel card;
-  const _CardSecretsSheet({required this.card});
-
-  @override
-  Widget build(BuildContext context) {
-    return SecretRevealSheet(
-      title: '${card.name} details',
-      fields: [
-        SecretField('Card number', card.encCardNumber,
-            maskedFallback: '•••• •••• •••• ${card.last4}', groupDigits: true),
-        SecretField('CVV', card.encCvv, maskedFallback: '•••'),
-        SecretField('ATM PIN', card.encPin, maskedFallback: '••••'),
-      ],
-    );
-  }
-}
-
 // ─── Add Card Modal ───────────────────────────────────────────────────────────
 class _AddCardModal extends ConsumerStatefulWidget {
   const _AddCardModal();
@@ -1415,9 +1320,6 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
   final _balanceCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   final _currencyCtrl = TextEditingController(text: 'USD');
-  final _cardNumCtrl = TextEditingController();
-  final _cvvCtrl = TextEditingController();
-  final _pinCtrl = TextEditingController();
 
   int? _expiryMonth;
   int? _expiryYear;
@@ -1428,7 +1330,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
 
   @override
   void dispose() {
-    for (final c in [_nameCtrl, _bankCtrl, _last4Ctrl, _holderCtrl, _limitCtrl, _balanceCtrl, _notesCtrl, _currencyCtrl, _cardNumCtrl, _cvvCtrl, _pinCtrl]) {
+    for (final c in [_nameCtrl, _bankCtrl, _last4Ctrl, _holderCtrl, _limitCtrl, _balanceCtrl, _notesCtrl, _currencyCtrl]) {
       c.dispose();
     }
     super.dispose();
@@ -1515,61 +1417,6 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                     ],
                   ),
                   const SizedBox(height: 16),
-
-                  // ── Sensitive details (encrypted on-device) ──
-                  Row(
-                    children: [
-                      Icon(LucideIcons.lock, size: 14, color: AppColors.primary),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text('Sensitive details', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text('Encrypted on this device. The full number sets the last 4 automatically.',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                  const SizedBox(height: 10),
-                  _field(
-                    _cardNumCtrl,
-                    'Card Number',
-                    hint: '•••• •••• •••• ••••',
-                    icon: LucideIcons.creditCard,
-                    inputType: TextInputType.number,
-                    formatter: FilteringTextInputFormatter.digitsOnly,
-                    maxLen: 19,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _field(
-                          _cvvCtrl,
-                          'CVV',
-                          hint: '•••',
-                          icon: LucideIcons.shield,
-                          inputType: TextInputType.number,
-                          formatter: FilteringTextInputFormatter.digitsOnly,
-                          maxLen: 4,
-                          obscure: true,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _field(
-                          _pinCtrl,
-                          'ATM PIN',
-                          hint: '••••',
-                          icon: LucideIcons.keyRound,
-                          inputType: TextInputType.number,
-                          formatter: FilteringTextInputFormatter.digitsOnly,
-                          maxLen: 6,
-                          obscure: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
 
                   // Network
                   Text('Network', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
@@ -1708,7 +1555,7 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
                   _field(
                     _notesCtrl,
                     'Notes / Hints (Optional)',
-                    hint: 'PIN hint, portal URL…',
+                    hint: 'Portal URL, reward notes…',
                     icon: LucideIcons.stickyNote,
                     maxLines: 2,
                   ),
@@ -2071,13 +1918,11 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
   }
 
   Future<void> _save() async {
-    final rawNumber = _cardNumCtrl.text.replaceAll(RegExp(r'\D'), '');
-    var last4 = _last4Ctrl.text.trim();
-    if (rawNumber.length >= 12) last4 = rawNumber.substring(rawNumber.length - 4);
+    final last4 = _last4Ctrl.text.trim();
 
     if (_nameCtrl.text.trim().isEmpty || _bankCtrl.text.trim().isEmpty || last4.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill card name, bank, and the card number (or last 4 digits)'), backgroundColor: AppColors.expense),
+        SnackBar(content: Text('Please fill card name, bank, and the last 4 digits'), backgroundColor: AppColors.expense),
       );
       return;
     }
@@ -2106,24 +1951,6 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
     }
     setState(() => _saving = true);
 
-    // Encrypt the sensitive fields transparently with the per-user DEK. Never
-    // persist plaintext — if the cipher is not ready, skip capture and warn.
-    String? encNumber, encCvv, encPin;
-    final cvv = _cvvCtrl.text.trim();
-    final pin = _pinCtrl.text.trim();
-    if (rawNumber.isNotEmpty || cvv.isNotEmpty || pin.isNotEmpty) {
-      final cipher = ref.read(secretCipherServiceProvider);
-      if (!cipher.isReady) await cipher.restoreFromCache();
-      if (cipher.isReady) {
-        if (rawNumber.isNotEmpty) encNumber = cipher.encryptField(rawNumber);
-        if (cvv.isNotEmpty) encCvv = cipher.encryptField(cvv);
-        if (pin.isNotEmpty) encPin = cipher.encryptField(pin);
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Secure storage is locked — card saved without the encrypted details'), backgroundColor: AppColors.warning),
-        );
-      }
-    }
     if (!mounted) return;
 
     try {
@@ -2140,9 +1967,6 @@ class _AddCardModalState extends ConsumerState<_AddCardModal> {
         colorHex: _customColorHex,
         isVirtual: _isVirtual,
         notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
-        encCardNumber: encNumber,
-        encCvv: encCvv,
-        encPin: encPin,
         creditLimit: double.tryParse(_limitCtrl.text) ?? 0,
         statementDay: _statementDay,
         dueDay: _dueDay,

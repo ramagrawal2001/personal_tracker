@@ -79,7 +79,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     }
     setState(() { _loading = true; _error = null; });
 
-    final result = await EmailOtpService.verifyOtp(widget.email, _enteredOtp);
+    final result = await EmailOtpService.verifyOtp(widget.email, _enteredOtp, purpose: widget.purpose);
 
     if (result == OtpResult.ok) {
       await widget.onVerified();
